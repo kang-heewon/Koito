@@ -70,6 +70,18 @@ func (m *MbzMockCaller) GetArtistPrimaryAliases(ctx context.Context, id uuid.UUI
 	return ss, nil
 }
 
+func (m *MbzMockCaller) GetArtistGenres(ctx context.Context, id uuid.UUID) ([]string, error) {
+	artist, exists := m.Artists[id]
+	if !exists {
+		return nil, fmt.Errorf("artist with ID %s not found", id)
+	}
+	genres := make([]string, len(artist.Genres))
+	for i, g := range artist.Genres {
+		genres[i] = g.Name
+	}
+	return genres, nil
+}
+
 func (m *MbzMockCaller) Shutdown() {}
 
 type MbzErrorCaller struct{}
@@ -92,6 +104,10 @@ func (m *MbzErrorCaller) GetTrack(ctx context.Context, id uuid.UUID) (*MusicBrai
 
 func (m *MbzErrorCaller) GetArtistPrimaryAliases(ctx context.Context, id uuid.UUID) ([]string, error) {
 	return nil, fmt.Errorf("error: GetArtistPrimaryAliases not implemented")
+}
+
+func (m *MbzErrorCaller) GetArtistGenres(ctx context.Context, id uuid.UUID) ([]string, error) {
+	return nil, fmt.Errorf("error: GetArtistGenres not implemented")
 }
 
 func (m *MbzErrorCaller) Shutdown() {}

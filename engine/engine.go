@@ -111,6 +111,7 @@ func Run(
 		EnableCAA:      !cfg.CoverArtArchiveDisabled(),
 		EnableDeezer:   !cfg.DeezerDisabled(),
 		EnableSubsonic: cfg.SubsonicEnabled(),
+		EnableSpotify:  cfg.SpotifyEnabled(),
 	})
 	l.Info().Msg("Engine: Image sources initialized")
 
@@ -202,6 +203,11 @@ func Run(
 	l.Info().Msg("Engine: Pruning orphaned images")
 	go catalog.PruneOrphanedImages(logger.NewContext(l), store)
 
+	if !cfg.MusicBrainzDisabled() {
+		l.Info().Msg("Engine: Backfilling genres for existing data")
+		go catalog.BackfillGenres(logger.NewContext(l), store, mbzC)
+	}
+
 	l.Info().Msg("Engine: Initialization finished")
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
@@ -212,6 +218,7 @@ func Run(
 	defer cancel()
 	l.Info().Msg("Engine: Waiting for all processes to finish")
 	mbzC.Shutdown()
+	images.Shutdown()
 	if err := httpServer.Shutdown(ctx); err != nil {
 		l.Fatal().Err(err).Msg("Engine: Error during server shutdown")
 		return err

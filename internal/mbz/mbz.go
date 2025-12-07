@@ -27,6 +27,7 @@ type MusicBrainzClient struct {
 
 type MusicBrainzCaller interface {
 	GetArtistPrimaryAliases(ctx context.Context, id uuid.UUID) ([]string, error)
+	GetArtistGenres(ctx context.Context, id uuid.UUID) ([]string, error)
 	GetReleaseTitles(ctx context.Context, RGID uuid.UUID) ([]string, error)
 	GetTrack(ctx context.Context, id uuid.UUID) (*MusicBrainzTrack, error)
 	GetReleaseGroup(ctx context.Context, id uuid.UUID) (*MusicBrainzReleaseGroup, error)

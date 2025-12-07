@@ -16,6 +16,7 @@ type MusicBrainzArtist struct {
 	Gender   string                   `json:"gender"`
 	Area     MusicBrainzArea          `json:"area"`
 	Aliases  []MusicBrainzArtistAlias `json:"aliases"`
+	Genres   []MusicBrainzGenre       `json:"genres"`
 }
 type MusicBrainzArtistAlias struct {
 	Name    string `json:"name"`
@@ -23,7 +24,7 @@ type MusicBrainzArtistAlias struct {
 	Primary bool   `json:"primary"`
 }
 
-const artistAliasFmtStr = "%s/ws/2/artist/%s?inc=aliases"
+const artistAliasFmtStr = "%s/ws/2/artist/%s?inc=aliases+genres"
 
 func (c *MusicBrainzClient) getArtist(ctx context.Context, id uuid.UUID) (*MusicBrainzArtist, error) {
 	mbzArtist := new(MusicBrainzArtist)
@@ -55,4 +56,19 @@ func (c *MusicBrainzClient) GetArtistPrimaryAliases(ctx context.Context, id uuid
 		}
 	}
 	return ret, nil
+}
+
+func (c *MusicBrainzClient) GetArtistGenres(ctx context.Context, id uuid.UUID) ([]string, error) {
+	artist, err := c.getArtist(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("GetArtistGenres: %w", err)
+	}
+	if artist == nil {
+		return nil, errors.New("GetArtistGenres: artist could not be found by musicbrainz")
+	}
+	genres := make([]string, len(artist.Genres))
+	for i, g := range artist.Genres {
+		genres[i] = g.Name
+	}
+	return genres, nil
 }

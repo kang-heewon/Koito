@@ -31,8 +31,10 @@ type DB interface {
 	// Save
 	SaveArtist(ctx context.Context, opts SaveArtistOpts) (*models.Artist, error)
 	SaveArtistAliases(ctx context.Context, id int32, aliases []string, source string) error
+	SaveArtistGenres(ctx context.Context, id int32, genres []string) error
 	SaveAlbum(ctx context.Context, opts SaveAlbumOpts) (*models.Album, error)
 	SaveAlbumAliases(ctx context.Context, id int32, aliases []string, source string) error
+	SaveAlbumGenres(ctx context.Context, id int32, genres []string) error
 	SaveTrack(ctx context.Context, opts SaveTrackOpts) (*models.Track, error)
 	SaveTrackAliases(ctx context.Context, id int32, aliases []string, source string) error
 	SaveListen(ctx context.Context, opts SaveListenOpts) error
@@ -82,7 +84,14 @@ type DB interface {
 	ImageHasAssociation(ctx context.Context, image uuid.UUID) (bool, error)
 	GetImageSource(ctx context.Context, image uuid.UUID) (string, error)
 	AlbumsWithoutImages(ctx context.Context, from int32) ([]*models.Album, error)
+	AlbumsWithoutGenres(ctx context.Context, from int32) ([]ItemWithMbzID, error)
+	ArtistsWithoutGenres(ctx context.Context, from int32) ([]ItemWithMbzID, error)
 	GetExportPage(ctx context.Context, opts GetExportPageOpts) ([]*ExportItem, error)
 	Ping(ctx context.Context) error
 	Close(ctx context.Context)
+}
+
+type ItemWithMbzID struct {
+	ID    int32
+	MbzID uuid.UUID
 }

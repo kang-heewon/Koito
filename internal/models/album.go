@@ -8,6 +8,7 @@ type Album struct {
 	Title          string         `json:"title"`
 	Image          *uuid.UUID     `json:"image"`
 	Artists        []SimpleArtist `json:"artists"`
+	Genres         []string       `json:"genres"`
 	VariousArtists bool           `json:"is_various_artists"`
 	ListenCount    int64          `json:"listen_count"`
 	TimeListened   int64          `json:"time_listened"`

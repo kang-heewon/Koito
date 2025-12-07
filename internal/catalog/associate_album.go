@@ -100,12 +100,21 @@ func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts Asso
 		l.Debug().Msgf("Updated album '%s' with MusicBrainz Release ID", album.Title)
 
 		if opts.ReleaseGroupMbzID != uuid.Nil {
-			aliases, err := opts.Mbzc.GetReleaseTitles(ctx, opts.ReleaseGroupMbzID)
+			rg, err := opts.Mbzc.GetReleaseGroup(ctx, opts.ReleaseGroupMbzID)
 			if err == nil {
+				aliases := mbz.ReleaseGroupToTitles(rg)
 				l.Debug().Msgf("Associating aliases '%s' with Release '%s'", aliases, album.Title)
 				err = d.SaveAlbumAliases(ctx, album.ID, aliases, "MusicBrainz")
 				if err != nil {
 					l.Err(err).Msg("createOrUpdateAlbumWithMbzReleaseID: failed to save aliases")
+				}
+
+				genres := mbz.ReleaseGroupToGenres(rg)
+				if len(genres) > 0 {
+					l.Debug().Msgf("Saving genres %v for album '%s'", genres, album.Title)
+					if saveErr := d.SaveAlbumGenres(ctx, album.ID, genres); saveErr != nil {
+						l.Warn().Err(saveErr).Msgf("Failed to save genres for album '%s'", album.Title)
+					}
 				}
 			} else {
 				l.Info().AnErr("err", err).Msg("createOrUpdateAlbumWithMbzReleaseID: failed to get release group from MusicBrainz")
@@ -167,12 +176,21 @@ func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts Asso
 		}
 
 		if opts.ReleaseGroupMbzID != uuid.Nil {
-			aliases, err := opts.Mbzc.GetReleaseTitles(ctx, opts.ReleaseGroupMbzID)
+			rg, err := opts.Mbzc.GetReleaseGroup(ctx, opts.ReleaseGroupMbzID)
 			if err == nil {
+				aliases := mbz.ReleaseGroupToTitles(rg)
 				l.Debug().Msgf("Associating aliases '%s' with Release '%s'", aliases, album.Title)
 				err = d.SaveAlbumAliases(ctx, album.ID, aliases, "MusicBrainz")
 				if err != nil {
 					l.Err(err).Msg("createOrUpdateAlbumWithMbzReleaseID: failed to save aliases")
+				}
+
+				genres := mbz.ReleaseGroupToGenres(rg)
+				if len(genres) > 0 {
+					l.Debug().Msgf("Saving genres %v for album '%s'", genres, album.Title)
+					if saveErr := d.SaveAlbumGenres(ctx, album.ID, genres); saveErr != nil {
+						l.Warn().Err(saveErr).Msgf("Failed to save genres for album '%s'", album.Title)
+					}
 				}
 			} else {
 				l.Info().AnErr("err", err).Msg("createOrUpdateAlbumWithMbzReleaseID: failed to get release group from MusicBrainz")

@@ -8,11 +8,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type MusicBrainzGenre struct {
+	Name string `json:"name"`
+}
+
 type MusicBrainzReleaseGroup struct {
 	Title        string                    `json:"title"`
 	Type         string                    `json:"primary_type"`
 	ArtistCredit []MusicBrainzArtistCredit `json:"artist-credit"`
 	Releases     []MusicBrainzRelease      `json:"releases"`
+	Genres       []MusicBrainzGenre        `json:"genres"`
 }
 type MusicBrainzRelease struct {
 	Title              string                    `json:"title"`
@@ -30,7 +35,7 @@ type TextRepresentation struct {
 	Script   string `json:"script"`
 }
 
-const releaseGroupFmtStr = "%s/ws/2/release-group/%s?inc=releases+artists"
+const releaseGroupFmtStr = "%s/ws/2/release-group/%s?inc=releases+artists+genres"
 const releaseFmtStr = "%s/ws/2/release/%s?inc=artists"
 
 func (c *MusicBrainzClient) GetReleaseGroup(ctx context.Context, id uuid.UUID) (*MusicBrainzReleaseGroup, error) {
@@ -75,6 +80,14 @@ func ReleaseGroupToTitles(rg *MusicBrainzReleaseGroup) []string {
 		}
 	}
 	return titles
+}
+
+func ReleaseGroupToGenres(rg *MusicBrainzReleaseGroup) []string {
+	genres := make([]string, len(rg.Genres))
+	for i, g := range rg.Genres {
+		genres[i] = g.Name
+	}
+	return genres
 }
 
 // Searches for Pseudo-Releases of release groups with Latin script, and returns them as an array

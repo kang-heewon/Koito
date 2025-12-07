@@ -115,6 +115,12 @@ func (d *Psql) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Albu
 	ret.TimeListened = seconds
 	ret.FirstListen = firstListen.ListenedAt.Unix()
 
+	genres, err := d.getGenresForRelease(ctx, ret.ID)
+	if err != nil {
+		l.Warn().Err(err).Msgf("GetAlbum: failed to get genres for album %d", ret.ID)
+	}
+	ret.Genres = genres
+
 	return ret, nil
 }
 

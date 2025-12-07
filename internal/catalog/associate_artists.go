@@ -266,6 +266,15 @@ func resolveAliasOrCreateArtist(ctx context.Context, mbzID uuid.UUID, names []st
 		return nil, fmt.Errorf("resolveAliasOrCreateArtist: %w", err)
 	}
 	l.Info().Msgf("Created artist '%s' with MusicBrainz Artist ID", canonical)
+
+	genres, err := opts.Mbzc.GetArtistGenres(ctx, mbzID)
+	if err == nil && len(genres) > 0 {
+		l.Debug().Msgf("Saving genres %v for artist '%s'", genres, canonical)
+		if saveErr := d.SaveArtistGenres(ctx, u.ID, genres); saveErr != nil {
+			l.Warn().Err(saveErr).Msgf("Failed to save genres for artist '%s'", canonical)
+		}
+	}
+
 	return u, nil
 }
 

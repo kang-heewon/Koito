@@ -48,6 +48,8 @@ const (
 	FETCH_IMAGES_DURING_IMPORT_ENV = "KOITO_FETCH_IMAGES_DURING_IMPORT"
 	ARTIST_SEPARATORS_ENV          = "KOITO_ARTIST_SEPARATORS_REGEX"
 	LOGIN_GATE_ENV                 = "KOITO_LOGIN_GATE"
+	SPOTIFY_CLIENT_ID_ENV          = "KOITO_SPOTIFY_CLIENT_ID"
+	SPOTIFY_CLIENT_SECRET_ENV      = "KOITO_SPOTIFY_CLIENT_SECRET"
 )
 
 type config struct {
@@ -85,6 +87,9 @@ type config struct {
 	importAfter            time.Time
 	artistSeparators       []*regexp.Regexp
 	loginGate              bool
+	spotifyClientID        string
+	spotifyClientSecret    string
+	spotifyEnabled         bool
 }
 
 var (
@@ -208,6 +213,15 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 
 	if strings.ToLower(getenv(LOGIN_GATE_ENV)) == "true" {
 		cfg.loginGate = true
+	}
+
+	cfg.spotifyClientID = getenv(SPOTIFY_CLIENT_ID_ENV)
+	cfg.spotifyClientSecret = getenv(SPOTIFY_CLIENT_SECRET_ENV)
+	if cfg.spotifyClientID != "" || cfg.spotifyClientSecret != "" {
+		if cfg.spotifyClientID == "" || cfg.spotifyClientSecret == "" {
+			return nil, fmt.Errorf("loadConfig: invalid configuration: both %s and %s must be set in order to use spotify image fetching", SPOTIFY_CLIENT_ID_ENV, SPOTIFY_CLIENT_SECRET_ENV)
+		}
+		cfg.spotifyEnabled = true
 	}
 
 	switch strings.ToLower(getenv(LOG_LEVEL_ENV)) {
@@ -420,4 +434,22 @@ func LoginGate() bool {
 	lock.RLock()
 	defer lock.RUnlock()
 	return globalConfig.loginGate
+}
+
+func SpotifyEnabled() bool {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.spotifyEnabled
+}
+
+func SpotifyClientID() string {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.spotifyClientID
+}
+
+func SpotifyClientSecret() string {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.spotifyClientSecret
 }

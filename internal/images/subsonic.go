@@ -57,6 +57,10 @@ func NewSubsonicClient() *SubsonicClient {
 	return ret
 }
 
+func (c *SubsonicClient) Shutdown() {
+	c.requestQueue.Shutdown()
+}
+
 func (c *SubsonicClient) queue(ctx context.Context, req *http.Request) ([]byte, error) {
 	l := logger.FromContext(ctx)
 	req.Header.Set("User-Agent", c.userAgent)

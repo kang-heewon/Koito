@@ -77,6 +77,11 @@ type ArtistAlias struct {
 	IsPrimary bool
 }
 
+type ArtistGenre struct {
+	ArtistID int32
+	GenreID  int32
+}
+
 type ArtistRelease struct {
 	ArtistID  int32
 	ReleaseID int32
@@ -95,6 +100,11 @@ type ArtistsWithName struct {
 	Image         *uuid.UUID
 	ImageSource   pgtype.Text
 	Name          string
+}
+
+type Genre struct {
+	ID   int32
+	Name string
 }
 
 type Listen struct {
@@ -117,6 +127,11 @@ type ReleaseAlias struct {
 	Alias     string
 	Source    string
 	IsPrimary bool
+}
+
+type ReleaseGenre struct {
+	ReleaseID int32
+	GenreID   int32
 }
 
 type ReleasesWithTitle struct {

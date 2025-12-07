@@ -45,11 +45,16 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("GetAlbum: GetFirstListenFromArtist: %w", err)
 		}
+		genres, err := d.getGenresForArtist(ctx, row.ID)
+		if err != nil {
+			l.Warn().Err(err).Msgf("GetArtist: failed to get genres for artist %d", row.ID)
+		}
 		return &models.Artist{
 			ID:           row.ID,
 			MbzID:        row.MusicBrainzID,
 			Name:         row.Name,
 			Aliases:      row.Aliases,
+			Genres:       genres,
 			Image:        row.Image,
 			ListenCount:  count,
 			TimeListened: seconds,
@@ -80,11 +85,16 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("GetAlbum: GetFirstListenFromArtist: %w", err)
 		}
+		genres, err := d.getGenresForArtist(ctx, row.ID)
+		if err != nil {
+			l.Warn().Err(err).Msgf("GetArtist: failed to get genres for artist %d", row.ID)
+		}
 		return &models.Artist{
 			ID:           row.ID,
 			MbzID:        row.MusicBrainzID,
 			Name:         row.Name,
 			Aliases:      row.Aliases,
+			Genres:       genres,
 			Image:        row.Image,
 			ListenCount:  count,
 			TimeListened: seconds,
@@ -122,11 +132,16 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("GetAlbum: GetFirstListenFromArtist: %w", err)
 		}
+		genres, err := d.getGenresForArtist(ctx, row.ID)
+		if err != nil {
+			l.Warn().Err(err).Msgf("GetArtist: failed to get genres for artist %d", row.ID)
+		}
 		return &models.Artist{
 			ID:           row.ID,
 			MbzID:        row.MusicBrainzID,
 			Name:         row.Name,
 			Aliases:      row.Aliases,
+			Genres:       genres,
 			Image:        row.Image,
 			ListenCount:  count,
 			TimeListened: seconds,

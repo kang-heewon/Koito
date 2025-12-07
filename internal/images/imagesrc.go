@@ -16,6 +16,8 @@ type ImageSource struct {
 	deezerC         *DeezerClient
 	subsonicEnabled bool
 	subsonicC       *SubsonicClient
+	spotifyEnabled  bool
+	spotifyC        *SpotifyClient
 	caaEnabled      bool
 }
 type ImageSourceOpts struct {
@@ -23,6 +25,7 @@ type ImageSourceOpts struct {
 	EnableCAA      bool
 	EnableDeezer   bool
 	EnableSubsonic bool
+	EnableSpotify  bool
 }
 
 var once sync.Once
@@ -55,11 +58,23 @@ func Initialize(opts ImageSourceOpts) {
 			imgsrc.subsonicEnabled = true
 			imgsrc.subsonicC = NewSubsonicClient()
 		}
+		if opts.EnableSpotify {
+			imgsrc.spotifyEnabled = true
+			imgsrc.spotifyC = NewSpotifyClient()
+		}
 	})
 }
 
 func Shutdown() {
-	imgsrc.deezerC.Shutdown()
+	if imgsrc.deezerC != nil {
+		imgsrc.deezerC.Shutdown()
+	}
+	if imgsrc.subsonicC != nil {
+		imgsrc.subsonicC.Shutdown()
+	}
+	if imgsrc.spotifyC != nil {
+		imgsrc.spotifyC.Shutdown()
+	}
 }
 
 func GetArtistImage(ctx context.Context, opts ArtistImageOpts) (string, error) {
@@ -86,6 +101,16 @@ func GetArtistImage(ctx context.Context, opts ArtistImageOpts) (string, error) {
 }
 func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 	l := logger.FromContext(ctx)
+	if imgsrc.spotifyEnabled {
+		l.Debug().Msg("Attempting to find album image from Spotify")
+		img, err := imgsrc.spotifyC.GetAlbumImage(ctx, opts.Artists, opts.Album)
+		if err != nil {
+			return "", err
+		}
+		if img != "" {
+			return img, nil
+		}
+	}
 	if imgsrc.subsonicEnabled {
 		img, err := imgsrc.subsonicC.GetAlbumImage(ctx, opts.Artists[0], opts.Album)
 		if err != nil {

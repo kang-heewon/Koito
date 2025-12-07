@@ -7,6 +7,7 @@ type Artist struct {
 	MbzID        *uuid.UUID `json:"musicbrainz_id"`
 	Name         string     `json:"name"`
 	Aliases      []string   `json:"aliases"`
+	Genres       []string   `json:"genres"`
 	Image        *uuid.UUID `json:"image"`
 	ListenCount  int64      `json:"listen_count"`
 	TimeListened int64      `json:"time_listened"`
