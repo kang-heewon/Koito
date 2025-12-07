@@ -49,6 +49,14 @@ func (d *Psql) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Albu
 		ret.Title = row.Title
 		ret.Image = row.Image
 		ret.VariousArtists = row.VariousArtists
+	} else if opts.Image != uuid.Nil {
+		l.Debug().Msgf("Fetching album from DB with image id %s", opts.Image)
+		row, err := d.q.GetReleaseByImageID(ctx, &opts.Image)
+		if err != nil {
+			return nil, fmt.Errorf("GetAlbum: %w", err)
+		}
+		// reuse ID path to populate full details and artists
+		return d.GetAlbum(ctx, db.GetAlbumOpts{ID: row.ID})
 	} else if opts.ArtistID != 0 && opts.Title != "" {
 		l.Debug().Msgf("Fetching album from DB with artist_id %d and title %s", opts.ArtistID, opts.Title)
 		row, err := d.q.GetReleaseByArtistAndTitle(ctx, repository.GetReleaseByArtistAndTitleParams{

@@ -13,6 +13,7 @@ import (
 	"github.com/gabehf/koito/internal/catalog"
 	"github.com/gabehf/koito/internal/cfg"
 	"github.com/gabehf/koito/internal/db"
+	"github.com/gabehf/koito/internal/images"
 	"github.com/gabehf/koito/internal/logger"
 	"github.com/gabehf/koito/internal/utils"
 	"github.com/go-chi/chi/v5"
@@ -154,9 +155,59 @@ func serveDefaultImage(w http.ResponseWriter, r *http.Request, size catalog.Imag
 
 // finds the item associated with the image id, downloads it, and saves it in the source path, returning the path to the image
 func downloadMissingImage(ctx context.Context, store db.DB, id uuid.UUID) (string, error) {
+	l := logger.FromContext(ctx)
 	src, err := store.GetImageSource(ctx, id)
 	if err != nil {
 		return "", fmt.Errorf("downloadMissingImage: %w", err)
+	}
+	if src == "" {
+		l.Debug().Msgf("downloadMissingImage: image_source missing for %s, attempting to refetch", id)
+		if album, err := store.GetAlbum(ctx, db.GetAlbumOpts{Image: id}); err == nil {
+			artists := make([]string, 0, len(album.Artists))
+			for _, a := range album.Artists {
+				artists = append(artists, a.Name)
+			}
+			if len(artists) == 0 {
+				artists = append(artists, "")
+			}
+			imgURL, imgErr := images.GetAlbumImage(ctx, images.AlbumImageOpts{
+				Artists:      artists,
+				Album:        album.Title,
+				ReleaseMbzID: album.MbzID,
+			})
+			if imgErr == nil && imgURL != "" {
+				l.Debug().Msgf("downloadMissingImage: found album image for %s", id)
+				src = imgURL
+				_ = store.UpdateAlbum(ctx, db.UpdateAlbumOpts{
+					ID:       album.ID,
+					Image:    id,
+					ImageSrc: imgURL,
+				})
+			} else if imgErr != nil {
+				l.Debug().Err(imgErr).Msg("downloadMissingImage: album image lookup failed")
+			}
+		}
+		if src == "" {
+			if artist, err := store.GetArtist(ctx, db.GetArtistOpts{Image: id}); err == nil {
+				imgURL, imgErr := images.GetArtistImage(ctx, images.ArtistImageOpts{
+					Aliases: []string{artist.Name},
+				})
+				if imgErr == nil && imgURL != "" {
+					l.Debug().Msgf("downloadMissingImage: found artist image for %s", id)
+					src = imgURL
+					_ = store.UpdateArtist(ctx, db.UpdateArtistOpts{
+						ID:       artist.ID,
+						Image:    id,
+						ImageSrc: imgURL,
+					})
+				} else if imgErr != nil {
+					l.Debug().Err(imgErr).Msg("downloadMissingImage: artist image lookup failed")
+				}
+			}
+		}
+		if src == "" {
+			return "", fmt.Errorf("downloadMissingImage: image source not found")
+		}
 	}
 	var size catalog.ImageSize
 	if cfg.FullImageCacheEnabled() {

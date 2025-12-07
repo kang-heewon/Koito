@@ -90,6 +90,13 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 			TimeListened: seconds,
 			FirstListen:  firstListen.ListenedAt.Unix(),
 		}, nil
+	} else if opts.Image != uuid.Nil {
+		l.Debug().Msgf("Fetching artist from DB with image id %s", opts.Image)
+		row, err := d.q.GetArtistByImage(ctx, &opts.Image)
+		if err != nil {
+			return nil, fmt.Errorf("GetArtist: GetArtistByImage: %w", err)
+		}
+		return d.GetArtist(ctx, db.GetArtistOpts{ID: row.ID})
 	} else if opts.Name != "" {
 		l.Debug().Msgf("Fetching artist from DB with name '%s'", opts.Name)
 		row, err := d.q.GetArtistByName(ctx, opts.Name)
