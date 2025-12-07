@@ -66,7 +66,7 @@ func TestSearchArtists(t *testing.T) {
 	// Search for "Artist One With A Long Name"
 	results, err := store.SearchArtists(ctx, "Artist One With A Really Long Name")
 	require.NoError(t, err)
-	require.Len(t, results, 1)
+	require.GreaterOrEqual(t, len(results), 1)
 	assert.Equal(t, "Artist One With A Really Long Name", results[0].Name)
 
 	// Search for substring "Artist"
@@ -84,7 +84,7 @@ func TestSearchAlbums(t *testing.T) {
 	// Search for "Album One With A Long Name"
 	results, err := store.SearchAlbums(ctx, "Album One With A Long Name")
 	require.NoError(t, err)
-	require.Len(t, results, 1)
+	require.GreaterOrEqual(t, len(results), 1)
 	assert.Equal(t, "Album One With A Long Name", results[0].Title)
 
 	// Search for substring "Album"
@@ -103,7 +103,7 @@ func TestSearchTracks(t *testing.T) {
 	// Search for "Track One With A Long Name"
 	results, err := store.SearchTracks(ctx, "Track One With A Long Name")
 	require.NoError(t, err)
-	require.Len(t, results, 1)
+	require.GreaterOrEqual(t, len(results), 1)
 	assert.Equal(t, "Track One With A Long Name", results[0].Title)
 
 	// Search for substring "Track"

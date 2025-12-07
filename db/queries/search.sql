@@ -6,11 +6,11 @@ FROM (
         a.name,
         a.musicbrainz_id,
         a.image,
-        similarity(aa.alias, $1) AS score,
-        ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY similarity(aa.alias, $1) DESC) AS rn
+        bigm_similarity(aa.alias, $1) AS score,
+        ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY bigm_similarity(aa.alias, $1) DESC) AS rn
     FROM artist_aliases aa
     JOIN artists_with_name a ON aa.artist_id = a.id
-    WHERE similarity(aa.alias, $1) > 0.22
+    WHERE bigm_similarity(aa.alias, $1) > 0.22
 ) ranked
 WHERE rn = 1
 ORDER BY score DESC
@@ -50,12 +50,12 @@ FROM (
         t.musicbrainz_id,
         t.release_id,
         r.image,
-        similarity(ta.alias, $1) AS score,
-        ROW_NUMBER() OVER (PARTITION BY t.id ORDER BY similarity(ta.alias, $1) DESC) AS rn
+        bigm_similarity(ta.alias, $1) AS score,
+        ROW_NUMBER() OVER (PARTITION BY t.id ORDER BY bigm_similarity(ta.alias, $1) DESC) AS rn
     FROM track_aliases ta
     JOIN tracks_with_title t ON ta.track_id = t.id
     JOIN releases r ON t.release_id = r.id
-    WHERE similarity(ta.alias, $1) > 0.22
+    WHERE bigm_similarity(ta.alias, $1) > 0.22
 ) ranked
 WHERE rn = 1
 ORDER BY score DESC, title
@@ -104,11 +104,11 @@ FROM (
         r.musicbrainz_id,
         r.image,
         r.various_artists,
-        similarity(ra.alias, $1) AS score,
-        ROW_NUMBER() OVER (PARTITION BY r.id ORDER BY similarity(ra.alias, $1) DESC) AS rn
+        bigm_similarity(ra.alias, $1) AS score,
+        ROW_NUMBER() OVER (PARTITION BY r.id ORDER BY bigm_similarity(ra.alias, $1) DESC) AS rn
     FROM release_aliases ra
     JOIN releases_with_title r ON ra.release_id = r.id
-    WHERE similarity(ra.alias, $1) > 0.22
+    WHERE bigm_similarity(ra.alias, $1) > 0.22
 ) ranked
 WHERE rn = 1
 ORDER BY score DESC, title

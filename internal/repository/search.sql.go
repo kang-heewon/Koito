@@ -20,11 +20,11 @@ FROM (
         a.name,
         a.musicbrainz_id,
         a.image,
-        similarity(aa.alias, $1) AS score,
-        ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY similarity(aa.alias, $1) DESC) AS rn
+        bigm_similarity(aa.alias, $1) AS score,
+        ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY bigm_similarity(aa.alias, $1) DESC) AS rn
     FROM artist_aliases aa
     JOIN artists_with_name a ON aa.artist_id = a.id
-    WHERE similarity(aa.alias, $1) > 0.22
+    WHERE bigm_similarity(aa.alias, $1) > 0.22
 ) ranked
 WHERE rn = 1
 ORDER BY score DESC
@@ -32,8 +32,8 @@ LIMIT $2
 `
 
 type SearchArtistsParams struct {
-	Similarity string
-	Limit      int32
+	BigmSimilarity interface{}
+	Limit          int32
 }
 
 type SearchArtistsRow struct {
@@ -41,11 +41,11 @@ type SearchArtistsRow struct {
 	Name          string
 	MusicBrainzID *uuid.UUID
 	Image         *uuid.UUID
-	Score         float32
+	Score         interface{}
 }
 
 func (q *Queries) SearchArtists(ctx context.Context, arg SearchArtistsParams) ([]SearchArtistsRow, error) {
-	rows, err := q.db.Query(ctx, searchArtists, arg.Similarity, arg.Limit)
+	rows, err := q.db.Query(ctx, searchArtists, arg.BigmSimilarity, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -144,11 +144,11 @@ FROM (
         r.musicbrainz_id,
         r.image,
         r.various_artists,
-        similarity(ra.alias, $1) AS score,
-        ROW_NUMBER() OVER (PARTITION BY r.id ORDER BY similarity(ra.alias, $1) DESC) AS rn
+        bigm_similarity(ra.alias, $1) AS score,
+        ROW_NUMBER() OVER (PARTITION BY r.id ORDER BY bigm_similarity(ra.alias, $1) DESC) AS rn
     FROM release_aliases ra
     JOIN releases_with_title r ON ra.release_id = r.id
-    WHERE similarity(ra.alias, $1) > 0.22
+    WHERE bigm_similarity(ra.alias, $1) > 0.22
 ) ranked
 WHERE rn = 1
 ORDER BY score DESC, title
@@ -156,8 +156,8 @@ LIMIT $2
 `
 
 type SearchReleasesParams struct {
-	Similarity string
-	Limit      int32
+	BigmSimilarity interface{}
+	Limit          int32
 }
 
 type SearchReleasesRow struct {
@@ -166,12 +166,12 @@ type SearchReleasesRow struct {
 	MusicBrainzID  *uuid.UUID
 	Image          *uuid.UUID
 	VariousArtists bool
-	Score          float32
+	Score          interface{}
 	Artists        []byte
 }
 
 func (q *Queries) SearchReleases(ctx context.Context, arg SearchReleasesParams) ([]SearchReleasesRow, error) {
-	rows, err := q.db.Query(ctx, searchReleases, arg.Similarity, arg.Limit)
+	rows, err := q.db.Query(ctx, searchReleases, arg.BigmSimilarity, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -284,12 +284,12 @@ FROM (
         t.musicbrainz_id,
         t.release_id,
         r.image,
-        similarity(ta.alias, $1) AS score,
-        ROW_NUMBER() OVER (PARTITION BY t.id ORDER BY similarity(ta.alias, $1) DESC) AS rn
+        bigm_similarity(ta.alias, $1) AS score,
+        ROW_NUMBER() OVER (PARTITION BY t.id ORDER BY bigm_similarity(ta.alias, $1) DESC) AS rn
     FROM track_aliases ta
     JOIN tracks_with_title t ON ta.track_id = t.id
     JOIN releases r ON t.release_id = r.id
-    WHERE similarity(ta.alias, $1) > 0.22
+    WHERE bigm_similarity(ta.alias, $1) > 0.22
 ) ranked
 WHERE rn = 1
 ORDER BY score DESC, title
@@ -297,8 +297,8 @@ LIMIT $2
 `
 
 type SearchTracksParams struct {
-	Similarity string
-	Limit      int32
+	BigmSimilarity interface{}
+	Limit          int32
 }
 
 type SearchTracksRow struct {
@@ -307,12 +307,12 @@ type SearchTracksRow struct {
 	MusicBrainzID *uuid.UUID
 	ReleaseID     int32
 	Image         *uuid.UUID
-	Score         float32
+	Score         interface{}
 	Artists       []byte
 }
 
 func (q *Queries) SearchTracks(ctx context.Context, arg SearchTracksParams) ([]SearchTracksRow, error) {
-	rows, err := q.db.Query(ctx, searchTracks, arg.Similarity, arg.Limit)
+	rows, err := q.db.Query(ctx, searchTracks, arg.BigmSimilarity, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

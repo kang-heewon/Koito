@@ -34,8 +34,8 @@ func (d *Psql) SearchArtists(ctx context.Context, q string) ([]*models.Artist, e
 		return ret, nil
 	} else {
 		rows, err := d.q.SearchArtists(ctx, repository.SearchArtistsParams{
-			Similarity: q,
-			Limit:      searchItemLimit,
+			BigmSimilarity: q,
+			Limit:          searchItemLimit,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("SearchArtist: SearchArtists: %w", err)
@@ -79,8 +79,8 @@ func (d *Psql) SearchAlbums(ctx context.Context, q string) ([]*models.Album, err
 		return ret, nil
 	} else {
 		rows, err := d.q.SearchReleases(ctx, repository.SearchReleasesParams{
-			Similarity: q,
-			Limit:      searchItemLimit,
+			BigmSimilarity: q,
+			Limit:          searchItemLimit,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("SearchAlbums: SearchReleases: %w", err)
@@ -128,8 +128,8 @@ func (d *Psql) SearchTracks(ctx context.Context, q string) ([]*models.Track, err
 		return ret, nil
 	} else {
 		rows, err := d.q.SearchTracks(ctx, repository.SearchTracksParams{
-			Similarity: q,
-			Limit:      searchItemLimit,
+			BigmSimilarity: q,
+			Limit:          searchItemLimit,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("SearchTracks: SearchTracks: %w", err)

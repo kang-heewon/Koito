@@ -265,7 +265,12 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to Docker: %s", err)
 	}
 
-	resource, err := pool.Run("postgres", "latest", []string{"POSTGRES_PASSWORD=secret"})
+	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "ghcr.io/kang-heewon/postgresql-local",
+		Tag:        "18",
+		Env:        []string{"POSTGRES_PASSWORD=secret"},
+		Cmd:        []string{"postgres", "-c", "shared_preload_libraries=pg_bigm"},
+	})
 	if err != nil {
 		log.Fatalf("Could not start resource: %s", err)
 	}
