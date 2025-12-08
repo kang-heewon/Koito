@@ -67,8 +67,8 @@ type spotifyArtistFull struct {
 
 const (
 	spotifyTokenURL          = "https://accounts.spotify.com/api/token"
-	spotifySearchFmt         = "https://api.spotify.com/v1/search?type=album&limit=5&q=%s"
-	spotifyArtistSearchFmt   = "https://api.spotify.com/v1/search?type=artist&limit=5&q=%s"
+	spotifySearchFmt         = "https://api.spotify.com/v1/search?type=album&limit=5&market=KR&q=%s"
+	spotifyArtistSearchFmt   = "https://api.spotify.com/v1/search?type=artist&limit=5&market=KR&q=%s"
 	tokenExpiryPadding       = 60 * time.Second
 )
 
