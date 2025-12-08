@@ -29,13 +29,18 @@ func BackfillAlbumGenres(ctx context.Context, store db.DB, mbzc mbz.MusicBrainzC
 		for _, album := range albums {
 			lastID = album.ID
 
-			rg, err := mbzc.GetReleaseGroup(ctx, album.MbzID)
+			release, err := mbzc.GetReleaseWithGenres(ctx, album.MbzID)
 			if err != nil {
-				l.Debug().Err(err).Msgf("BackfillAlbumGenres: Failed to get release group for album %d", album.ID)
+				l.Debug().Err(err).Msgf("BackfillAlbumGenres: Failed to get release for album %d", album.ID)
 				continue
 			}
 
-			genres := mbz.ReleaseGroupToGenres(rg)
+			if release.ReleaseGroup == nil {
+				l.Debug().Msgf("BackfillAlbumGenres: No release group found for album %d", album.ID)
+				continue
+			}
+
+			genres := mbz.ReleaseGroupToGenres(release.ReleaseGroup)
 			if len(genres) == 0 {
 				continue
 			}

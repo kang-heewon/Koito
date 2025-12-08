@@ -32,6 +32,7 @@ type MusicBrainzCaller interface {
 	GetTrack(ctx context.Context, id uuid.UUID) (*MusicBrainzTrack, error)
 	GetReleaseGroup(ctx context.Context, id uuid.UUID) (*MusicBrainzReleaseGroup, error)
 	GetRelease(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error)
+	GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error)
 	Shutdown()
 }
 
@@ -82,11 +83,13 @@ func (c *MusicBrainzClient) queue(ctx context.Context, req *http.Request) ([]byt
 			l.Err(err).Str("url", req.RequestURI).Msg("Failed to contact MusicBrainz")
 			done <- queue.RequestResult{Err: err}
 			return
-		} else if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-			err = fmt.Errorf("recieved non-ok status from MusicBrainz: %s", resp.Status)
-			done <- queue.RequestResult{Body: nil, Err: err}
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+			err = fmt.Errorf("recieved non-ok status from MusicBrainz: %s", resp.Status)
+			done <- queue.RequestResult{Body: nil, Err: err}
+			return
+		}
 
 		body, err := io.ReadAll(resp.Body)
 		done <- queue.RequestResult{Body: body, Err: err}

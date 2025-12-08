@@ -79,17 +79,25 @@ func Shutdown() {
 
 func GetArtistImage(ctx context.Context, opts ArtistImageOpts) (string, error) {
 	l := logger.FromContext(ctx)
+	if imgsrc.spotifyEnabled {
+		l.Debug().Msg("Attempting to find artist image from Spotify")
+		img, err := imgsrc.spotifyC.GetArtistImage(ctx, opts.Aliases)
+		if err != nil {
+			l.Debug().Err(err).Msg("Could not find artist image from Spotify")
+		} else if img != "" {
+			return img, nil
+		}
+	}
 	if imgsrc.subsonicEnabled {
 		img, err := imgsrc.subsonicC.GetArtistImage(ctx, opts.Aliases[0])
 		if err != nil {
-			return "", err
-		}
-		if img != "" {
+			l.Debug().Err(err).Msg("Could not find artist image from Subsonic")
+		} else if img != "" {
 			return img, nil
 		}
-		l.Debug().Msg("Could not find artist image from Subsonic")
 	}
-	if imgsrc.deezerC != nil {
+	if imgsrc.deezerEnabled {
+		l.Debug().Msg("Attempting to find artist image from Deezer")
 		img, err := imgsrc.deezerC.GetArtistImages(ctx, opts.Aliases)
 		if err != nil {
 			return "", err

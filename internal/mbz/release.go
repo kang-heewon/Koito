@@ -25,6 +25,7 @@ type MusicBrainzRelease struct {
 	ArtistCredit       []MusicBrainzArtistCredit `json:"artist-credit"`
 	Status             string                    `json:"status"`
 	TextRepresentation TextRepresentation        `json:"text-representation"`
+	ReleaseGroup       *MusicBrainzReleaseGroup  `json:"release-group"`
 }
 type MusicBrainzArtistCredit struct {
 	Artist MusicBrainzArtist `json:"artist"`
@@ -37,6 +38,7 @@ type TextRepresentation struct {
 
 const releaseGroupFmtStr = "%s/ws/2/release-group/%s?inc=releases+artists+genres"
 const releaseFmtStr = "%s/ws/2/release/%s?inc=artists"
+const releaseWithGenresFmtStr = "%s/ws/2/release/%s?inc=release-groups+genres"
 
 func (c *MusicBrainzClient) GetReleaseGroup(ctx context.Context, id uuid.UUID) (*MusicBrainzReleaseGroup, error) {
 	mbzRG := new(MusicBrainzReleaseGroup)
@@ -52,6 +54,15 @@ func (c *MusicBrainzClient) GetRelease(ctx context.Context, id uuid.UUID) (*Musi
 	err := c.getEntity(ctx, releaseFmtStr, id, mbzRelease)
 	if err != nil {
 		return nil, fmt.Errorf("GetRelease: %w", err)
+	}
+	return mbzRelease, nil
+}
+
+func (c *MusicBrainzClient) GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
+	mbzRelease := new(MusicBrainzRelease)
+	err := c.getEntity(ctx, releaseWithGenresFmtStr, id, mbzRelease)
+	if err != nil {
+		return nil, fmt.Errorf("GetReleaseWithGenres: %w", err)
 	}
 	return mbzRelease, nil
 }

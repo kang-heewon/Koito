@@ -39,6 +39,9 @@ type spotifySearchResponse struct {
 	Albums struct {
 		Items []spotifyAlbum `json:"items"`
 	} `json:"albums"`
+	Artists struct {
+		Items []spotifyArtistFull `json:"items"`
+	} `json:"artists"`
 }
 
 type spotifyAlbum struct {
@@ -57,10 +60,16 @@ type spotifyArtist struct {
 	Name string `json:"name"`
 }
 
+type spotifyArtistFull struct {
+	Name   string         `json:"name"`
+	Images []spotifyImage `json:"images"`
+}
+
 const (
-	spotifyTokenURL    = "https://accounts.spotify.com/api/token"
-	spotifySearchFmt   = "https://api.spotify.com/v1/search?type=album&limit=5&q=%s"
-	tokenExpiryPadding = 60 * time.Second
+	spotifyTokenURL          = "https://accounts.spotify.com/api/token"
+	spotifySearchFmt         = "https://api.spotify.com/v1/search?type=album&limit=5&q=%s"
+	spotifyArtistSearchFmt   = "https://api.spotify.com/v1/search?type=artist&limit=5&q=%s"
+	tokenExpiryPadding       = 60 * time.Second
 )
 
 func NewSpotifyClient() *SpotifyClient {
@@ -199,6 +208,78 @@ func (c *SpotifyClient) GetAlbumImage(ctx context.Context, artists []string, alb
 	}
 
 	return "", fmt.Errorf("GetAlbumImage: album image not found")
+}
+
+func (c *SpotifyClient) GetArtistImage(ctx context.Context, aliases []string) (string, error) {
+	l := logger.FromContext(ctx)
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return "", fmt.Errorf("GetArtistImage: %w", err)
+	}
+
+	artistCandidates := utils.UniqueIgnoringCase(aliases)
+	for _, artist := range artistCandidates {
+		if strings.TrimSpace(artist) == "" {
+			continue
+		}
+		query := fmt.Sprintf(`artist:"%s"`, artist)
+		img, unauthorized, err := c.searchArtist(ctx, token, query, artist)
+		if unauthorized {
+			c.tokenMu.Lock()
+			c.token = ""
+			c.tokenExpiry = time.Time{}
+			c.tokenMu.Unlock()
+			token, err = c.getToken(ctx)
+			if err != nil {
+				return "", fmt.Errorf("GetArtistImage: %w", err)
+			}
+			img, unauthorized, err = c.searchArtist(ctx, token, query, artist)
+		}
+		if err != nil {
+			return "", fmt.Errorf("GetArtistImage: %w", err)
+		}
+		if unauthorized {
+			return "", fmt.Errorf("GetArtistImage: Spotify returned unauthorized for artist query")
+		}
+		if img != "" {
+			l.Debug().Str("query", query).Msg("Found artist image from Spotify")
+			return img, nil
+		}
+	}
+
+	return "", fmt.Errorf("GetArtistImage: artist image not found")
+}
+
+func (c *SpotifyClient) searchArtist(ctx context.Context, token, query, artist string) (string, bool, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf(spotifyArtistSearchFmt, url.QueryEscape(query)), nil)
+	if err != nil {
+		return "", false, fmt.Errorf("searchArtist: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	body, status, err := c.queue(ctx, req)
+	if status == http.StatusUnauthorized {
+		return "", true, fmt.Errorf("searchArtist: received unauthorized status")
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("searchArtist: %w", err)
+	}
+
+	resp := new(spotifySearchResponse)
+	err = json.Unmarshal(body, resp)
+	if err != nil {
+		return "", false, fmt.Errorf("searchArtist: %w", err)
+	}
+
+	for _, item := range resp.Artists.Items {
+		if !strings.EqualFold(item.Name, artist) {
+			continue
+		}
+		if len(item.Images) > 0 {
+			return item.Images[0].URL, false, nil
+		}
+	}
+	return "", false, nil
 }
 
 func (c *SpotifyClient) searchAlbum(ctx context.Context, token, query, album string, artists []string) (string, bool, error) {

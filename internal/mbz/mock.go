@@ -33,6 +33,14 @@ func (m *MbzMockCaller) GetRelease(ctx context.Context, id uuid.UUID) (*MusicBra
 	return release, nil
 }
 
+func (m *MbzMockCaller) GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
+	release, exists := m.Releases[id]
+	if !exists {
+		return nil, fmt.Errorf("release with ID %s not found", id)
+	}
+	return release, nil
+}
+
 func (m *MbzMockCaller) GetReleaseTitles(ctx context.Context, RGID uuid.UUID) ([]string, error) {
 	rg, exists := m.ReleaseGroups[RGID]
 	if !exists {
@@ -92,6 +100,10 @@ func (m *MbzErrorCaller) GetReleaseGroup(ctx context.Context, id uuid.UUID) (*Mu
 
 func (m *MbzErrorCaller) GetRelease(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
 	return nil, fmt.Errorf("error: GetRelease not implemented")
+}
+
+func (m *MbzErrorCaller) GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
+	return nil, fmt.Errorf("error: GetReleaseWithGenres not implemented")
 }
 
 func (m *MbzErrorCaller) GetReleaseTitles(ctx context.Context, RGID uuid.UUID) ([]string, error) {
