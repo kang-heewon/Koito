@@ -50,6 +50,7 @@ export default function Wrapped() {
                   <span className="text-[var(--color-accent)]">●</span> 시간대별 청취
                </h2>
                <div className="h-[300px]">
+                 {(data.listening_hours || []).length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
                    <BarChart data={data.listening_hours}>
                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} stroke="var(--color-fg)" />
@@ -77,8 +78,11 @@ export default function Wrapped() {
                        fill="var(--color-primary)" 
                        radius={[4, 4, 0, 0]} 
                      />
-                   </BarChart>
-                 </ResponsiveContainer>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full opacity-50">데이터 없음</div>
+                  )}
                </div>
             </div>
 
@@ -120,8 +124,11 @@ export default function Wrapped() {
                <h2 className="text-2xl font-bold mb-8 flex items-center gap-2">
                   <span className="text-[var(--color-primary)]">★</span> 새로 발견한 아티스트
                </h2>
+               {(data.top_new_artists || []).length === 0 ? (
+                 <div className="flex items-center justify-center h-32 opacity-50">데이터 없음</div>
+               ) : (
                <div className="space-y-6">
-                 {data.top_new_artists.slice(0, 5).map((artist, i) => (
+                  {(data.top_new_artists || []).slice(0, 5).map((artist, i) => (
                    <Link to={`/artist/${artist.id}`} key={artist.id} className="flex items-center gap-4 group hover:bg-[var(--color-fg-tertiary)] p-2 rounded-lg transition-colors -mx-2">
                      <div className="w-14 h-14 rounded-full overflow-hidden shadow-sm">
                        <img src={imageUrl(artist.image, "small")} alt={artist.name} className="w-full h-full object-cover" />
@@ -131,8 +138,9 @@ export default function Wrapped() {
                        <div className="text-sm opacity-60">{artist.listen_count}회</div>
                      </div>
                    </Link>
-                 ))}
-               </div>
+                  ))}
+                </div>
+               )}
             </div>
 
             <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)] flex flex-col">
@@ -177,11 +185,15 @@ function StatCard({ title, value }: { title: string, value: React.ReactNode }) {
 }
 
 function TopList({ title, items, type }: { title: string, items: any[], type: 'track' | 'artist' | 'album' }) {
+  const safeItems = items || [];
   return (
     <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
       <h2 className="text-2xl font-bold mb-8">{title}</h2>
+      {safeItems.length === 0 ? (
+        <div className="flex items-center justify-center h-32 opacity-50">데이터 없음</div>
+      ) : (
       <div className="space-y-6">
-        {items.slice(0, 5).map((item, i) => (
+        {safeItems.slice(0, 5).map((item, i) => (
           <div key={item.id} className="flex items-center gap-4 group">
             <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center font-black text-xl 
                 ${i === 0 ? 'text-[var(--color-accent)] scale-110' : 
@@ -203,9 +215,10 @@ function TopList({ title, items, type }: { title: string, items: any[], type: 't
                  {item.listen_count}회
                </div>
             </div>
-          </div>
-        ))}
+            </div>
+          ))}
       </div>
+      )}
     </div>
   )
 }
