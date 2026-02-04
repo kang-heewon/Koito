@@ -7,6 +7,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -112,6 +113,94 @@ func (q *Queries) GetGenreByName(ctx context.Context, name string) (Genre, error
 	var i Genre
 	err := row.Scan(&i.ID, &i.Name)
 	return i, err
+}
+
+const getGenreStatsByListenCount = `-- name: GetGenreStatsByListenCount :many
+SELECT
+    g.name,
+    COUNT(l.listened_at) AS listen_count
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+JOIN releases r ON t.release_id = r.id
+JOIN release_genres rg ON r.id = rg.release_id
+JOIN genres g ON rg.genre_id = g.id
+WHERE l.listened_at BETWEEN $1 AND $2
+GROUP BY g.name
+ORDER BY listen_count DESC
+`
+
+type GetGenreStatsByListenCountParams struct {
+	ListenedAt   time.Time
+	ListenedAt_2 time.Time
+}
+
+type GetGenreStatsByListenCountRow struct {
+	Name        string
+	ListenCount int64
+}
+
+func (q *Queries) GetGenreStatsByListenCount(ctx context.Context, arg GetGenreStatsByListenCountParams) ([]GetGenreStatsByListenCountRow, error) {
+	rows, err := q.db.Query(ctx, getGenreStatsByListenCount, arg.ListenedAt, arg.ListenedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGenreStatsByListenCountRow
+	for rows.Next() {
+		var i GetGenreStatsByListenCountRow
+		if err := rows.Scan(&i.Name, &i.ListenCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getGenreStatsByTimeListened = `-- name: GetGenreStatsByTimeListened :many
+SELECT
+    g.name,
+    COALESCE(SUM(t.duration), 0)::BIGINT AS seconds_listened
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+JOIN releases r ON t.release_id = r.id
+JOIN release_genres rg ON r.id = rg.release_id
+JOIN genres g ON rg.genre_id = g.id
+WHERE l.listened_at BETWEEN $1 AND $2
+GROUP BY g.name
+ORDER BY seconds_listened DESC
+`
+
+type GetGenreStatsByTimeListenedParams struct {
+	ListenedAt   time.Time
+	ListenedAt_2 time.Time
+}
+
+type GetGenreStatsByTimeListenedRow struct {
+	Name            string
+	SecondsListened int64
+}
+
+func (q *Queries) GetGenreStatsByTimeListened(ctx context.Context, arg GetGenreStatsByTimeListenedParams) ([]GetGenreStatsByTimeListenedRow, error) {
+	rows, err := q.db.Query(ctx, getGenreStatsByTimeListened, arg.ListenedAt, arg.ListenedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGenreStatsByTimeListenedRow
+	for rows.Next() {
+		var i GetGenreStatsByTimeListenedRow
+		if err := rows.Scan(&i.Name, &i.SecondsListened); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getGenresByNames = `-- name: GetGenresByNames :many

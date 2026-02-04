@@ -1,4 +1,4 @@
-import { ExternalLink, Home, Info } from "lucide-react";
+import { ExternalLink, Home, Info, PieChart, RefreshCw, Sparkles } from "lucide-react";
 import SidebarSearch from "./SidebarSearch";
 import SidebarItem from "./SidebarItem";
 import SidebarSettings from "./SidebarSettings";
@@ -34,6 +34,15 @@ export default function Sidebar() {
                     <Home size={iconSize} />
                 </SidebarItem>
                 <SidebarSearch size={iconSize} />
+                <SidebarItem space={10} to="/chart/genres" name="장르 통계" onClick={() => {}} modal={<></>}>
+                    <PieChart size={iconSize} />
+                </SidebarItem>
+                <SidebarItem space={10} to="/recommendations" name="다시 들어볼 곡" onClick={() => {}} modal={<></>}>
+                    <RefreshCw size={iconSize} />
+                </SidebarItem>
+                <SidebarItem space={10} to="/wrapped" name="연간 리포트" onClick={() => {}} modal={<></>}>
+                    <Sparkles size={iconSize} />
+                </SidebarItem>
             </div>
             <div className="flex gap-4 sm:flex-col">
                 <SidebarItem

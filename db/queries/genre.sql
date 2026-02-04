@@ -59,3 +59,29 @@ WHERE a.musicbrainz_id IS NOT NULL
   )
 ORDER BY a.id ASC
 LIMIT $1;
+
+-- name: GetGenreStatsByListenCount :many
+SELECT
+    g.name,
+    COUNT(l.listened_at) AS listen_count
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+JOIN releases r ON t.release_id = r.id
+JOIN release_genres rg ON r.id = rg.release_id
+JOIN genres g ON rg.genre_id = g.id
+WHERE l.listened_at BETWEEN $1 AND $2
+GROUP BY g.name
+ORDER BY listen_count DESC;
+
+-- name: GetGenreStatsByTimeListened :many
+SELECT
+    g.name,
+    COALESCE(SUM(t.duration), 0)::BIGINT AS seconds_listened
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+JOIN releases r ON t.release_id = r.id
+JOIN release_genres rg ON r.id = rg.release_id
+JOIN genres g ON rg.genre_id = g.id
+WHERE l.listened_at BETWEEN $1 AND $2
+GROUP BY g.name
+ORDER BY seconds_listened DESC;

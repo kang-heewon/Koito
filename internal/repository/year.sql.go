@@ -163,29 +163,38 @@ WITH first_artist_plays_in_year AS (
         MIN(l.listened_at) AS first_listen
     FROM listens l
     JOIN artist_tracks at ON at.track_id = l.track_id
-    WHERE EXTRACT(YEAR FROM l.listened_at) = 2024
+    WHERE l.user_id = $2::int
+      AND EXTRACT(YEAR FROM l.listened_at) = $1::int
       AND NOT EXISTS (
           SELECT 1
           FROM listens l2
           JOIN artist_tracks at2 ON at2.track_id = l2.track_id
           WHERE l2.user_id = l.user_id
             AND at2.artist_id = at.artist_id
-            AND l2.listened_at < DATE '2024-01-01'
+            AND l2.listened_at < make_date($1::int, 1, 1)
       )
     GROUP BY l.user_id, at.artist_id
 ) 
 SELECT
     f.user_id,
     f.artist_id,
-    f.first_listen, a.name,
+    f.first_listen,
+    a.name,
     COUNT(l.*) AS total_plays_in_year
 FROM first_artist_plays_in_year f
 JOIN listens l ON l.user_id = f.user_id
-JOIN artist_tracks at ON at.track_id = l.track_id JOIN artists_with_name a ON at.artist_id = a.id
+JOIN artist_tracks at ON at.track_id = l.track_id
+JOIN artists_with_name a ON at.artist_id = a.id
 WHERE at.artist_id = f.artist_id
-  AND EXTRACT(YEAR FROM l.listened_at) = 2024
-GROUP BY f.user_id, f.artist_id, f.first_listen, a.name HAVING COUNT(*) = 1
+  AND EXTRACT(YEAR FROM l.listened_at) = $1::int
+GROUP BY f.user_id, f.artist_id, f.first_listen, a.name
+HAVING COUNT(*) = 1
 `
+
+type GetArtistsWithOnlyOnePlayInYearParams struct {
+	Year   int32
+	UserID int32
+}
 
 type GetArtistsWithOnlyOnePlayInYearRow struct {
 	UserID           int32
@@ -195,8 +204,8 @@ type GetArtistsWithOnlyOnePlayInYearRow struct {
 	TotalPlaysInYear int64
 }
 
-func (q *Queries) GetArtistsWithOnlyOnePlayInYear(ctx context.Context) ([]GetArtistsWithOnlyOnePlayInYearRow, error) {
-	rows, err := q.db.Query(ctx, getArtistsWithOnlyOnePlayInYear)
+func (q *Queries) GetArtistsWithOnlyOnePlayInYear(ctx context.Context, arg GetArtistsWithOnlyOnePlayInYearParams) ([]GetArtistsWithOnlyOnePlayInYearRow, error) {
+	rows, err := q.db.Query(ctx, getArtistsWithOnlyOnePlayInYear, arg.Year, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -228,10 +237,16 @@ SELECT
     get_artists_for_track(t.id) as artists 
 FROM listens l 
 LEFT JOIN tracks_with_title t ON l.track_id = t.id 
-WHERE EXTRACT(YEAR FROM l.listened_at) = 2025 
+WHERE EXTRACT(YEAR FROM l.listened_at) = $1::int
+  AND l.user_id = $2::int
 ORDER BY l.listened_at ASC 
 LIMIT 1
 `
+
+type GetFirstListenInYearParams struct {
+	Year   int32
+	UserID int32
+}
 
 type GetFirstListenInYearRow struct {
 	TrackID       int32
@@ -246,8 +261,8 @@ type GetFirstListenInYearRow struct {
 	Artists       []byte
 }
 
-func (q *Queries) GetFirstListenInYear(ctx context.Context) (GetFirstListenInYearRow, error) {
-	row := q.db.QueryRow(ctx, getFirstListenInYear)
+func (q *Queries) GetFirstListenInYear(ctx context.Context, arg GetFirstListenInYearParams) (GetFirstListenInYearRow, error) {
+	row := q.db.QueryRow(ctx, getFirstListenInYear, arg.Year, arg.UserID)
 	var i GetFirstListenInYearRow
 	err := row.Scan(
 		&i.TrackID,
@@ -313,6 +328,47 @@ func (q *Queries) GetListenPercentageInTimeWindowInYear(ctx context.Context, arg
 	var i GetListenPercentageInTimeWindowInYearRow
 	err := row.Scan(&i.InWindow, &i.TotalListens, &i.PercentOfTotal)
 	return i, err
+}
+
+const getListeningHoursDistributionInYear = `-- name: GetListeningHoursDistributionInYear :many
+SELECT
+    EXTRACT(HOUR FROM listened_at)::int AS hour,
+    COUNT(*) AS count
+FROM listens
+WHERE user_id = $1::int
+  AND EXTRACT(YEAR FROM listened_at) = $2::int
+GROUP BY hour
+ORDER BY hour
+`
+
+type GetListeningHoursDistributionInYearParams struct {
+	UserID int32
+	Year   int32
+}
+
+type GetListeningHoursDistributionInYearRow struct {
+	Hour  int32
+	Count int64
+}
+
+func (q *Queries) GetListeningHoursDistributionInYear(ctx context.Context, arg GetListeningHoursDistributionInYearParams) ([]GetListeningHoursDistributionInYearRow, error) {
+	rows, err := q.db.Query(ctx, getListeningHoursDistributionInYear, arg.UserID, arg.Year)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetListeningHoursDistributionInYearRow
+	for rows.Next() {
+		var i GetListeningHoursDistributionInYearRow
+		if err := rows.Scan(&i.Hour, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getMostReplayedTrackInYear = `-- name: GetMostReplayedTrackInYear :one
@@ -485,6 +541,192 @@ func (q *Queries) GetPercentageOfTotalListensFromTopTracksInYear(ctx context.Con
 	return i, err
 }
 
+const getTopAlbumsInYear = `-- name: GetTopAlbumsInYear :many
+SELECT
+    r.id AS release_id,
+    r.title,
+    COUNT(l.*) as listen_count
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+JOIN releases_with_title r ON t.release_id = r.id
+WHERE l.user_id = $2::int
+  AND EXTRACT(YEAR FROM l.listened_at) = $3::int
+GROUP BY r.id, r.title
+ORDER BY listen_count DESC
+LIMIT $1
+`
+
+type GetTopAlbumsInYearParams struct {
+	Limit  int32
+	UserID int32
+	Year   int32
+}
+
+type GetTopAlbumsInYearRow struct {
+	ReleaseID   int32
+	Title       string
+	ListenCount int64
+}
+
+func (q *Queries) GetTopAlbumsInYear(ctx context.Context, arg GetTopAlbumsInYearParams) ([]GetTopAlbumsInYearRow, error) {
+	rows, err := q.db.Query(ctx, getTopAlbumsInYear, arg.Limit, arg.UserID, arg.Year)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopAlbumsInYearRow
+	for rows.Next() {
+		var i GetTopAlbumsInYearRow
+		if err := rows.Scan(&i.ReleaseID, &i.Title, &i.ListenCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopArtistsInYear = `-- name: GetTopArtistsInYear :many
+SELECT
+    a.id AS artist_id,
+    a.name,
+    COUNT(l.*) as listen_count
+FROM listens l
+JOIN artist_tracks at ON l.track_id = at.track_id
+JOIN artists_with_name a ON at.artist_id = a.id
+WHERE l.user_id = $2::int
+  AND EXTRACT(YEAR FROM l.listened_at) = $3::int
+GROUP BY a.id, a.name
+ORDER BY listen_count DESC
+LIMIT $1
+`
+
+type GetTopArtistsInYearParams struct {
+	Limit  int32
+	UserID int32
+	Year   int32
+}
+
+type GetTopArtistsInYearRow struct {
+	ArtistID    int32
+	Name        string
+	ListenCount int64
+}
+
+func (q *Queries) GetTopArtistsInYear(ctx context.Context, arg GetTopArtistsInYearParams) ([]GetTopArtistsInYearRow, error) {
+	rows, err := q.db.Query(ctx, getTopArtistsInYear, arg.Limit, arg.UserID, arg.Year)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopArtistsInYearRow
+	for rows.Next() {
+		var i GetTopArtistsInYearRow
+		if err := rows.Scan(&i.ArtistID, &i.Name, &i.ListenCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopTracksInYear = `-- name: GetTopTracksInYear :many
+SELECT
+    t.id AS track_id,
+    t.title,
+    get_artists_for_track(t.id) as artists,
+    COUNT(l.*) as listen_count
+FROM listens l
+JOIN tracks_with_title t ON l.track_id = t.id
+WHERE l.user_id = $2::int
+  AND EXTRACT(YEAR FROM l.listened_at) = $3::int
+GROUP BY t.id, t.title
+ORDER BY listen_count DESC
+LIMIT $1
+`
+
+type GetTopTracksInYearParams struct {
+	Limit  int32
+	UserID int32
+	Year   int32
+}
+
+type GetTopTracksInYearRow struct {
+	TrackID     int32
+	Title       string
+	Artists     []byte
+	ListenCount int64
+}
+
+func (q *Queries) GetTopTracksInYear(ctx context.Context, arg GetTopTracksInYearParams) ([]GetTopTracksInYearRow, error) {
+	rows, err := q.db.Query(ctx, getTopTracksInYear, arg.Limit, arg.UserID, arg.Year)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopTracksInYearRow
+	for rows.Next() {
+		var i GetTopTracksInYearRow
+		if err := rows.Scan(
+			&i.TrackID,
+			&i.Title,
+			&i.Artists,
+			&i.ListenCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTotalListenCountInYear = `-- name: GetTotalListenCountInYear :one
+SELECT count(*)
+FROM listens
+WHERE user_id = $1::int
+  AND EXTRACT(YEAR FROM listened_at) = $2::int
+`
+
+type GetTotalListenCountInYearParams struct {
+	UserID int32
+	Year   int32
+}
+
+func (q *Queries) GetTotalListenCountInYear(ctx context.Context, arg GetTotalListenCountInYearParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalListenCountInYear, arg.UserID, arg.Year)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getTotalTimeListenedInYear = `-- name: GetTotalTimeListenedInYear :one
+SELECT COALESCE(SUM(t.duration), 0)::bigint
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+WHERE l.user_id = $1::int
+  AND EXTRACT(YEAR FROM l.listened_at) = $2::int
+`
+
+type GetTotalTimeListenedInYearParams struct {
+	UserID int32
+	Year   int32
+}
+
+func (q *Queries) GetTotalTimeListenedInYear(ctx context.Context, arg GetTotalTimeListenedInYearParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalTimeListenedInYear, arg.UserID, arg.Year)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getTracksPlayedAtLeastOncePerMonthInYear = `-- name: GetTracksPlayedAtLeastOncePerMonthInYear :many
 WITH monthly_plays AS (
     SELECT
@@ -492,6 +734,7 @@ WITH monthly_plays AS (
         EXTRACT(MONTH FROM l.listened_at) AS month
     FROM listens l
     WHERE EXTRACT(YEAR FROM l.listened_at) = $1::int
+      AND l.user_id = $2::int
     GROUP BY l.track_id, EXTRACT(MONTH FROM l.listened_at)
 ),
 monthly_counts AS (
@@ -509,13 +752,18 @@ JOIN tracks_with_title t ON t.id = mc.track_id
 WHERE mc.months_played = 12
 `
 
+type GetTracksPlayedAtLeastOncePerMonthInYearParams struct {
+	Year   int32
+	UserID int32
+}
+
 type GetTracksPlayedAtLeastOncePerMonthInYearRow struct {
 	TrackID int32
 	Title   string
 }
 
-func (q *Queries) GetTracksPlayedAtLeastOncePerMonthInYear(ctx context.Context, userID int32) ([]GetTracksPlayedAtLeastOncePerMonthInYearRow, error) {
-	rows, err := q.db.Query(ctx, getTracksPlayedAtLeastOncePerMonthInYear, userID)
+func (q *Queries) GetTracksPlayedAtLeastOncePerMonthInYear(ctx context.Context, arg GetTracksPlayedAtLeastOncePerMonthInYearParams) ([]GetTracksPlayedAtLeastOncePerMonthInYearRow, error) {
+	rows, err := q.db.Query(ctx, getTracksPlayedAtLeastOncePerMonthInYear, arg.Year, arg.UserID)
 	if err != nil {
 		return nil, err
 	}

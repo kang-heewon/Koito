@@ -212,7 +212,8 @@ SELECT
     get_artists_for_track(t.id) as artists 
 FROM listens l 
 LEFT JOIN tracks_with_title t ON l.track_id = t.id 
-WHERE EXTRACT(YEAR FROM l.listened_at) = 2025 
+WHERE EXTRACT(YEAR FROM l.listened_at) = @year::int
+  AND l.user_id = @user_id::int
 ORDER BY l.listened_at ASC 
 LIMIT 1;
 
@@ -222,7 +223,8 @@ WITH monthly_plays AS (
         l.track_id,
         EXTRACT(MONTH FROM l.listened_at) AS month
     FROM listens l
-    WHERE EXTRACT(YEAR FROM l.listened_at) = @user_id::int
+    WHERE EXTRACT(YEAR FROM l.listened_at) = @year::int
+      AND l.user_id = @user_id::int
     GROUP BY l.track_id, EXTRACT(MONTH FROM l.listened_at)
 ),
 monthly_counts AS (
@@ -317,28 +319,32 @@ WITH first_artist_plays_in_year AS (
         MIN(l.listened_at) AS first_listen
     FROM listens l
     JOIN artist_tracks at ON at.track_id = l.track_id
-    WHERE EXTRACT(YEAR FROM l.listened_at) = 2024
+    WHERE l.user_id = @user_id::int
+      AND EXTRACT(YEAR FROM l.listened_at) = @year::int
       AND NOT EXISTS (
           SELECT 1
           FROM listens l2
           JOIN artist_tracks at2 ON at2.track_id = l2.track_id
           WHERE l2.user_id = l.user_id
             AND at2.artist_id = at.artist_id
-            AND l2.listened_at < DATE '2024-01-01'
+            AND l2.listened_at < make_date(@year::int, 1, 1)
       )
     GROUP BY l.user_id, at.artist_id
 ) 
 SELECT
     f.user_id,
     f.artist_id,
-    f.first_listen, a.name,
+    f.first_listen,
+    a.name,
     COUNT(l.*) AS total_plays_in_year
 FROM first_artist_plays_in_year f
 JOIN listens l ON l.user_id = f.user_id
-JOIN artist_tracks at ON at.track_id = l.track_id JOIN artists_with_name a ON at.artist_id = a.id
+JOIN artist_tracks at ON at.track_id = l.track_id
+JOIN artists_with_name a ON at.artist_id = a.id
 WHERE at.artist_id = f.artist_id
-  AND EXTRACT(YEAR FROM l.listened_at) = 2024
-GROUP BY f.user_id, f.artist_id, f.first_listen, a.name HAVING COUNT(*) = 1;
+  AND EXTRACT(YEAR FROM l.listened_at) = @year::int
+GROUP BY f.user_id, f.artist_id, f.first_listen, a.name
+HAVING COUNT(*) = 1;
 
 -- name: GetArtistCountInYear :one
 SELECT
@@ -372,3 +378,68 @@ SELECT
     t.total_listens,
     ROUND((w.in_window::decimal / t.total_listens) * 100, 2) AS percent_of_total
 FROM windowed w, total t;
+
+-- name: GetTotalListenCountInYear :one
+SELECT count(*)
+FROM listens
+WHERE user_id = @user_id::int
+  AND EXTRACT(YEAR FROM listened_at) = @year::int;
+
+-- name: GetTotalTimeListenedInYear :one
+SELECT COALESCE(SUM(t.duration), 0)::bigint
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+WHERE l.user_id = @user_id::int
+  AND EXTRACT(YEAR FROM l.listened_at) = @year::int;
+
+-- name: GetTopTracksInYear :many
+SELECT
+    t.id AS track_id,
+    t.title,
+    get_artists_for_track(t.id) as artists,
+    COUNT(l.*) as listen_count
+FROM listens l
+JOIN tracks_with_title t ON l.track_id = t.id
+WHERE l.user_id = @user_id::int
+  AND EXTRACT(YEAR FROM l.listened_at) = @year::int
+GROUP BY t.id, t.title
+ORDER BY listen_count DESC
+LIMIT $1;
+
+-- name: GetTopArtistsInYear :many
+SELECT
+    a.id AS artist_id,
+    a.name,
+    COUNT(l.*) as listen_count
+FROM listens l
+JOIN artist_tracks at ON l.track_id = at.track_id
+JOIN artists_with_name a ON at.artist_id = a.id
+WHERE l.user_id = @user_id::int
+  AND EXTRACT(YEAR FROM l.listened_at) = @year::int
+GROUP BY a.id, a.name
+ORDER BY listen_count DESC
+LIMIT $1;
+
+-- name: GetTopAlbumsInYear :many
+SELECT
+    r.id AS release_id,
+    r.title,
+    COUNT(l.*) as listen_count
+FROM listens l
+JOIN tracks t ON l.track_id = t.id
+JOIN releases_with_title r ON t.release_id = r.id
+WHERE l.user_id = @user_id::int
+  AND EXTRACT(YEAR FROM l.listened_at) = @year::int
+GROUP BY r.id, r.title
+ORDER BY listen_count DESC
+LIMIT $1;
+
+-- name: GetListeningHoursDistributionInYear :many
+SELECT
+    EXTRACT(HOUR FROM listened_at)::int AS hour,
+    COUNT(*) AS count
+FROM listens
+WHERE user_id = @user_id::int
+  AND EXTRACT(YEAR FROM listened_at) = @year::int
+GROUP BY hour
+ORDER BY hour;

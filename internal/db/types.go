@@ -44,3 +44,56 @@ type ExportItem struct {
 	ReleaseAliases     []models.Alias
 	Artists            []models.ArtistWithFullAliases
 }
+
+type GenreStat struct {
+	Name  string
+	Value int64 // listen_count or seconds_listened
+}
+
+type WrappedStats struct {
+	Year                   int
+	TotalListens           int64
+	TotalSecondsListened   int64
+	UniqueArtists          int64
+	UniqueTracks           int64
+	UniqueAlbums           int64
+	TopTracks              []*models.Track
+	TopArtists             []*models.Artist
+	TopAlbums              []*models.Album
+	TopNewArtists          []*models.Artist
+	MostReplayedTrack      *TrackStreak
+	ListeningHours         []HourDistribution
+	BusiestWeek            *WeekStats
+	FirstListen            *models.Listen
+	TracksPlayedEveryMonth []*models.Track
+	ArtistConcentration    float64
+	TrackConcentration     float64
+}
+
+type TrackStreak struct {
+	Track       *models.Track
+	StreakCount int
+}
+
+type HourDistribution struct {
+	Hour        int
+	ListenCount int64
+}
+
+type WeekStats struct {
+	WeekStart   time.Time
+	ListenCount int64
+}
+
+type TrackRecommendation struct {
+	Track           *models.Track
+	PastListenCount int64
+	LastListenedAt  time.Time
+}
+
+type GetRecommendationsOpts struct {
+	PastWindowStart time.Time
+	PastWindowEnd   time.Time
+	MinPastListens  int
+	Limit           int
+}

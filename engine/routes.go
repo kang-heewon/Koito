@@ -52,8 +52,11 @@ func bindRoutes(
 			r.Get("/listen-activity", handlers.GetListenActivityHandler(db))
 			r.Get("/now-playing", handlers.NowPlayingHandler(db))
 			r.Get("/stats", handlers.StatsHandler(db))
+			r.Get("/wrapped", handlers.WrappedHandler(db))
+			r.Get("/genre-stats", handlers.GenreStatsHandler(db))
 			r.Get("/search", handlers.SearchHandler(db))
 			r.Get("/aliases", handlers.GetAliasesHandler(db))
+			r.Get("/recommendations", handlers.RecommendationsHandler(db))
 		})
 		r.Post("/logout", handlers.LogoutHandler(db))
 		if !cfg.RateLimitDisabled() {

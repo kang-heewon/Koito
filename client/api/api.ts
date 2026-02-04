@@ -277,11 +277,32 @@ function deleteListen(listen: Listen): Promise<Response> {
 }
 function getExport() {}
 
+function getGenreStats(period: string, metric: "count" | "time"): Promise<GenreStatsResponse> {
+  return fetch(`/apis/web/v1/genre-stats?period=${period}&metric=${metric}`).then(
+    (r) => handleJson<GenreStatsResponse>(r)
+  );
+}
+
 function getNowPlaying(): Promise<NowPlaying> {
   return fetch("/apis/web/v1/now-playing").then((r) => r.json());
 }
 
+function getRecommendations(): Promise<RecommendationsResponse> {
+  return fetch("/apis/web/v1/recommendations").then((r) =>
+    handleJson<RecommendationsResponse>(r)
+  );
+}
+
+
+function getWrapped(year: number): Promise<WrappedStats> {
+  return fetch(`/apis/web/v1/wrapped?year=${year}`).then(
+    (r) => handleJson<WrappedStats>(r)
+  );
+}
+
 export {
+  getWrapped,
+  getRecommendations,
   getLastListens,
   getTopTracks,
   getTopAlbums,
@@ -312,6 +333,7 @@ export {
   getExport,
   submitListen,
   getNowPlaying,
+  getGenreStats,
 };
 type Track = {
   id: number;
@@ -405,7 +427,32 @@ type NowPlaying = {
   track: Track;
 };
 
+type GenreStat = {
+  name: string;
+  value: number;
+};
+
+type GenreStatsResponse = {
+  stats: GenreStat[];
+};
+
+type RecommendationTrack = {
+  id: number;
+  title: string;
+  artists: SimpleArtists[];
+  album_id: number;
+  image: string;
+  past_listen_count: number;
+  last_listened_at: string;
+};
+
+type RecommendationsResponse = {
+  tracks: RecommendationTrack[];
+};
+
 export type {
+  RecommendationTrack,
+  RecommendationsResponse,
   getItemsArgs,
   getActivityArgs,
   Track,
@@ -422,4 +469,39 @@ export type {
   Config,
   NowPlaying,
   Stats,
+  GenreStat,
+  GenreStatsResponse,
+  WrappedStats,
+  WrappedTrack,
+  WrappedArtist,
+  WrappedAlbum,
+  TrackStreak,
+  HourDistribution,
+  WeekStats,
 };
+
+type WrappedTrack = { id: number; title: string; artists: SimpleArtists[]; image: string; listen_count: number };
+type WrappedArtist = { id: number; name: string; image: string; listen_count: number };
+type WrappedAlbum = { id: number; title: string; image: string; listen_count: number };
+type TrackStreak = { track: WrappedTrack; streak_count: number };
+type HourDistribution = { hour: number; listen_count: number };
+type WeekStats = { week_start: string; listen_count: number };
+
+type WrappedStats = {
+  year: number;
+  total_listens: number;
+  total_seconds_listened: number;
+  unique_artists: number;
+  unique_tracks: number;
+  unique_albums: number;
+  top_tracks: WrappedTrack[];
+  top_artists: WrappedArtist[];
+  top_albums: WrappedAlbum[];
+  top_new_artists: WrappedArtist[];
+  most_replayed_track: TrackStreak | null;
+  listening_hours: HourDistribution[];
+  busiest_week: WeekStats | null;
+  artist_concentration: number;
+  track_concentration: number;
+};
+

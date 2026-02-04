@@ -72,6 +72,13 @@ type DB interface {
 	CountTimeListened(ctx context.Context, period Period) (int64, error)
 	CountTimeListenedToItem(ctx context.Context, opts TimeListenedOpts) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
+	// Genre Stats
+	GetGenreStatsByListenCount(ctx context.Context, period Period) ([]GenreStat, error)
+	GetGenreStatsByTimeListened(ctx context.Context, period Period) ([]GenreStat, error)
+	// Wrapped
+	GetWrappedStats(ctx context.Context, year int, userID int32) (*WrappedStats, error)
+	// Recommendation
+	GetTracksToRevisit(ctx context.Context, opts GetRecommendationsOpts) ([]TrackRecommendation, error)
 	// Search
 	SearchArtists(ctx context.Context, q string) ([]*models.Artist, error)
 	SearchAlbums(ctx context.Context, q string) ([]*models.Album, error)
