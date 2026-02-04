@@ -206,6 +206,8 @@ func Run(
 	if !cfg.MusicBrainzDisabled() {
 		l.Info().Msg("Engine: Backfilling genres for existing data")
 		go catalog.BackfillGenres(logger.NewContext(l), store, mbzC)
+		l.Info().Msg("Engine: Backfilling track durations")
+		go catalog.BackfillTrackDurations(logger.NewContext(l), store, mbzC)
 	}
 
 	l.Info().Msg("Engine: Initialization finished")

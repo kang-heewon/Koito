@@ -127,3 +127,13 @@ WHERE artist_id = $1 AND track_id = $2;
 
 -- name: DeleteTrack :exec
 DELETE FROM tracks WHERE id = $1;
+
+-- name: TracksWithoutDuration :many
+-- Get tracks that have a musicbrainz_id but no duration (or duration = 0)
+SELECT id, musicbrainz_id
+FROM tracks
+WHERE musicbrainz_id IS NOT NULL 
+  AND (duration IS NULL OR duration = 0)
+  AND id > $1
+ORDER BY id
+LIMIT 50;

@@ -447,6 +447,42 @@ func (q *Queries) InsertTrack(ctx context.Context, arg InsertTrackParams) (Track
 	return i, err
 }
 
+const tracksWithoutDuration = `-- name: TracksWithoutDuration :many
+SELECT id, musicbrainz_id
+FROM tracks
+WHERE musicbrainz_id IS NOT NULL 
+  AND (duration IS NULL OR duration = 0)
+  AND id > $1
+ORDER BY id
+LIMIT 50
+`
+
+type TracksWithoutDurationRow struct {
+	ID            int32
+	MusicBrainzID *uuid.UUID
+}
+
+// Get tracks that have a musicbrainz_id but no duration (or duration = 0)
+func (q *Queries) TracksWithoutDuration(ctx context.Context, id int32) ([]TracksWithoutDurationRow, error) {
+	rows, err := q.db.Query(ctx, tracksWithoutDuration, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TracksWithoutDurationRow
+	for rows.Next() {
+		var i TracksWithoutDurationRow
+		if err := rows.Scan(&i.ID, &i.MusicBrainzID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateReleaseForAll = `-- name: UpdateReleaseForAll :exec
 UPDATE tracks SET release_id = $2
 WHERE release_id = $1

@@ -97,3 +97,8 @@ type GetRecommendationsOpts struct {
 	MinPastListens  int
 	Limit           int
 }
+
+type TrackWithMbzID struct {
+	ID    int32
+	MbzID uuid.UUID
+}

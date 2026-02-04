@@ -93,6 +93,8 @@ type DB interface {
 	AlbumsWithoutImages(ctx context.Context, from int32) ([]*models.Album, error)
 	AlbumsWithoutGenres(ctx context.Context, from int32) ([]ItemWithMbzID, error)
 	ArtistsWithoutGenres(ctx context.Context, from int32) ([]ItemWithMbzID, error)
+	TracksWithoutDuration(ctx context.Context, lastID int32) ([]TrackWithMbzID, error)
+	UpdateTrackDuration(ctx context.Context, id int32, duration int32) error
 	GetExportPage(ctx context.Context, opts GetExportPageOpts) ([]*ExportItem, error)
 	Ping(ctx context.Context) error
 	Close(ctx context.Context)
