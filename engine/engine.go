@@ -36,7 +36,7 @@ func Run(
 ) error {
 	err := cfg.Load(getenv, version)
 	if err != nil {
-		panic("Engine: Failed to load configuration")
+		return fmt.Errorf("Engine: failed to load configuration: %w", err)
 	}
 
 	l := logger.Get()
@@ -116,7 +116,10 @@ func Run(
 	l.Info().Msg("Engine: Image sources initialized")
 
 	l.Debug().Msg("Engine: Checking for default user")
-	userCount, _ := store.CountUsers(ctx)
+	userCount, err := store.CountUsers(ctx)
+	if err != nil {
+		return fmt.Errorf("Engine: failed to count users: %w", err)
+	}
 	if userCount < 1 {
 		l.Info().Msg("Engine: Creating default user")
 		user, err := store.SaveUser(ctx, db.SaveUserOpts{

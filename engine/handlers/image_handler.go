@@ -20,6 +20,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var defaultImageMu sync.Mutex
+
 func ImageHandler(store db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		l := logger.FromContext(r.Context())
@@ -59,6 +61,7 @@ func ImageHandler(store db.DB) http.HandlerFunc {
 					if err != nil {
 						l.Err(err).Msg("ImageHandler: Failed to redownload missing image")
 						w.WriteHeader(http.StatusInternalServerError)
+						return
 					}
 				} else if err != nil {
 					l.Err(err).Msg("ImageHandler: Failed to access source image file at large size")
@@ -87,6 +90,8 @@ func ImageHandler(store db.DB) http.HandlerFunc {
 			err = catalog.CompressAndSaveImage(r.Context(), imgid.String(), imageSize, bytes.NewReader(imageBuf))
 			if err != nil {
 				l.Err(err).Msg("ImageHandler: Failed to save compressed image to cache")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 		} else if err != nil {
 			l.Err(err).Msg("ImageHandler: Failed to access desired image file")
@@ -100,7 +105,6 @@ func ImageHandler(store db.DB) http.HandlerFunc {
 }
 
 func serveDefaultImage(w http.ResponseWriter, r *http.Request, size catalog.ImageSize) {
-	var lock sync.Mutex
 	l := logger.FromContext(r.Context())
 
 	l.Debug().Msgf("serveDefaultImage: Serving default image at size '%s'", size)
@@ -117,14 +121,14 @@ func serveDefaultImage(w http.ResponseWriter, r *http.Request, size catalog.Imag
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			lock.Lock()
+			defaultImageMu.Lock()
 			err = utils.CopyFile(path.Join("assets", "default_img"), defaultImagePath)
+			defaultImageMu.Unlock()
 			if err != nil {
 				l.Err(err).Msg("serveDefaultImage: Error when copying default image from assets")
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			lock.Unlock()
 		} else if err != nil {
 			l.Err(err).Msg("serveDefaultImage: Error when attempting to read default image in cache")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -137,6 +141,7 @@ func serveDefaultImage(w http.ResponseWriter, r *http.Request, size catalog.Imag
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer file.Close()
 		err = catalog.CompressAndSaveImage(r.Context(), "default_img", size, file)
 		if err != nil {
 			l.Err(err).Msg("serveDefaultImage: Error when caching default image at desired size")

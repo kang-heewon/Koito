@@ -150,11 +150,11 @@ func CopyFile(src, dst string) (err error) {
 			return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
 		}
 		if os.SameFile(sfi, dfi) {
-			return fmt.Errorf("CopyFile: %w", err)
+			return nil
 		}
 	}
 	if err = os.Link(src, dst); err == nil {
-		return fmt.Errorf("CopyFile: %w", err)
+		return nil
 	}
 	err = copyFileContents(src, dst)
 	if err != nil {
@@ -177,11 +177,16 @@ func copyFileContents(src, dst string) (err error) {
 	if err != nil {
 		return fmt.Errorf("copyFileContents: %w", err)
 	}
-	defer out.Close()
 	if _, err = io.Copy(out, in); err != nil {
+		_ = out.Close()
 		return fmt.Errorf("copyFileContents: %w", err)
 	}
 	err = out.Sync()
+	if err != nil {
+		_ = out.Close()
+		return fmt.Errorf("copyFileContents: %w", err)
+	}
+	err = out.Close()
 	if err != nil {
 		return fmt.Errorf("copyFileContents: %w", err)
 	}

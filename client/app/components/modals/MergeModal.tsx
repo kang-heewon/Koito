@@ -15,13 +15,16 @@ interface Props {
     mergeCleanerFunc: MergeSearchCleanerFunc
 }
 
+type MergeTarget = { title: string; id: number };
+
 export default function MergeModal(props: Props) {
     const [query, setQuery] = useState('');
     const [data, setData] = useState<SearchResponse>();
     const [debouncedQuery, setDebouncedQuery] = useState(query);
-    const [mergeTarget, setMergeTarget] = useState<{title: string, id: number}>({title: '', id: 0})
+    const [mergeTarget, setMergeTarget] = useState<MergeTarget>({title: '', id: 0})
     const [mergeOrderReversed, setMergeOrderReversed] = useState(false)
     const [replaceImage, setReplaceImage] = useState(false)
+    const [error, setError] = useState('')
     const navigate = useNavigate()
 
 
@@ -31,18 +34,17 @@ export default function MergeModal(props: Props) {
         setData(undefined)
         setMergeOrderReversed(false)
         setMergeTarget({title: '', id: 0})
+        setError('')
     }
 
     const toggleSelect = ({title, id}: {title: string, id: number}) => {
         setMergeTarget({title: title, id: id})
     }
 
-    useEffect(() => {
-        console.log("mergeTarget",mergeTarget)
-    }, [mergeTarget])
-
     const doMerge = () => {
-        let from, to
+        setError('')
+        let from: MergeTarget
+        let to: MergeTarget
         if (!mergeOrderReversed) {
             from = mergeTarget
             to = {id: props.currentId, title: props.currentTitle}
@@ -60,11 +62,12 @@ export default function MergeModal(props: Props) {
                     window.location.reload()
                 }
             } else {
-                // TODO: handle error
-                console.log(r)
+                r.json()
+                    .then((body) => setError(body.error || "Merge failed"))
+                    .catch(() => setError("Merge failed"))
             }
         })
-        .catch((err) => console.log(err))
+        .catch((err) => setError(err instanceof Error ? err.message : "Merge failed"))
     }
     
     useEffect(() => {
@@ -87,7 +90,7 @@ export default function MergeModal(props: Props) {
                 setData(r);
             });
         }
-    }, [debouncedQuery]);
+    }, [debouncedQuery, props.currentId, props.mergeCleanerFunc]);
 
     return (
     <Modal isOpen={props.open} onClose={closeMergeModal}>
@@ -95,7 +98,6 @@ export default function MergeModal(props: Props) {
         <div className="flex flex-col items-center">
             <input
                 type="text"
-                autoFocus
                 // i find my stupid a(n) logic to be a little silly so im leaving it in even if its not optimal
                 placeholder={`Search for a${props.type.toLowerCase()[0] === 'a' ? 'n' : ''} ${props.type.toLowerCase()} to be merged into the current ${props.type.toLowerCase()}`}
                 className="w-full mx-auto fg bg rounded p-2"
@@ -109,20 +111,21 @@ export default function MergeModal(props: Props) {
             :
             <p className="mt-5"><strong>{mergeTarget.title}</strong> will be merged into <strong>{props.currentTitle}</strong></p>
             }
-            <button className="hover:cursor-pointer px-5 py-2 rounded-md mt-5 bg-(--color-bg) hover:bg-(--color-bg-tertiary)" onClick={doMerge}>Merge Items</button>
+            <button type="button" className="hover:cursor-pointer px-5 py-2 rounded-md mt-5 bg-(--color-bg) hover:bg-(--color-bg-tertiary)" onClick={doMerge}>Merge Items</button>
             <div className="flex gap-2 mt-3">
-                <input type="checkbox" name="reverse-merge-order" checked={mergeOrderReversed} onChange={() => setMergeOrderReversed(!mergeOrderReversed)} />
+                <input id="reverse-merge-order" type="checkbox" name="reverse-merge-order" checked={mergeOrderReversed} onChange={() => setMergeOrderReversed(!mergeOrderReversed)} />
                 <label htmlFor="reverse-merge-order">Reverse merge order</label>
             </div>
             {
             (props.type.toLowerCase() === "album" || props.type.toLowerCase() === "artist") &&
             <div className="flex gap-2 mt-3">
-                <input type="checkbox" name="replace-image" checked={replaceImage} onChange={() => setReplaceImage(!replaceImage)} />
+                <input id="replace-image" type="checkbox" name="replace-image" checked={replaceImage} onChange={() => setReplaceImage(!replaceImage)} />
                 <label htmlFor="replace-image">Replace image</label>
             </div>
             }
             </> :
             ''}
+            {error ? <p className="error mt-3">{error}</p> : null}
         </div>
     </Modal>
     )

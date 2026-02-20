@@ -35,6 +35,7 @@ export default function SearchResults({ data, onSelect, selectorMode }: Props) {
             {data.artists.map((artist) => (
                 selectorMode ? 
                 <SearchResultSelectorItem 
+                    key={`artist-${artist.id}`}
                     id={artist.id}
                     onClick={() => selectItem(artist.name, artist.id)}
                     text={artist.name}
@@ -42,6 +43,7 @@ export default function SearchResults({ data, onSelect, selectorMode }: Props) {
                     active={selected === artist.id}
                 /> : 
                 <SearchResultItem 
+                    key={`artist-${artist.id}`}
                     to={`/artist/${artist.id}`} 
                     onClick={() => onSelect(artist.id)}
                     text={artist.name}
@@ -59,6 +61,7 @@ export default function SearchResults({ data, onSelect, selectorMode }: Props) {
             {data.albums.map((album) => (
                 selectorMode ? 
                 <SearchResultSelectorItem 
+                    key={`album-${album.id}`}
                     id={album.id}
                     onClick={() => selectItem(album.title, album.id)}
                     text={album.title}
@@ -67,6 +70,7 @@ export default function SearchResults({ data, onSelect, selectorMode }: Props) {
                     active={selected === album.id}
                 /> : 
                 <SearchResultItem 
+                    key={`album-${album.id}`}
                     to={`/album/${album.id}`} 
                     onClick={() => onSelect(album.id)}
                     text={album.title}
@@ -84,6 +88,7 @@ export default function SearchResults({ data, onSelect, selectorMode }: Props) {
             {data.tracks.map((track) => (
                 selectorMode ? 
                 <SearchResultSelectorItem 
+                    key={`track-${track.id}`}
                     id={track.id}
                     onClick={() => selectItem(track.title, track.id)}
                     text={track.title}
@@ -92,6 +97,7 @@ export default function SearchResults({ data, onSelect, selectorMode }: Props) {
                     active={selected === track.id}
                 /> : 
                 <SearchResultItem 
+                    key={`track-${track.id}`}
                     to={`/track/${track.id}`} 
                     onClick={() => onSelect(track.id)}
                     text={track.title}

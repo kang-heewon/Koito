@@ -1,5 +1,7 @@
 import { useEffect } from "react"
 
+const PERIODS = ["day", "week", "month", "year", "all_time"]
+
 interface Props {
     setter: Function
     current: string
@@ -7,7 +9,7 @@ interface Props {
 }
 
 export default function PeriodSelector({ setter, current, disableCache = false }: Props) {
-    const periods = ['day', 'week', 'month', 'year', 'all_time']
+    const cacheScope = window.location.pathname
 
     const periodDisplay = (str: string) => {
         return str.split('_').map(w => w.split('').map((char, index) =>
@@ -17,33 +19,34 @@ export default function PeriodSelector({ setter, current, disableCache = false }
     const setPeriod = (val: string) => {
         setter(val)
         if (!disableCache) {
-            localStorage.setItem('period_selection_'+window.location.pathname.split('/')[1], val) 
+            localStorage.setItem('period_selection_' + cacheScope, val) 
         }  
     }
 
     useEffect(() => {
         if (!disableCache) {
-            const cached = localStorage.getItem('period_selection_' + window.location.pathname.split('/')[1]);
-            if (cached) {
+            const cached = localStorage.getItem('period_selection_' + cacheScope);
+            if (cached && PERIODS.includes(cached)) {
               setter(cached);
             }
         }
-      }, []);
+      }, [cacheScope, disableCache, setter]);
 
     return (
         <div className="flex gap-2 grow-0 text-sm sm:text-[16px]">
             <p>Showing stats for:</p>
-            {periods.map((p, i) => (
+            {PERIODS.map((p, i) => (
                 <div key={`period_setter_${p}`}>
                     <button 
-                        className={`period-selector ${p === current ? 'color-fg' : 'color-fg-secondary'} ${i !== periods.length - 1 ? 'pr-2' : ''}`}
+                        type="button"
+                        className={`period-selector ${p === current ? 'color-fg' : 'color-fg-secondary'} ${i !== PERIODS.length - 1 ? 'pr-2' : ''}`}
                         onClick={() => setPeriod(p)}
                         disabled={p === current}
                     >
                         {periodDisplay(p)}
                     </button>
                     <span className="color-fg-secondary">
-                        {i !== periods.length - 1 ? '|' : ''}
+                        {i !== PERIODS.length - 1 ? '|' : ''}
                     </span>
                 </div>
             ))}

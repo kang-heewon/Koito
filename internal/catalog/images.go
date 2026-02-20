@@ -165,12 +165,17 @@ func saveImage(filename string, size ImageSize, data io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("saveImage: failed to create image file: %w", err)
 	}
-	defer file.Close()
 
 	// Save the image to the file
 	_, err = io.Copy(file, data)
 	if err != nil {
+		_ = file.Close()
 		return fmt.Errorf("saveImage: failed to save image: %w", err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("saveImage: failed to close image file: %w", err)
 	}
 
 	return nil
@@ -195,7 +200,7 @@ func compressImage(size ImageSize, data io.Reader) (io.Reader, error) {
 		return nil, fmt.Errorf("compressImage: bimg.NewImage: %w", err)
 	}
 	if len(imgBytes) == 0 {
-		return nil, fmt.Errorf("compressImage: failed to compress image: %w", err)
+		return nil, fmt.Errorf("compressImage: image processor returned empty output")
 	}
 	return bytes.NewReader(imgBytes), nil
 }

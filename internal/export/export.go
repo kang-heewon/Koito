@@ -83,21 +83,26 @@ func ExportData(ctx context.Context, user *models.User, store db.DB, out io.Writ
 		for _, r := range rows {
 			// Adds a comma after each listen item
 			if !first {
-				_, _ = out.Write([]byte(",\n"))
+				if _, err := out.Write([]byte(",\n")); err != nil {
+					return fmt.Errorf("ExportData: write separator: %w", err)
+				}
 			}
 			first = false
 
 			exported := convertToExportFormat(r)
 
 			raw, err := json.MarshalIndent(exported, "    ", "  ")
-
-			// needed to make the listen item start at the right indent level
-			out.Write([]byte("    "))
-
 			if err != nil {
 				return fmt.Errorf("ExportData: marshal: %w", err)
 			}
-			_, _ = out.Write(raw)
+
+			// needed to make the listen item start at the right indent level
+			if _, err := out.Write([]byte("    ")); err != nil {
+				return fmt.Errorf("ExportData: write indent: %w", err)
+			}
+			if _, err := out.Write(raw); err != nil {
+				return fmt.Errorf("ExportData: write item: %w", err)
+			}
 
 			if r.TrackID > lastTrackId {
 				lastTrackId = r.TrackID

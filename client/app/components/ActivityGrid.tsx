@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getActivity,
   type getActivityArgs,
-  type ListenActivityItem,
 } from "api/api";
 import Popup from "./Popup";
 import { useState } from "react";
@@ -92,13 +91,13 @@ export default function ActivityGrid({
     lum = lum || 0;
 
     // convert to decimal and change luminosity
-    var rgb = "#",
-      c,
-      i;
-    for (i = 0; i < 3; i++) {
-      c = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
-      c = Math.round(Math.min(Math.max(0, c + c * lum), 255)).toString(16);
-      rgb += ("00" + c).substring(c.length);
+    let rgb = "#";
+    for (let i = 0; i < 3; i++) {
+      const channel = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+      const adjusted = Math.round(
+        Math.min(Math.max(0, channel + channel * lum), 255)
+      ).toString(16);
+      rgb += ("00" + adjusted).substring(adjusted.length);
     }
 
     return rgb;
@@ -108,7 +107,7 @@ export default function ActivityGrid({
     // really ugly way to just check if this is for all items and not a specific item.
     // is it jsut better to just pass the target in as a var? probably.
     const adjustment =
-      artistId == albumId && albumId == trackId && trackId == 0 ? 10 : 1;
+      artistId === albumId && albumId === trackId && trackId === 0 ? 10 : 1;
 
     // automatically adjust the target value based on step
     // the smartest way to do this would be to have the api return the
@@ -158,14 +157,16 @@ export default function ActivityGrid({
         />
       ) : null}
 
-      {chunks.map((chunk, index) => (
+      {chunks.map((chunk) => (
         <div
-          key={index}
+          key={`${new Date(chunk[0].start_time).getTime()}-${new Date(
+            chunk[chunk.length - 1].start_time
+          ).getTime()}`}
           className="w-auto grid grid-flow-col grid-rows-7 gap-[3px] md:gap-[5px] mb-4"
         >
           {chunk.map((item) => (
             <div
-              key={new Date(item.start_time).toString()}
+              key={new Date(item.start_time).getTime()}
               className="w-[10px] sm:w-[12px] h-[10px] sm:h-[12px]"
             >
               <Popup
