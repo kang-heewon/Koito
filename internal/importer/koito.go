@@ -34,7 +34,7 @@ func ImportKoitoFile(ctx context.Context, store db.DB, filename string) error {
 	}
 
 	if data.Version != "1" {
-		return fmt.Errorf("ImportKoitoFile: unupported version: %s", data.Version)
+		return fmt.Errorf("ImportKoitoFile: unsupported version: %s", data.Version)
 	}
 
 	l.Info().Msgf("Beginning data import for user: %s", data.User)
@@ -79,6 +79,10 @@ func ImportKoitoFile(ctx context.Context, store db.DB, filename string) error {
 			} else {
 				artistIds = append(artistIds, artist.ID)
 			}
+		}
+		if len(artistIds) == 0 {
+			l.Warn().Msg("ImportKoitoFile: Skipping listen with no associated artists")
+			continue
 		}
 		// call associate album
 		albumId := int32(0)

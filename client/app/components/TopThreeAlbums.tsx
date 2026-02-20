@@ -4,7 +4,7 @@ import AlbumDisplay from "./AlbumDisplay"
 
 interface Props {
     period: string
-    artistId?: Number
+    artistId?: number
     vert?: boolean
     hideTitle?: boolean
 }
@@ -23,14 +23,12 @@ export default function TopThreeAlbums(props: Props) {
         return <p className="error">Error:{error.message}</p>
     }
 
-    console.log(data)
-
     return (
         <div>
             {!props.hideTitle && <h2>Top Three Albums</h2>}
             <div className={`flex ${props.vert ? 'flex-col' : ''}`} style={{gap: 15}}>
             {data.items.map((item, index) => (
-                <AlbumDisplay album={item} size={index === 0 ? 190 : 130} />
+                <AlbumDisplay key={`top-three-album-${item.id}`} album={item} size={index === 0 ? 190 : 130} />
             ))}
             </div>
         </div>

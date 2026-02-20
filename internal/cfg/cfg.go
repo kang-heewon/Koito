@@ -166,10 +166,10 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 	cfg.disableMusicBrainz = parseBool(getenv(DISABLE_MUSICBRAINZ_ENV))
 	cfg.subsonicUrl = getenv(SUBSONIC_URL_ENV)
 	cfg.subsonicParams = getenv(SUBSONIC_PARAMS_ENV)
-	cfg.subsonicEnabled = cfg.subsonicUrl != "" && cfg.subsonicParams != ""
-	if cfg.subsonicEnabled && (cfg.subsonicUrl == "" || cfg.subsonicParams == "") {
+	if (cfg.subsonicUrl == "") != (cfg.subsonicParams == "") {
 		return nil, fmt.Errorf("loadConfig: invalid configuration: both %s and %s must be set in order to use subsonic image fetching", SUBSONIC_URL_ENV, SUBSONIC_PARAMS_ENV)
 	}
+	cfg.subsonicEnabled = cfg.subsonicUrl != "" && cfg.subsonicParams != ""
 	cfg.skipImport = parseBool(getenv(SKIP_IMPORT_ENV))
 
 	cfg.userAgent = fmt.Sprintf("Koito %s (contact@koito.io)", version)

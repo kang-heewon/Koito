@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import ArtistLinks from "./ArtistLinks";
 import { imageUrl, type Album, type Artist, type Track, type PaginatedResponse } from "api/api";
 
@@ -25,7 +25,7 @@ export default function TopItemList<T extends Item>({ data, separators, type, cl
                             separators && index !== data.items.length - 1 ? 'border-b border-(--color-fg-tertiary) mb-1 pb-2' : ''
                         }`}
                     >
-                        <ItemCard item={item} type={type} key={type+item.id} />
+                        <ItemCard item={item} type={type} />
                     </div>
                 );
             })}
@@ -55,7 +55,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
                         <span className="color-fg-secondary">Various Artists</span>
                         :
                         <div>
-                           <ArtistLinks artists={album.artists ? [album.artists[0]] : [{id: 0, name: 'Unknown Artist'}]}/>
+                           <ArtistLinks artists={album.artists && album.artists.length > 0 ? [album.artists[0]] : [{id: 0, name: 'Unknown Artist'}]}/>
                         </div>
                         }
                         <div className="color-fg-secondary">{album.listen_count} plays</div>
@@ -77,7 +77,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
                         </Link>
                         <br />
                             <div>
-                               <ArtistLinks artists={track.artists || [{id: 0, Name: 'Unknown Artist'}]}/>
+                               <ArtistLinks artists={track.artists || [{id: 0, name: 'Unknown Artist'}]}/>
                             </div>
                         <div className="color-fg-secondary">{track.listen_count} plays</div>
                     </div>

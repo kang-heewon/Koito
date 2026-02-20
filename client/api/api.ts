@@ -17,18 +17,36 @@ interface getActivityArgs {
 }
 
 async function handleJson<T>(r: Response): Promise<T> {
+  const parseApiError = async (): Promise<string> => {
+    try {
+      const err = (await r.json()) as ApiError;
+      if (err && typeof err.error === "string" && err.error.length > 0) {
+        return err.error;
+      }
+    } catch {
+      return `request failed (${r.status})`;
+    }
+    return `request failed (${r.status})`;
+  };
+
   if (!r.ok) {
-    const err = await r.json();
-    throw Error(err.error);
+    throw new Error(await parseApiError());
   }
   return (await r.json()) as T;
 }
 async function getLastListens(
   args: getItemsArgs
 ): Promise<PaginatedResponse<Listen>> {
-  const r = await fetch(
-    `/apis/web/v1/listens?period=${args.period}&limit=${args.limit}&artist_id=${args.artist_id}&album_id=${args.album_id}&track_id=${args.track_id}&page=${args.page}`
-  );
+  const params = new URLSearchParams({
+    period: args.period,
+    limit: String(args.limit),
+    page: String(args.page),
+  });
+  if (args.artist_id !== undefined) params.set("artist_id", String(args.artist_id));
+  if (args.album_id !== undefined) params.set("album_id", String(args.album_id));
+  if (args.track_id !== undefined) params.set("track_id", String(args.track_id));
+
+  const r = await fetch(`/apis/web/v1/listens?${params.toString()}`);
   return handleJson<PaginatedResponse<Listen>>(r);
 }
 
@@ -504,4 +522,3 @@ type WrappedStats = {
   artist_concentration: number;
   track_concentration: number;
 };
-

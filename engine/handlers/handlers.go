@@ -20,7 +20,7 @@ func OptsFromRequest(r *http.Request) db.GetItemsOpts {
 
 	limitStr := r.URL.Query().Get("limit")
 	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
+	if err != nil || limit < 1 {
 		l.Debug().Msgf("OptsFromRequest: Query parameter 'limit' not specified, using default %d", defaultLimitSize)
 		limit = defaultLimitSize
 	}

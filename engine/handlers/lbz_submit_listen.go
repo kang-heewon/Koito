@@ -107,7 +107,7 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 
 		if len(req.Payload) < 1 {
 			l.Debug().Msg("LbzSubmitListenHandler: Payload is empty")
-			utils.WriteError(w, "payload is nil", http.StatusBadRequest)
+			utils.WriteError(w, "payload is empty", http.StatusBadRequest)
 			return
 		}
 
@@ -140,8 +140,8 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 				l.Debug().AnErr("error", err).Msg("LbzSubmitListenHandler: Failed to parse one or more UUIDs")
 			}
 			if len(artistMbzIDs) < 1 {
-				l.Debug().AnErr("error", err).Msg("LbzSubmitListenHandler: Attempting to parse artist UUIDs from mbid_mapping")
-				utils.ParseUUIDSlice(payload.TrackMeta.MBIDMapping.ArtistMBIDs)
+				l.Debug().Msg("LbzSubmitListenHandler: Attempting to parse artist UUIDs from mbid_mapping")
+				artistMbzIDs, err = utils.ParseUUIDSlice(payload.TrackMeta.MBIDMapping.ArtistMBIDs)
 				if err != nil {
 					l.Debug().AnErr("error", err).Msg("LbzSubmitListenHandler: Failed to parse one or more UUIDs")
 				}
@@ -223,17 +223,17 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 			}
 			if err != nil {
 				l.Err(err).Msg("LbzSubmitListenHandler: Failed to submit listen")
-				w.WriteHeader(http.StatusInternalServerError)
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte("{\"status\": \"internal server error\"}"))
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte("{\"status\": \"internal server error\"}"))
 				return
 			}
 		}
 
 		l.Debug().Msg("LbzSubmitListenHandler: Successfully processed listens")
-		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("{\"status\": \"ok\"}"))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("{\"status\": \"ok\"}"))
 
 		if cfg.LbzRelayEnabled() {
 			go doLbzRelay(requestBytes, l)
@@ -253,13 +253,7 @@ func doLbzRelay(requestBytes []byte, l *zerolog.Logger) {
 		maxBackoff       = 40 * time.Second
 	)
 	l.Debug().Msg("doLbzRelay: Building ListenBrainz relay request")
-	req, err := http.NewRequest("POST", cfg.LbzRelayUrl()+"/submit-listens", bytes.NewBuffer(requestBytes))
-	if err != nil {
-		l.Err(err).Msg("doLbzRelay: Failed to build ListenBrainz relay request")
-		return
-	}
-	req.Header.Add("Authorization", "Token "+cfg.LbzRelayToken())
-	req.Header.Add("Content-Type", "application/json")
+	endpoint := cfg.LbzRelayUrl() + "/submit-listens"
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -271,20 +265,29 @@ func doLbzRelay(requestBytes []byte, l *zerolog.Logger) {
 	backoff := initialBackoff
 
 	for {
+		req, err := http.NewRequest("POST", endpoint, bytes.NewReader(requestBytes))
+		if err != nil {
+			l.Err(err).Msg("doLbzRelay: Failed to build ListenBrainz relay request")
+			return
+		}
+		req.Header.Add("Authorization", "Token "+cfg.LbzRelayToken())
+		req.Header.Add("Content-Type", "application/json")
+
 		l.Debug().Msg("doLbzRelay: Sending ListenBrainz relay request")
 		resp, err = client.Do(req)
 		if err != nil {
 			l.Err(err).Msg("doLbzRelay: Failed to send ListenBrainz relay request")
 			return
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			resp.Body.Close()
 			l.Info().Msg("doLbzRelay: Successfully relayed ListenBrainz submission")
 			return
 		}
 
 		body, _ = io.ReadAll(resp.Body)
+		resp.Body.Close()
 
 		if resp.StatusCode >= 500 && time.Since(start)+backoff <= maxRetryDuration {
 			l.Warn().

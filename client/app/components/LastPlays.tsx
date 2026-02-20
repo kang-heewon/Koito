@@ -8,15 +8,14 @@ import {
   getNowPlaying,
   type getItemsArgs,
   type Listen,
-  type Track,
 } from "api/api";
 import { Link } from "react-router";
 import { useAppContext } from "~/providers/AppProvider";
 
 interface Props {
   limit: number;
-  artistId?: Number;
-  albumId?: Number;
+  artistId?: number;
+  albumId?: number;
   trackId?: number;
   hideArtists?: boolean;
   showNowPlaying?: boolean;
@@ -33,6 +32,7 @@ export default function LastPlays(props: Props) {
         artist_id: props.artistId,
         album_id: props.albumId,
         track_id: props.trackId,
+        page: 1,
       },
     ],
     queryFn: ({ queryKey }) => getLastListens(queryKey[1] as getItemsArgs),
@@ -118,6 +118,7 @@ export default function LastPlays(props: Props) {
             >
               <td className="w-[18px] pr-2 align-middle">
                 <button
+                  type="button"
                   onClick={() => handleDelete(item)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity text-(--color-fg-tertiary) hover:text-(--color-error)"
                   aria-label="Delete"

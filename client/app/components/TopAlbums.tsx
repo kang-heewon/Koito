@@ -1,11 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import ArtistLinks from "./ArtistLinks";
-import {
-  getTopAlbums,
-  getTopTracks,
-  imageUrl,
-  type getItemsArgs,
-} from "api/api";
+import { getTopAlbums, type getItemsArgs } from "api/api";
 import { Link } from "react-router";
 import TopListSkeleton from "./skeletons/TopListSkeleton";
 import TopItemList from "./TopItemList";
@@ -13,20 +7,20 @@ import TopItemList from "./TopItemList";
 interface Props {
   limit: number;
   period: string;
-  artistId?: Number;
+  artistId?: number;
 }
 
 export default function TopAlbums(props: Props) {
   const { isPending, isError, data, error } = useQuery({
     queryKey: [
-      "top-albums",
-      {
-        limit: props.limit,
-        period: props.period,
-        artistId: props.artistId,
-        page: 0,
-      },
-    ],
+        "top-albums",
+        {
+          limit: props.limit,
+          period: props.period,
+          artist_id: props.artistId,
+          page: 0,
+        },
+      ],
     queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as getItemsArgs),
   });
 
@@ -34,7 +28,7 @@ export default function TopAlbums(props: Props) {
     return (
       <div className="w-[300px]">
         <h2>Top Albums</h2>
-        <p>Loading...</p>
+        <TopListSkeleton numItems={props.limit} />
       </div>
     );
   } else if (isError) {
@@ -45,6 +39,8 @@ export default function TopAlbums(props: Props) {
       </div>
     );
   }
+
+  if (!data?.items) return null;
 
   return (
     <div>
@@ -59,7 +55,7 @@ export default function TopAlbums(props: Props) {
       </h2>
       <div className="max-w-[300px]">
         <TopItemList type="album" data={data} />
-        {data.items.length < 1 ? "Nothing to show" : ""}
+        {data.items.length < 1 ? "No albums found for this period." : ""}
       </div>
     </div>
   );

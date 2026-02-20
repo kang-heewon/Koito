@@ -75,6 +75,8 @@ func (c *DeezerClient) queue(ctx context.Context, req *http.Request) ([]byte, er
 		} else if resp.StatusCode >= 300 || resp.StatusCode < 200 {
 			err = fmt.Errorf("recieved non-ok status from Deezer: %s", resp.Status)
 			done <- queue.RequestResult{Body: nil, Err: err}
+			resp.Body.Close()
+			return
 		}
 		defer resp.Body.Close()
 
