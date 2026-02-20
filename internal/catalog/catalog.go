@@ -118,10 +118,13 @@ func SubmitListen(ctx context.Context, store db.DB, opts SubmitListenOpts) error
 	l.Debug().Any("album", rg).Msg("Matched listen to release")
 
 	// ensure artists are associated with release group
-	store.AddArtistsToAlbum(ctx, db.AddArtistsToAlbumOpts{
+	if err := store.AddArtistsToAlbum(ctx, db.AddArtistsToAlbumOpts{
 		ArtistIDs: artistIDs,
 		AlbumID:   rg.ID,
-	})
+	}); err != nil {
+		l.Error().Err(err).Msg("Failed to associate artists with release")
+		return fmt.Errorf("SubmitListen: add artists to album: %w", err)
+	}
 
 	track, err := AssociateTrack(ctx, store, AssociateTrackOpts{
 		ArtistIDs:  artistIDs,

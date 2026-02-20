@@ -1,6 +1,19 @@
 import { getCfg, type User } from "api/api";
 import { createContext, useContext, useEffect, useState } from "react";
 
+const isUser = (data: unknown): data is User => {
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+
+  const candidate = data as Record<string, unknown>;
+  return (
+    typeof candidate.id === "number" &&
+    typeof candidate.username === "string" &&
+    (candidate.role === "user" || candidate.role === "admin")
+  );
+};
+
 interface AppContextType {
   user: User | null | undefined;
   configurableHomeActivity: boolean;
@@ -39,23 +52,36 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     fetch("/apis/web/v1/user/me")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) {
+          return null;
+        }
+
+        return (await res.json()) as unknown;
+      })
       .then((data) => {
-        data.error ? setUser(null) : setUser(data);
+        setUser(isUser(data) ? data : null);
       })
       .catch(() => setUser(null));
 
     setConfigurableHomeActivity(true);
     setHomeItems(12);
 
-    getCfg().then((cfg) => {
-      console.log(cfg);
-      if (cfg.default_theme !== "") {
-        setDefaultTheme(cfg.default_theme);
-      } else {
+    getCfg()
+      .then((cfg) => {
+        if (
+          cfg &&
+          typeof cfg.default_theme === "string" &&
+          cfg.default_theme !== ""
+        ) {
+          setDefaultTheme(cfg.default_theme);
+        } else {
+          setDefaultTheme("yuu");
+        }
+      })
+      .catch(() => {
         setDefaultTheme("yuu");
-      }
-    });
+      });
   }, []);
 
   // Block rendering the app until config is loaded

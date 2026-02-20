@@ -17,7 +17,7 @@ export default function ApiKeysModal() {
     const [displayData, setDisplayData] = useState<ApiKey[]>([])
     const [copied, setCopied] = useState<CopiedState | null>(null);
     const [expandedKey, setExpandedKey] = useState<string | null>(null);
-    const textRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const textRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     
     const handleRevealAndSelect = (key: string) => {
         setExpandedKey(key);
@@ -65,8 +65,13 @@ export default function ApiKeysModal() {
         } else {
             fallbackCopy(text);
         }
-    
-        const parentRect = (e.currentTarget.closest(".relative") as HTMLElement).getBoundingClientRect();
+
+        const parent = e.currentTarget.closest(".relative");
+        if (!parent) {
+            return;
+        }
+
+        const parentRect = parent.getBoundingClientRect();
         const buttonRect = e.currentTarget.getBoundingClientRect();
     
         setCopied({
@@ -87,40 +92,58 @@ export default function ApiKeysModal() {
         textarea.select();
         try {
             document.execCommand("copy");
-        } catch (err) {
-            console.error("Fallback: Copy failed", err);
+        } catch {
+            setError("Failed to copy API key");
         }
         document.body.removeChild(textarea);
     };
-    
-    const handleCreateApiKey = () => {
+
+    const handleCreateApiKey = async () => {
         setError(undefined)
         if (input === "") {
             setError("a label must be provided")
             return
         }
+
+        if (loading) {
+            return
+        }
+
         setLoading(true)
-        createApiKey(input)
-        .then(r => {
-            setDisplayData([r, ...displayData])
+
+        try {
+            const createdKey = await createApiKey(input)
+            setDisplayData((prev) => [createdKey, ...prev])
             setInput('')
-        }).catch((err) => setError(err.message))
-        setLoading(false)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to create API key")
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const handleDeleteApiKey = (id: number) => {
+    const handleDeleteApiKey = async (id: number) => {
         setError(undefined)
-        setLoading(true)
-        deleteApiKey(id)
-        .then(r => {
-            if (r.ok) {
-                setDisplayData(displayData.filter((v) => v.id != id))
-            } else {
-                r.json().then((r) => setError(r.error))
-            }
-        })
-        setLoading(false)
 
+        if (loading) {
+            return
+        }
+
+        setLoading(true)
+
+        try {
+            const r = await deleteApiKey(id)
+            if (r.ok) {
+                setDisplayData((prev) => prev.filter((v) => v.id !== id))
+            } else {
+                const body = (await r.json().catch(() => null)) as { error?: string } | null
+                setError(body?.error ?? "Failed to delete API key")
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to delete API key")
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -128,21 +151,21 @@ export default function ApiKeysModal() {
         <h2>API Keys</h2>
         <div className="flex flex-col gap-4 relative">
             {displayData.map((v) => (
-                <div className="flex gap-2"><div
-                        key={v.key}
+                <div key={v.key} className="flex gap-2"><button
+                        type="button"
                         ref={el => {
                             textRefs.current[v.key] = el;
                         }}
                         onClick={() => handleRevealAndSelect(v.key)}
-                        className={`bg p-3 rounded-md flex-grow cursor-pointer select-text ${
+                        className={`bg p-3 rounded-md flex-grow text-left cursor-pointer ${
                             expandedKey === v.key ? '' : 'truncate'
                         }`}
                         style={{ whiteSpace: 'nowrap' }}
-                        title={v.key} // optional tooltip
+                        title={v.key}
                     >
                         {expandedKey === v.key ? v.key : `${v.key.slice(0, 8)}... ${v.label}`}
-                    </div>            
-                    <button onClick={(e) => handleCopy(e, v.key)} className="large-button px-5 rounded-md"><Copy size={16} /></button>
+                    </button>
+                    <button type="button" onClick={(e) => handleCopy(e, v.key)} className="large-button px-5 rounded-md" aria-label="Copy API key"><Copy size={16} /></button>
                     <AsyncButton loading={loading} onClick={() => handleDeleteApiKey(v.id)} confirm><Trash size={16} /></AsyncButton>
                 </div>
             ))}

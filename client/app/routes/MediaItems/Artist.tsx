@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import TopTracks from "~/components/TopTracks";
-import { mergeArtists, type Artist } from "api/api";
+import { mergeArtists, type Artist as ArtistItem } from "api/api";
 import LastPlays from "~/components/LastPlays";
 import PeriodSelector from "~/components/PeriodSelector";
 import MediaLayout from "./MediaLayout";
@@ -14,20 +14,13 @@ export async function clientLoader({ params }: LoaderFunctionArgs) {
   if (!res.ok) {
     throw new Response("Failed to load artist", { status: 500 });
   }
-  const artist: Artist = await res.json();
+  const artist: ArtistItem = await res.json();
   return artist;
 }
 
-export default function Artist() {
-  const artist = useLoaderData() as Artist;
+export default function ArtistPage() {
+  const artist = useLoaderData() as ArtistItem;
   const [period, setPeriod] = useState("week");
-
-  // remove canonical name from alias list
-  console.log(artist.aliases);
-  let index = artist.aliases.indexOf(artist.name);
-  if (index !== -1) {
-    artist.aliases.splice(index, 1);
-  }
 
   return (
     <MediaLayout
@@ -39,14 +32,11 @@ export default function Artist() {
       imgItemId={artist.id}
       mergeFunc={mergeArtists}
       mergeCleanerFunc={(r, id) => {
-        r.albums = [];
-        r.tracks = [];
-        for (let i = 0; i < r.artists.length; i++) {
-          if (r.artists[i].id === id) {
-            delete r.artists[i];
-          }
-        }
-        return r;
+        return {
+          albums: [],
+          tracks: [],
+          artists: r.artists.filter((artist) => artist.id !== id),
+        };
       }}
       subContent={
         <div className="flex flex-col gap-2 items-start">

@@ -12,43 +12,74 @@ export default function Account() {
     const [success, setSuccess] = useState('')
     const { user, setUsername: setCtxUsername } = useAppContext()
 
-    const logoutHandler = () => {
+    const logoutHandler = async () => {
+        if (loading) {
+            return
+        }
+
+        setError('')
+        setSuccess('')
         setLoading(true)
-        logout()
-        .then(r => {
+
+        try {
+            const r = await logout()
             if (r.ok) {
                 window.location.reload()
             } else {
-                r.json().then(r => setError(r.error))
+                const body = (await r.json().catch(() => null)) as { error?: string } | null
+                setError(body?.error ?? 'failed to log out')
             }
-        }).catch(err => setError(err))
-        setLoading(false)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'failed to log out')
+        } finally {
+            setLoading(false)
+        }
     }
-    const updateHandler = () => {
+
+    const updateHandler = async () => {
+        if (loading) {
+            return
+        }
+
         setError('')
         setSuccess('')
-        if (password != "" && confirmPw === "") {
+
+        if (username.trim() === '' && password === '') {
+            setError('provide a new username or password before submitting')
+            return
+        }
+
+        if (password !== "" && confirmPw === "") {
             setError("confirm your new password before submitting")
             return
         }
-        setError('')
-        setSuccess('')
+
+        if (password !== confirmPw && confirmPw !== '') {
+            setError('new password and confirmation must match')
+            return
+        }
+
         setLoading(true)
-        updateUser(username, password)
-        .then(r => {
+
+        try {
+            const r = await updateUser(username, password)
             if (r.ok) {
                 setSuccess("sucessfully updated user")
-                if (username != "") {
+                if (username !== "") {
                     setCtxUsername(username)
                 }
                 setUsername('')
                 setPassword('')
                 setConfirmPw('')
             } else {
-                r.json().then((r) => setError(r.error))
+                const body = (await r.json().catch(() => null)) as { error?: string } | null
+                setError(body?.error ?? 'failed to update user')
             }
-        }).catch(err => setError(err))
-        setLoading(false)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'failed to update user')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -98,8 +129,8 @@ export default function Account() {
                     <AsyncButton loading={loading} onClick={updateHandler}>Submit</AsyncButton>
                 </div>
             </form>
-            {success != "" && <p className="success">{success}</p>}
-            {error != "" && <p className="error">{error}</p>}
+            {success !== "" && <p className="success">{success}</p>}
+            {error !== "" && <p className="error">{error}</p>}
         </div>
         </>
     )

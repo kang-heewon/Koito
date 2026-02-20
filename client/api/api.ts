@@ -164,7 +164,7 @@ function logout(): Promise<Response> {
 }
 
 function getCfg(): Promise<Config> {
-  return fetch(`/apis/web/v1/config`).then((r) => r.json() as Promise<Config>);
+  return fetch(`/apis/web/v1/config`).then((r) => handleJson<Config>(r));
 }
 
 function submitListen(id: string, ts: Date): Promise<Response> {

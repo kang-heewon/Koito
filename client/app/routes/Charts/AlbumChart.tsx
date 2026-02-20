@@ -5,7 +5,7 @@ import { type Album, type PaginatedResponse } from "api/api";
 
 export async function clientLoader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
-  const page = url.searchParams.get("page") || "0";
+  const page = url.searchParams.get("page") || "1";
   url.searchParams.set('page', page)
 
   const res = await fetch(
@@ -30,10 +30,10 @@ export default function AlbumChart() {
       render={({ data, page, onNext, onPrev }) => (
         <div className="flex flex-col gap-5">
         <div className="flex gap-15 mx-auto">
-          <button className="default" onClick={onPrev} disabled={page <= 1}>
+          <button type="button" className="default" onClick={onPrev} disabled={page <= 1}>
             Prev
           </button>
-          <button className="default" onClick={onNext} disabled={!data.has_next_page}>
+          <button type="button" className="default" onClick={onNext} disabled={!data.has_next_page}>
             Next
           </button>
         </div>
@@ -44,10 +44,10 @@ export default function AlbumChart() {
             type="album"
           />
           <div className="flex gap-15 mx-auto">
-            <button className="default" onClick={onPrev} disabled={page === 0}>
+            <button type="button" className="default" onClick={onPrev} disabled={page <= 1}>
               Prev
             </button>
-            <button className="default" onClick={onNext} disabled={!data.has_next_page}>
+            <button type="button" className="default" onClick={onNext} disabled={!data.has_next_page}>
               Next
             </button>
           </div>

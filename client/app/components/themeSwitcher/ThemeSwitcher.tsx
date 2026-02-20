@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "../../hooks/useTheme";
-import themes from "~/styles/themes.css";
+import themes, { type Theme } from "~/styles/themes.css";
 import ThemeOption from "./ThemeOption";
 import { AsyncButton } from "../AsyncButton";
 
@@ -27,16 +27,16 @@ export function ThemeSwitcher() {
   const [custom, setCustom] = useState(
     JSON.stringify(getCustomTheme() ?? initialTheme, null, "  ")
   );
+  const [customThemeError, setCustomThemeError] = useState("");
 
   const handleCustomTheme = () => {
-    console.log(custom);
     try {
-      const themeData = JSON.parse(custom);
+      const themeData = JSON.parse(custom) as Theme;
+      setCustomThemeError("");
       setCustomTheme(themeData);
       setCustom(JSON.stringify(themeData, null, "  "));
-      console.log(themeData);
-    } catch (err) {
-      console.log(err);
+    } catch {
+      setCustomThemeError("Invalid JSON: custom theme was not applied");
     }
   };
 
@@ -65,12 +65,18 @@ export function ThemeSwitcher() {
         <div className="flex flex-col items-center gap-3 bg-secondary p-5 rounded-lg">
           <textarea
             name="custom-theme"
-            onChange={(e) => setCustom(e.target.value)}
+            onChange={(e) => {
+              setCustomThemeError("");
+              setCustom(e.target.value);
+            }}
             id="custom-theme-input"
             className="bg-(--color-bg) h-[450px] w-[300px] p-5 rounded-md"
             value={custom}
           />
           <AsyncButton onClick={handleCustomTheme}>Submit</AsyncButton>
+          {customThemeError !== "" ? (
+            <p className="error">{customThemeError}</p>
+          ) : null}
         </div>
       </div>
     </div>

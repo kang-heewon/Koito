@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import TopTracks from "~/components/TopTracks";
-import { mergeAlbums, type Album } from "api/api";
+import { mergeAlbums, type Album as AlbumItem } from "api/api";
 import LastPlays from "~/components/LastPlays";
 import PeriodSelector from "~/components/PeriodSelector";
 import MediaLayout from "./MediaLayout";
@@ -13,15 +13,13 @@ export async function clientLoader({ params }: LoaderFunctionArgs) {
   if (!res.ok) {
     throw new Response("Failed to load album", { status: 500 });
   }
-  const album: Album = await res.json();
+  const album: AlbumItem = await res.json();
   return album;
 }
 
-export default function Album() {
-  const album = useLoaderData() as Album;
+export default function AlbumPage() {
+  const album = useLoaderData() as AlbumItem;
   const [period, setPeriod] = useState("week");
-
-  console.log(album);
 
   return (
     <MediaLayout
@@ -33,14 +31,11 @@ export default function Album() {
       imgItemId={album.id}
       mergeFunc={mergeAlbums}
       mergeCleanerFunc={(r, id) => {
-        r.artists = [];
-        r.tracks = [];
-        for (let i = 0; i < r.albums.length; i++) {
-          if (r.albums[i].id === id) {
-            delete r.albums[i];
-          }
-        }
-        return r;
+        return {
+          artists: [],
+          tracks: [],
+          albums: r.albums.filter((album) => album.id !== id),
+        };
       }}
       subContent={
         <div className="flex flex-col gap-2 items-start">

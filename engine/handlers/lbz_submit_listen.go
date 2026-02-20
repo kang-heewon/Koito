@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -73,6 +74,7 @@ type LbzAdditionalInfo struct {
 
 const (
 	maxListensPerRequest = 1000
+	maxRequestBodyBytes  = 1 << 20 // 1 MiB
 )
 
 var sfGroup singleflight.Group
@@ -84,13 +86,23 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 		l.Debug().Msg("LbzSubmitListenHandler: Received request to submit listens")
 
 		var req LbzSubmitListenRequest
-		requestBytes, err := io.ReadAll(r.Body)
+		requestBytes, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes+1))
 		if err != nil {
 			l.Err(err).Msg("LbzSubmitListenHandler: Failed to read request body")
 			utils.WriteError(w, "failed to read request body", http.StatusBadRequest)
 			return
 		}
-		if err := json.NewDecoder(bytes.NewBuffer(requestBytes)).Decode(&req); err != nil {
+
+		if len(requestBytes) > maxRequestBodyBytes {
+			l.Debug().Msg("LbzSubmitListenHandler: Request body too large")
+			utils.WriteError(w, "request body too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+
+		decoder := json.NewDecoder(bytes.NewBuffer(requestBytes))
+		decoder.DisallowUnknownFields()
+
+		if err := decoder.Decode(&req); err != nil {
 			l.Err(err).Msg("LbzSubmitListenHandler: Failed to decode request")
 			utils.WriteError(w, "failed to decode request", http.StatusBadRequest)
 			return
@@ -215,8 +227,11 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 				SkipSaveListen:     req.ListenType == ListenTypePlayingNow,
 			}
 
-			_, err, shared := sfGroup.Do(buildCaolescingKey(payload), func() (interface{}, error) {
-				return 0, catalog.SubmitListen(r.Context(), store, opts)
+			_, err, shared := sfGroup.Do(buildCoalescingKey(u.ID, req.ListenType, payload), func() (interface{}, error) {
+				submitCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 30*time.Second)
+				defer cancel()
+
+				return 0, catalog.SubmitListen(submitCtx, store, opts)
 			})
 			if shared {
 				l.Info().Msg("LbzSubmitListenHandler: Duplicate requests detected; results were coalesced")
@@ -310,13 +325,14 @@ func doLbzRelay(requestBytes []byte, l *zerolog.Logger) {
 	}
 }
 
-func buildCaolescingKey(p LbzSubmitListenPayload) string {
-	// the key not including the listen_type introduces the very rare possibility of a playing_now
-	// request taking precedence over a single, meaning that a listen will not be logged when it
-	// should, however that would require a playing_now request to fire a few seconds before a 'single'
-	// of the same track, which should never happen outside of misbehaving clients
-	//
-	// this could be fixed by restructuring the database inserts for idempotency, which would
-	// eliminate the need to coalesce responses, however i'm not gonna do that right now
-	return fmt.Sprintf("%s:%s:%s", p.TrackMeta.ArtistName, p.TrackMeta.TrackName, p.TrackMeta.ReleaseName)
+func buildCoalescingKey(userID int32, listenType LbzListenType, p LbzSubmitListenPayload) string {
+	return fmt.Sprintf(
+		"%d:%s:%s:%s:%s:%d",
+		userID,
+		listenType,
+		p.TrackMeta.ArtistName,
+		p.TrackMeta.TrackName,
+		p.TrackMeta.ReleaseName,
+		p.ListenedAt,
+	)
 }

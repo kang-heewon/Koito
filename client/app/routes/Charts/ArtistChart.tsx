@@ -1,11 +1,11 @@
 import TopItemList from "~/components/TopItemList";
 import ChartLayout from "./ChartLayout";
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
-import { type Album, type PaginatedResponse } from "api/api";
+import { type Artist as ArtistItem, type PaginatedResponse } from "api/api";
 
 export async function clientLoader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
-  const page = url.searchParams.get("page") || "0";
+  const page = url.searchParams.get("page") || "1";
   url.searchParams.set('page', page)
 
   const res = await fetch(
@@ -15,12 +15,12 @@ export async function clientLoader({ request }: LoaderFunctionArgs) {
     throw new Response("Failed to load top artists", { status: 500 });
   }
 
-  const top_artists: PaginatedResponse<Album> = await res.json();
+  const top_artists: PaginatedResponse<ArtistItem> = await res.json();
   return { top_artists };
 }
 
-export default function Artist() {
-  const { top_artists: initialData } = useLoaderData<{ top_artists: PaginatedResponse<Album> }>();
+export default function ArtistChart() {
+  const { top_artists: initialData } = useLoaderData<{ top_artists: PaginatedResponse<ArtistItem> }>();
 
   return (
     <ChartLayout
@@ -30,10 +30,10 @@ export default function Artist() {
       render={({ data, page, onNext, onPrev }) => (
         <div className="flex flex-col gap-5">
         <div className="flex gap-15 mx-auto">
-          <button className="default" onClick={onPrev} disabled={page <= 1}>
+          <button type="button" className="default" onClick={onPrev} disabled={page <= 1}>
             Prev
           </button>
-          <button className="default" onClick={onNext} disabled={!data.has_next_page}>
+          <button type="button" className="default" onClick={onNext} disabled={!data.has_next_page}>
             Next
           </button>
         </div>
@@ -44,10 +44,10 @@ export default function Artist() {
             type="artist"
           />
           <div className="flex gap-15 mx-auto">
-            <button className="default" onClick={onPrev} disabled={page <= 1}>
+            <button type="button" className="default" onClick={onPrev} disabled={page <= 1}>
               Prev
             </button>
-            <button className="default" onClick={onNext} disabled={!data.has_next_page}>
+            <button type="button" className="default" onClick={onNext} disabled={!data.has_next_page}>
               Next
             </button>
           </div>
