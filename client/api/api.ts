@@ -95,11 +95,10 @@ async function getStats(period: string): Promise<Stats> {
   return handleJson<Stats>(r);
 }
 
-function search(q: string): Promise<SearchResponse> {
-  q = encodeURIComponent(q);
-  return fetch(`/apis/web/v1/search?q=${q}`).then(
-    (r) => r.json() as Promise<SearchResponse>
-  );
+async function search(q: string): Promise<SearchResponse> {
+  const query = encodeURIComponent(q);
+  const r = await fetch(`/apis/web/v1/search?q=${query}`);
+  return handleJson<SearchResponse>(r);
 }
 
 function imageUrl(id: string, size: string) {

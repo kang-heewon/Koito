@@ -153,7 +153,13 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 		cfg.importAfter = time.Unix(afterutx, 0)
 	}
 
-	cfg.importThrottleMs, _ = strconv.Atoi(getenv(THROTTLE_IMPORTS_MS))
+	importThrottle := strings.TrimSpace(getenv(THROTTLE_IMPORTS_MS))
+	if importThrottle != "" {
+		cfg.importThrottleMs, err = strconv.Atoi(importThrottle)
+		if err != nil || cfg.importThrottleMs < 0 {
+			return nil, fmt.Errorf("loadConfig: invalid %s value %q", THROTTLE_IMPORTS_MS, importThrottle)
+		}
+	}
 
 	cfg.disableRateLimit = parseBool(getenv(DISABLE_RATE_LIMIT_ENV))
 
@@ -193,11 +199,16 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 	}
 
 	rawHosts := getenv(ALLOWED_HOSTS_ENV)
-	cfg.allowedHosts = strings.Split(rawHosts, ",")
-	cfg.allowAllHosts = cfg.allowedHosts[0] == "*"
+	cfg.allowedHosts = parseCSVList(rawHosts)
+	for _, host := range cfg.allowedHosts {
+		if host == "*" {
+			cfg.allowAllHosts = true
+			break
+		}
+	}
 
 	rawCors := getenv(CORS_ORIGINS_ENV)
-	cfg.allowedOrigins = strings.Split(rawCors, ",")
+	cfg.allowedOrigins = parseCSVList(rawCors)
 
 	if getenv(ARTIST_SEPARATORS_ENV) != "" {
 		for pattern := range strings.SplitSeq(getenv(ARTIST_SEPARATORS_ENV), ";;") {
@@ -245,6 +256,21 @@ func parseBool(s string) bool {
 	} else {
 		return false
 	}
+}
+
+func parseCSVList(s string) []string {
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value == "" {
+			continue
+		}
+		result = append(result, value)
+	}
+
+	return result
 }
 
 // Global accessors for configuration values

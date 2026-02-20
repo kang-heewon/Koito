@@ -18,41 +18,48 @@ func OptsFromRequest(r *http.Request) db.GetItemsOpts {
 
 	l.Debug().Msg("OptsFromRequest: Parsing query parameters")
 
-	limitStr := r.URL.Query().Get("limit")
+	parseOptionalInt := func(key string) int {
+		value := strings.TrimSpace(r.URL.Query().Get(key))
+		if value == "" {
+			return 0
+		}
+
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			l.Debug().Msgf("OptsFromRequest: Invalid integer for query parameter '%s': %q", key, value)
+			return 0
+		}
+
+		return parsed
+	}
+
+	limitStr := strings.TrimSpace(r.URL.Query().Get("limit"))
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 {
 		l.Debug().Msgf("OptsFromRequest: Query parameter 'limit' not specified, using default %d", defaultLimitSize)
 		limit = defaultLimitSize
 	}
 	if limit > maximumLimit {
-		l.Debug().Msgf("OptsFromRequest: Limit exceeds maximum %d, using default %d", maximumLimit, defaultLimitSize)
-		limit = defaultLimitSize
+		l.Debug().Msgf("OptsFromRequest: Limit exceeds maximum %d, clamping to %d", maximumLimit, maximumLimit)
+		limit = maximumLimit
 	}
 
-	pageStr := r.URL.Query().Get("page")
+	pageStr := strings.TrimSpace(r.URL.Query().Get("page"))
 	page, _ := strconv.Atoi(pageStr)
 	if page < 1 {
 		l.Debug().Msg("OptsFromRequest: Page parameter is less than 1, defaulting to 1")
 		page = 1
 	}
 
-	weekStr := r.URL.Query().Get("week")
-	week, _ := strconv.Atoi(weekStr)
-	monthStr := r.URL.Query().Get("month")
-	month, _ := strconv.Atoi(monthStr)
-	yearStr := r.URL.Query().Get("year")
-	year, _ := strconv.Atoi(yearStr)
-	fromStr := r.URL.Query().Get("from")
-	from, _ := strconv.Atoi(fromStr)
-	toStr := r.URL.Query().Get("to")
-	to, _ := strconv.Atoi(toStr)
+	week := parseOptionalInt("week")
+	month := parseOptionalInt("month")
+	year := parseOptionalInt("year")
+	from := parseOptionalInt("from")
+	to := parseOptionalInt("to")
 
-	artistIdStr := r.URL.Query().Get("artist_id")
-	artistId, _ := strconv.Atoi(artistIdStr)
-	albumIdStr := r.URL.Query().Get("album_id")
-	albumId, _ := strconv.Atoi(albumIdStr)
-	trackIdStr := r.URL.Query().Get("track_id")
-	trackId, _ := strconv.Atoi(trackIdStr)
+	artistId := parseOptionalInt("artist_id")
+	albumId := parseOptionalInt("album_id")
+	trackId := parseOptionalInt("track_id")
 
 	var period db.Period
 	switch strings.ToLower(r.URL.Query().Get("period")) {

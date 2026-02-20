@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { Modal } from "./Modal";
-import { replaceImage, search, type SearchResponse } from "api/api";
-import SearchResults from "../SearchResults";
+import { replaceImage } from "api/api";
 import { AsyncButton } from "../AsyncButton";
 
 interface Props {
@@ -9,7 +8,7 @@ interface Props {
   id: number;
   musicbrainzId?: string;
   open: boolean;
-  setOpen: Function;
+  setOpen: Dispatch<SetStateAction<boolean>>;
 }
 
 export default function ImageReplaceModal({
@@ -24,6 +23,18 @@ export default function ImageReplaceModal({
   const [error, setError] = useState("");
   const [suggestedImgLoading, setSuggestedImgLoading] = useState(true);
 
+  const parseResponseError = async (r: Response): Promise<string> => {
+    try {
+      const body = (await r.json()) as { error?: string };
+      if (body && typeof body.error === "string" && body.error.length > 0) {
+        return body.error;
+      }
+    } catch {
+      return `request failed (${r.status})`;
+    }
+    return `request failed (${r.status})`;
+  };
+
   const doImageReplace = (url: string) => {
     setLoading(true);
     setError("");
@@ -31,21 +42,24 @@ export default function ImageReplaceModal({
     formData.set(`${type.toLowerCase()}_id`, id.toString());
     formData.set("image_url", url);
     replaceImage(formData)
-      .then((r) => {
-        if (r.status >= 200 && r.status < 300) {
+      .then(async (r) => {
+        if (r.ok) {
           window.location.reload();
         } else {
-          r.json().then((r) => setError(r.error));
-          setLoading(false);
+          setError(await parseResponseError(r));
         }
       })
-      .catch((err) => setError(err));
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Failed to replace image")
+      )
+      .finally(() => setLoading(false));
   };
 
   const closeModal = () => {
     setOpen(false);
     setQuery("");
     setError("");
+    setSuggestedImgLoading(true);
   };
 
   return (
@@ -54,14 +68,13 @@ export default function ImageReplaceModal({
       <div className="flex flex-col items-center">
         <input
           type="text"
-          autoFocus
           // i find my stupid a(n) logic to be a little silly so im leaving it in even if its not optimal
           placeholder={`Enter image URL, or drag-and-drop a local file`}
           className="w-full mx-auto fg bg rounded p-2"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {query != "" ? (
+        {query !== "" ? (
           <div className="flex gap-2 mt-4">
             <AsyncButton
               loading={loading}
@@ -77,6 +90,7 @@ export default function ImageReplaceModal({
           <>
             <h3 className="mt-5">Suggested Image (Click to Apply)</h3>
             <button
+              type="button"
               className="mt-4"
               disabled={loading}
               onClick={() =>
@@ -96,6 +110,7 @@ export default function ImageReplaceModal({
                 )}
                 <img
                   src={`https://coverartarchive.org/release/${musicbrainzId}/front`}
+                  alt="Suggested album cover"
                   onLoad={() => setSuggestedImgLoading(false)}
                   onError={() => setSuggestedImgLoading(false)}
                   className={`block w-[130px] h-auto ${

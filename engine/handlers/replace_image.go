@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -27,10 +28,33 @@ func ReplaceImageHandler(store db.DB) http.HandlerFunc {
 
 		l.Debug().Msg("ReplaceImageHandler: Received request to replace image")
 
-		artistIdStr := r.FormValue("artist_id")
-		artistId, _ := strconv.Atoi(artistIdStr)
-		albumIdStr := r.FormValue("album_id")
-		albumId, _ := strconv.Atoi(albumIdStr)
+		parseID := func(key string) (int, error) {
+			value := strings.TrimSpace(r.FormValue(key))
+			if value == "" {
+				return 0, nil
+			}
+
+			id, err := strconv.Atoi(value)
+			if err != nil || id < 1 {
+				return 0, fmt.Errorf("invalid value for %s: %q", key, value)
+			}
+
+			return id, nil
+		}
+
+		artistId, err := parseID("artist_id")
+		if err != nil {
+			l.Debug().AnErr("error", err).Msg("ReplaceImageHandler: Invalid artist_id")
+			utils.WriteError(w, "artist_id must be a positive integer", http.StatusBadRequest)
+			return
+		}
+
+		albumId, err := parseID("album_id")
+		if err != nil {
+			l.Debug().AnErr("error", err).Msg("ReplaceImageHandler: Invalid album_id")
+			utils.WriteError(w, "album_id must be a positive integer", http.StatusBadRequest)
+			return
+		}
 
 		if artistId != 0 && albumId != 0 {
 			l.Debug().Msg("ReplaceImageHandler: Both artist_id and album_id are set, rejecting request")
@@ -70,7 +94,6 @@ func ReplaceImageHandler(store db.DB) http.HandlerFunc {
 		l.Debug().Msg("ReplaceImageHandler: Getting image from request")
 
 		var id uuid.UUID
-		var err error
 
 		fileUrl := r.FormValue("image_url")
 		if fileUrl != "" {
@@ -106,13 +129,14 @@ func ReplaceImageHandler(store db.DB) http.HandlerFunc {
 			defer file.Close()
 
 			buf := make([]byte, 512)
-			if _, err := file.Read(buf); err != nil {
+			n, err := file.Read(buf)
+			if err != nil && err != io.EOF {
 				l.Err(err).Msg("ReplaceImageHandler: Could not read file")
 				utils.WriteError(w, "Could not read file", http.StatusInternalServerError)
 				return
 			}
 
-			contentType := http.DetectContentType(buf)
+			contentType := http.DetectContentType(buf[:n])
 			if !strings.HasPrefix(contentType, "image/") {
 				l.Debug().Msg("ReplaceImageHandler: Uploaded file is not an image")
 				utils.WriteError(w, "Only image uploads are allowed", http.StatusBadRequest)
@@ -183,9 +207,7 @@ func ReplaceImageHandler(store db.DB) http.HandlerFunc {
 			l.Debug().Msg("ReplaceImageHandler: Cleaning up old image file")
 			err = catalog.DeleteImage(*oldImage)
 			if err != nil {
-				l.Err(err).Msg("ReplaceImageHandler: Failed to delete old image file")
-				utils.WriteError(w, "Could not delete old image file", http.StatusInternalServerError)
-				return
+				l.Warn().Err(err).Msg("ReplaceImageHandler: Failed to delete old image file")
 			}
 		}
 

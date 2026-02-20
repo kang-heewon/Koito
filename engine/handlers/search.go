@@ -21,7 +21,7 @@ func SearchHandler(store db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		l := logger.FromContext(ctx)
-		q := r.URL.Query().Get("q")
+		q := strings.TrimSpace(r.URL.Query().Get("q"))
 
 		l.Debug().Msgf("SearchHandler: Received search with query: %s", r.URL.Query().Encode())
 
@@ -29,9 +29,15 @@ func SearchHandler(store db.DB) http.HandlerFunc {
 		var albums []*models.Album
 		var tracks []*models.Track
 
-		if strings.HasPrefix(q, "id:") {
-			idStr := strings.TrimPrefix(q, "id:")
-			id, _ := strconv.Atoi(idStr)
+		qLower := strings.ToLower(q)
+		if strings.HasPrefix(qLower, "id:") {
+			idStr := strings.TrimSpace(q[3:])
+			id, err := strconv.Atoi(idStr)
+			if err != nil || id < 1 {
+				l.Debug().Msgf("SearchHandler: Invalid id query %q", q)
+				utils.WriteError(w, "id search must use a positive integer (id:<number>)", http.StatusBadRequest)
+				return
+			}
 
 			artist, err := store.GetArtist(ctx, db.GetArtistOpts{ID: int32(id)})
 			if err != nil {

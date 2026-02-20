@@ -3,23 +3,40 @@ import { useState } from "react"
 import SearchResultItem from "./SearchResultItem"
 import SearchResultSelectorItem from "./SearchResultSelectorItem"
 
-interface Props {
+type SelectorSelection = { id: number; title: string }
+
+interface CommonProps {
     data?: SearchResponse
-    onSelect: Function
-    selectorMode?: boolean
 }
+
+interface SelectorModeProps extends CommonProps {
+    selectorMode: true
+    onSelect: (selection: SelectorSelection) => void
+}
+
+interface DefaultModeProps extends CommonProps {
+    selectorMode?: false
+    onSelect: (id: number) => void
+}
+
+type Props = SelectorModeProps | DefaultModeProps
+
 export default function SearchResults({ data, onSelect, selectorMode }: Props) {
     const [selected, setSelected] = useState(0)
     const classes = "flex flex-col items-start bg rounded w-full"
     const hClasses = "pt-4 pb-2"
 
     const selectItem = (title: string, id: number) => {
+        if (!selectorMode) {
+            return
+        }
+
         if (selected === id) {
             setSelected(0)
-            onSelect({id: 0, title: ''})
+            onSelect({ id: 0, title: '' })
         } else {
             setSelected(id)
-            onSelect({id: id, title: title})
+            onSelect({ id, title })
         }
     }
 

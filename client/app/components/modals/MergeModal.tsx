@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { Modal } from "./Modal";
 import { search, type SearchResponse } from "api/api";
 import SearchResults from "../SearchResults";
@@ -7,7 +7,7 @@ import { useNavigate } from "react-router";
 
 interface Props {
     open: boolean 
-    setOpen: Function
+    setOpen: Dispatch<SetStateAction<boolean>>
     type: string
     currentId: number
     currentTitle: string
@@ -75,6 +75,7 @@ export default function MergeModal(props: Props) {
             setDebouncedQuery(query);
             if (query === '') {
                 setData(undefined)
+                setError('')
             }
         }, 300);
 
@@ -84,11 +85,27 @@ export default function MergeModal(props: Props) {
     }, [query]);
 
     useEffect(() => {
+        let active = true
+
         if (debouncedQuery) {
             search(debouncedQuery).then((r) => {
+                if (!active) {
+                    return
+                }
                 r = props.mergeCleanerFunc(r, props.currentId)
+                setError('')
                 setData(r);
+            }).catch((err) => {
+                if (!active) {
+                    return
+                }
+                setData(undefined)
+                setError(err instanceof Error ? err.message : "Search failed")
             });
+        }
+
+        return () => {
+            active = false
         }
     }, [debouncedQuery, props.currentId, props.mergeCleanerFunc]);
 
