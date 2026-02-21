@@ -17,51 +17,49 @@ func GetListenActivityHandler(store db.DB) func(w http.ResponseWriter, r *http.R
 
 		l.Debug().Msg("GetListenActivityHandler: Received request to retrieve listen activity")
 
-		rangeStr := r.URL.Query().Get("range")
-		_range, err := strconv.Atoi(rangeStr)
-		if err != nil {
-			l.Debug().AnErr("error", err).Msg("GetListenActivityHandler: Invalid range parameter")
-			utils.WriteError(w, "invalid range parameter", http.StatusBadRequest)
+		parseOptionalInt := func(key string, invalidMessage string) (int, bool) {
+			value := strings.TrimSpace(r.URL.Query().Get(key))
+			if value == "" {
+				return 0, true
+			}
+
+			parsed, err := strconv.Atoi(value)
+			if err != nil {
+				l.Debug().AnErr("error", err).Msgf("GetListenActivityHandler: Invalid %s parameter", key)
+				utils.WriteError(w, invalidMessage, http.StatusBadRequest)
+				return 0, false
+			}
+
+			return parsed, true
+		}
+
+		_range, ok := parseOptionalInt("range", "invalid range parameter")
+		if !ok {
 			return
 		}
 
-		monthStr := r.URL.Query().Get("month")
-		month, err := strconv.Atoi(monthStr)
-		if err != nil {
-			l.Debug().AnErr("error", err).Msg("GetListenActivityHandler: Invalid month parameter")
-			utils.WriteError(w, "invalid month parameter", http.StatusBadRequest)
+		month, ok := parseOptionalInt("month", "invalid month parameter")
+		if !ok {
 			return
 		}
 
-		yearStr := r.URL.Query().Get("year")
-		year, err := strconv.Atoi(yearStr)
-		if err != nil {
-			l.Debug().AnErr("error", err).Msg("GetListenActivityHandler: Invalid year parameter")
-			utils.WriteError(w, "invalid year parameter", http.StatusBadRequest)
+		year, ok := parseOptionalInt("year", "invalid year parameter")
+		if !ok {
 			return
 		}
 
-		artistIdStr := r.URL.Query().Get("artist_id")
-		artistId, err := strconv.Atoi(artistIdStr)
-		if err != nil {
-			l.Debug().AnErr("error", err).Msg("GetListenActivityHandler: Invalid artist ID parameter")
-			utils.WriteError(w, "invalid artist ID parameter", http.StatusBadRequest)
+		artistId, ok := parseOptionalInt("artist_id", "invalid artist ID parameter")
+		if !ok {
 			return
 		}
 
-		albumIdStr := r.URL.Query().Get("album_id")
-		albumId, err := strconv.Atoi(albumIdStr)
-		if err != nil {
-			l.Debug().AnErr("error", err).Msg("GetListenActivityHandler: Invalid album ID parameter")
-			utils.WriteError(w, "invalid album ID parameter", http.StatusBadRequest)
+		albumId, ok := parseOptionalInt("album_id", "invalid album ID parameter")
+		if !ok {
 			return
 		}
 
-		trackIdStr := r.URL.Query().Get("track_id")
-		trackId, err := strconv.Atoi(trackIdStr)
-		if err != nil {
-			l.Debug().AnErr("error", err).Msg("GetListenActivityHandler: Invalid track ID parameter")
-			utils.WriteError(w, "invalid track ID parameter", http.StatusBadRequest)
+		trackId, ok := parseOptionalInt("track_id", "invalid track ID parameter")
+		if !ok {
 			return
 		}
 
@@ -94,6 +92,12 @@ func GetListenActivityHandler(store db.DB) func(w http.ResponseWriter, r *http.R
 
 		activity, err := store.GetListenActivity(ctx, opts)
 		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "year must be specified with month") {
+				l.Debug().AnErr("error", err).Msg("GetListenActivityHandler: Invalid month/year combination")
+				utils.WriteError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
 			l.Err(err).Msg("GetListenActivityHandler: Failed to retrieve listen activity")
 			utils.WriteError(w, "failed to retrieve listen activity", http.StatusInternalServerError)
 			return

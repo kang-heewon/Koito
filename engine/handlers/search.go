@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/gabehf/koito/internal/logger"
 	"github.com/gabehf/koito/internal/models"
 	"github.com/gabehf/koito/internal/utils"
+	"github.com/jackc/pgx/v5"
 )
 
 type SearchResults struct {
@@ -41,7 +43,13 @@ func SearchHandler(store db.DB) http.HandlerFunc {
 
 			artist, err := store.GetArtist(ctx, db.GetArtistOpts{ID: int32(id)})
 			if err != nil {
-				l.Debug().Msg("No artists found with id")
+				if errors.Is(err, pgx.ErrNoRows) {
+					l.Debug().Msgf("SearchHandler: No artists found with id=%d", id)
+				} else {
+					l.Err(err).Msgf("SearchHandler: Failed to search artist by id=%d", id)
+					utils.WriteError(w, "failed to search in database", http.StatusInternalServerError)
+					return
+				}
 			}
 			if artist != nil {
 				artists = append(artists, artist)
@@ -49,7 +57,13 @@ func SearchHandler(store db.DB) http.HandlerFunc {
 
 			album, err := store.GetAlbum(ctx, db.GetAlbumOpts{ID: int32(id)})
 			if err != nil {
-				l.Debug().Msg("No albums found with id")
+				if errors.Is(err, pgx.ErrNoRows) {
+					l.Debug().Msgf("SearchHandler: No albums found with id=%d", id)
+				} else {
+					l.Err(err).Msgf("SearchHandler: Failed to search album by id=%d", id)
+					utils.WriteError(w, "failed to search in database", http.StatusInternalServerError)
+					return
+				}
 			}
 			if album != nil {
 				albums = append(albums, album)
@@ -57,7 +71,13 @@ func SearchHandler(store db.DB) http.HandlerFunc {
 
 			track, err := store.GetTrack(ctx, db.GetTrackOpts{ID: int32(id)})
 			if err != nil {
-				l.Debug().Msg("No tracks found with id")
+				if errors.Is(err, pgx.ErrNoRows) {
+					l.Debug().Msgf("SearchHandler: No tracks found with id=%d", id)
+				} else {
+					l.Err(err).Msgf("SearchHandler: Failed to search track by id=%d", id)
+					utils.WriteError(w, "failed to search in database", http.StatusInternalServerError)
+					return
+				}
 			}
 			if track != nil {
 				tracks = append(tracks, track)

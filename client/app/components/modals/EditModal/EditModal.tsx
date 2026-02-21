@@ -53,50 +53,95 @@ export default function EditModal({ open, setOpen, type, id }: Props) {
     return <p>Loading...</p>;
   }
 
-  const handleSetPrimary = (alias: string) => {
-    setError(undefined);
-    setLoading(true);
-    setPrimaryAlias(type, id, alias).then((r) => {
-      if (r.ok) {
-        window.location.reload();
-      } else {
-        r.json().then((r) => setError(r.error));
+  const parseResponseError = async (r: Response): Promise<string> => {
+    const fallback = `request failed (${r.status})`;
+    try {
+      const body = (await r.json()) as { error?: string };
+      if (body && typeof body.error === "string" && body.error.length > 0) {
+        return body.error;
       }
-    });
-    setLoading(false);
+    } catch {
+      return fallback;
+    }
+    return fallback;
   };
 
-  const handleNewAlias = () => {
+  const handleSetPrimary = async (alias: string) => {
+    if (loading) {
+      return;
+    }
+
     setError(undefined);
-    if (input === "") {
+    setLoading(true);
+
+    try {
+      const r = await setPrimaryAlias(type, id, alias);
+      if (r.ok) {
+        setDisplayData((prev) =>
+          prev.map((item) => ({ ...item, is_primary: item.alias === alias }))
+        );
+      } else {
+        setError(await parseResponseError(r));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set primary alias");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNewAlias = async () => {
+    if (loading) {
+      return;
+    }
+
+    setError(undefined);
+    const normalizedInput = input.trim();
+    if (normalizedInput === "") {
       setError("alias must be provided");
       return;
     }
+
     setLoading(true);
-    createAlias(type, id, input).then((r) => {
+
+    try {
+      const r = await createAlias(type, id, normalizedInput);
       if (r.ok) {
-        setDisplayData([
-          ...displayData,
-          { alias: input, source: "Manual", is_primary: false, id: id },
+        setDisplayData((prev) => [
+          ...prev,
+          { alias: normalizedInput, source: "Manual", is_primary: false, id: id },
         ]);
+        setInput("");
       } else {
-        r.json().then((r) => setError(r.error));
+        setError(await parseResponseError(r));
       }
-    });
-    setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create alias");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteAlias = (alias: string) => {
+  const handleDeleteAlias = async (alias: string) => {
+    if (loading) {
+      return;
+    }
+
     setError(undefined);
     setLoading(true);
-    deleteAlias(type, id, alias).then((r) => {
+
+    try {
+      const r = await deleteAlias(type, id, alias);
       if (r.ok) {
-        setDisplayData(displayData.filter((v) => v.alias != alias));
+        setDisplayData((prev) => prev.filter((v) => v.alias !== alias));
       } else {
-        r.json().then((r) => setError(r.error));
+        setError(await parseResponseError(r));
       }
-    });
-    setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete alias");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -108,23 +153,27 @@ export default function EditModal({ open, setOpen, type, id }: Props) {
     <Modal maxW={1000} isOpen={open} onClose={handleClose}>
       <div className="flex flex-col items-start gap-6 w-full">
         <div className="w-full">
-          <h2>Alias Manager</h2>
-          <div className="flex flex-col gap-4">
-            {displayData.map((v) => (
-              <div className="flex gap-2">
-                <div className="bg p-3 rounded-md flex-grow" key={v.alias}>
+            <h2>Alias Manager</h2>
+            <div className="flex flex-col gap-4">
+              {displayData.map((v) => (
+              <div className="flex gap-2" key={v.alias}>
+                <div className="bg p-3 rounded-md flex-grow">
                   {v.alias} (source: {v.source})
                 </div>
                 <AsyncButton
                   loading={loading}
-                  onClick={() => handleSetPrimary(v.alias)}
+                  onClick={() => {
+                    void handleSetPrimary(v.alias);
+                  }}
                   disabled={v.is_primary}
                 >
                   Set Primary
                 </AsyncButton>
                 <AsyncButton
                   loading={loading}
-                  onClick={() => handleDeleteAlias(v.alias)}
+                  onClick={() => {
+                    void handleDeleteAlias(v.alias);
+                  }}
                   confirm
                   disabled={v.is_primary}
                 >
@@ -140,7 +189,12 @@ export default function EditModal({ open, setOpen, type, id }: Props) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
               />
-              <AsyncButton loading={loading} onClick={handleNewAlias}>
+              <AsyncButton
+                loading={loading}
+                onClick={() => {
+                  void handleNewAlias();
+                }}
+              >
                 Submit
               </AsyncButton>
             </div>

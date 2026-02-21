@@ -1,5 +1,5 @@
 import { login } from "api/api"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { AsyncButton } from "../AsyncButton"
 
 export default function LoginForm() {
@@ -9,20 +9,35 @@ export default function LoginForm() {
     const [password, setPassword] = useState('')
     const [remember, setRemember] = useState(false)
 
-    const loginHandler = () => {
-        if (username && password) {
-            setLoading(true)
-            login(username, password, remember)
-            .then(r => {
-                if (r.status >= 200 && r.status < 300) {
-                    window.location.reload()
-                } else {
-                    r.json().then(r => setError(r.error))
-                }
-            }).catch(err => setError(err))
+    const loginHandler = async () => {
+        if (loading) {
+            return
+        }
+
+        setError('')
+
+        if (!username || !password) {
+            if (username || password) {
+                setError("username and password are required")
+            }
+            return
+        }
+
+        setLoading(true)
+
+        try {
+            const r = await login(username, password, remember)
+            if (r.ok) {
+                window.location.reload()
+                return
+            }
+
+            const body = (await r.json().catch(() => null)) as { error?: string } | null
+            setError(body?.error ?? `failed to log in (${r.status})`)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "failed to log in")
+        } finally {
             setLoading(false)
-        } else if (username || password) {
-            setError("username and password are required")
         }
     }
 
@@ -48,9 +63,9 @@ export default function LoginForm() {
                 />
                 <div className="flex gap-2">
                     <input type="checkbox" name="koito-remember" id="koito-remember" onChange={() => setRemember(!remember)} />
-                    <label htmlFor="kotio-remember">Remember me</label>
+                    <label htmlFor="koito-remember">Remember me</label>
                 </div>
-                <AsyncButton loading={loading} onClick={loginHandler}>Login</AsyncButton>
+                <AsyncButton loading={loading} onClick={() => { void loginHandler() }}>Login</AsyncButton>
             </form>
             <p className="error">{error}</p>
         </div>

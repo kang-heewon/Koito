@@ -6,39 +6,35 @@ export default function ExportModal() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleExport = () => {
+    const handleExport = async () => {
+        if (loading) {
+            return
+        }
+
+        setError('')
         setLoading(true)
-        fetch(`/apis/web/v1/export`, {
-            method: "GET"
-        })
-        .then(res => {
-            if (res.ok) {
-                res.blob()
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob)
-                    const a = document.createElement("a")
-                    a.href = url
-                    a.download = "koito_export.json"
-                    document.body.appendChild(a)
-                    a.click()
-                    a.remove()
-                    window.URL.revokeObjectURL(url)
-                    setLoading(false)
-                })
-            } else {
-                res.json().then(r => setError(r.error))
-                setLoading(false)
-            }
-        }).catch(err => {
-            setError(err)
+
+        try {
+            const blob = await getExport()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = "koito_export.json"
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            window.URL.revokeObjectURL(url)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "failed to export data")
+        } finally {
             setLoading(false)
-        })
+        }
     }
 
     return (
         <div>
             <h2>Export</h2>
-            <AsyncButton loading={loading} onClick={handleExport}>Export Data</AsyncButton>
+            <AsyncButton loading={loading} onClick={() => { void handleExport() }}>Export Data</AsyncButton>
             {error && <p className="error">{error}</p>}
         </div>
     )

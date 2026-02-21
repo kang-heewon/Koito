@@ -16,21 +16,22 @@ interface getActivityArgs {
   track_id: number;
 }
 
-async function handleJson<T>(r: Response): Promise<T> {
-  const parseApiError = async (): Promise<string> => {
-    try {
-      const err = (await r.json()) as ApiError;
-      if (err && typeof err.error === "string" && err.error.length > 0) {
-        return err.error;
-      }
-    } catch {
-      return `request failed (${r.status})`;
+async function parseApiError(r: Response): Promise<string> {
+  try {
+    const err = (await r.json()) as ApiError;
+    if (err && typeof err.error === "string" && err.error.length > 0) {
+      return err.error;
     }
+  } catch {
     return `request failed (${r.status})`;
-  };
+  }
+  return `request failed (${r.status})`;
+}
+
+async function handleJson<T>(r: Response): Promise<T> {
 
   if (!r.ok) {
-    throw new Error(await parseApiError());
+    throw new Error(await parseApiError(r));
   }
   return (await r.json()) as T;
 }
@@ -180,9 +181,7 @@ function submitListen(id: string, ts: Date): Promise<Response> {
 }
 
 function getApiKeys(): Promise<ApiKey[]> {
-  return fetch(`/apis/web/v1/user/apikeys`).then(
-    (r) => r.json() as Promise<ApiKey[]>
-  );
+  return fetch(`/apis/web/v1/user/apikeys`).then((r) => handleJson<ApiKey[]>(r));
 }
 const createApiKey = async (label: string): Promise<ApiKey> => {
   const form = new URLSearchParams();
@@ -192,16 +191,7 @@ const createApiKey = async (label: string): Promise<ApiKey> => {
     body: form,
   });
   if (!r.ok) {
-    let errorMessage = `error: ${r.status}`;
-    try {
-      const errorData: ApiError = await r.json();
-      if (errorData && typeof errorData.error === "string") {
-        errorMessage = errorData.error;
-      }
-    } catch (e) {
-      console.error("unexpected api error:", e);
-    }
-    throw new Error(errorMessage);
+    throw new Error(await parseApiError(r));
   }
   const data: ApiKey = await r.json();
   return data;
@@ -236,8 +226,8 @@ function updateUser(username: string, password: string) {
   });
 }
 function getAliases(type: string, id: number): Promise<Alias[]> {
-  return fetch(`/apis/web/v1/aliases?${type}_id=${id}`).then(
-    (r) => r.json() as Promise<Alias[]>
+  return fetch(`/apis/web/v1/aliases?${type}_id=${id}`).then((r) =>
+    handleJson<Alias[]>(r)
   );
 }
 function createAlias(
@@ -280,9 +270,7 @@ function setPrimaryAlias(
   });
 }
 function getAlbum(id: number): Promise<Album> {
-  return fetch(`/apis/web/v1/album?id=${id}`).then(
-    (r) => r.json() as Promise<Album>
-  );
+  return fetch(`/apis/web/v1/album?id=${id}`).then((r) => handleJson<Album>(r));
 }
 
 function deleteListen(listen: Listen): Promise<Response> {
@@ -292,7 +280,15 @@ function deleteListen(listen: Listen): Promise<Response> {
     method: "DELETE",
   });
 }
-function getExport() {}
+async function getExport(): Promise<Blob> {
+  const r = await fetch(`/apis/web/v1/export`, {
+    method: "GET",
+  });
+  if (!r.ok) {
+    throw new Error(await parseApiError(r));
+  }
+  return r.blob();
+}
 
 function getGenreStats(period: string, metric: "count" | "time"): Promise<GenreStatsResponse> {
   return fetch(`/apis/web/v1/genre-stats?period=${period}&metric=${metric}`).then(
@@ -301,7 +297,9 @@ function getGenreStats(period: string, metric: "count" | "time"): Promise<GenreS
 }
 
 function getNowPlaying(): Promise<NowPlaying> {
-  return fetch("/apis/web/v1/now-playing").then((r) => r.json());
+  return fetch("/apis/web/v1/now-playing").then((r) =>
+    handleJson<NowPlaying>(r)
+  );
 }
 
 function getRecommendations(): Promise<RecommendationsResponse> {

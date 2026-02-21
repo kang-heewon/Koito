@@ -20,18 +20,28 @@ export default function AddListenModal({ open, setOpen, trackid }: Props) {
         setOpen(false)
     }
 
-    const submit = () => {
+    const submit = async () => {
+        if (loading) {
+            return
+        }
+
+        setError('')
         setLoading(true)
-        submitListen(trackid.toString(), ts)
-        .then(r => {
-            if(r.ok) {
-                setLoading(false)
+
+        try {
+            const r = await submitListen(trackid.toString(), ts)
+            if (r.ok) {
                 navigate(0)
-            } else {
-                r.json().then(r => setError(r.error))
-                setLoading(false)
+                return
             }
-        })
+
+            const body = (await r.json().catch(() => null)) as { error?: string } | null
+            setError(body?.error ?? `failed to add listen (${r.status})`)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'failed to add listen')
+        } finally {
+            setLoading(false)
+        }
     }
 
     const formatForDatetimeLocal = (d: Date) => {
@@ -49,7 +59,7 @@ export default function AddListenModal({ open, setOpen, trackid }: Props) {
                     value={formatForDatetimeLocal(ts)}
                     onChange={(e) => setTS(new Date(e.target.value))}
                 />
-                <AsyncButton loading={loading} onClick={submit}>Submit</AsyncButton>
+                <AsyncButton loading={loading} onClick={() => { void submit() }}>Submit</AsyncButton>
                 <p className="error">{error}</p>
             </div>
         </Modal>
