@@ -4,7 +4,6 @@ import {
   ResponsiveContainer,
   Treemap,
   Tooltip,
-  type TooltipProps,
 } from "recharts";
 import { getGenreStats, type GenreStatsResponse } from "api/api";
 import PeriodSelector from "~/components/PeriodSelector";
@@ -27,6 +26,37 @@ const COLORS = [
 ];
 
 const getColor = (index: number) => COLORS[index % COLORS.length];
+
+type TreemapLeaf = {
+  name: string;
+  value: number;
+  fill: string;
+};
+
+type CustomContentProps = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  name?: string;
+  fill?: string;
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload?: unknown }>;
+  metric: "count" | "time";
+};
+
+function isTreemapLeaf(value: unknown): value is TreemapLeaf {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("name" in value) || !("value" in value)) {
+    return false;
+  }
+  return typeof value.name === "string" && typeof value.value === "number";
+}
 
 export default function GenreStats() {
   const [period, setPeriod] = useState("month");
@@ -123,8 +153,13 @@ export default function GenreStats() {
   );
 }
 
-const CustomContent = (props: any) => {
-  const { x, y, width, height, name, value, fill } = props;
+const CustomContent = (props: CustomContentProps) => {
+  const x = props.x ?? 0;
+  const y = props.y ?? 0;
+  const width = props.width ?? 0;
+  const height = props.height ?? 0;
+  const name = props.name ?? "";
+  const fill = props.fill ?? "#8884d8";
 
   if (width < 50 || height < 30) return null;
 
@@ -161,10 +196,14 @@ const CustomTooltip = ({
   active,
   payload,
   metric,
-}: any) => {
+}: CustomTooltipProps) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const value = data.value;
+    const rawData = payload[0]?.payload;
+    if (!isTreemapLeaf(rawData)) {
+      return null;
+    }
+
+    const value = rawData.value;
 
     const formattedValue =
       metric === "time"
@@ -173,7 +212,7 @@ const CustomTooltip = ({
 
     return (
       <div className="bg-(--color-bg) border border-(--color-border) p-3 rounded shadow-lg">
-        <p className="font-bold mb-1">{data.name}</p>
+        <p className="font-bold mb-1">{rawData.name}</p>
         <p className="text-sm text-(--color-fg-secondary)">
           {formattedValue}
         </p>

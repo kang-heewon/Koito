@@ -65,12 +65,16 @@ export function Modal({
     >
       <div
         ref={modalRef}
+        role="dialog"
+        aria-modal="true"
         className={`bg-secondary rounded-lg shadow-md p-6 w-full relative max-h-3/4 overflow-y-auto transition-all duration-100 ${
           isClosing ? 'animate-fade-out-scale' : 'animate-fade-in-scale'
         }`}
         style={{ maxWidth: maxW ?? 600, height: h ?? '' }}
       >
         <button
+          type="button"
+          aria-label="닫기"
           onClick={onClose}
           className="absolute top-2 right-2 color-fg-tertiary hover:cursor-pointer"
         >

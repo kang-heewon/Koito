@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gabehf/koito/engine/middleware"
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/logger"
 	"github.com/gabehf/koito/internal/models"
@@ -63,6 +64,9 @@ func WrappedHandler(store db.DB) http.HandlerFunc {
 		l.Debug().Msgf("WrappedHandler: Fetching wrapped stats for year '%d'", year)
 
 		userID := int32(1)
+		if u := middleware.GetUserFromContext(r.Context()); u != nil {
+			userID = u.ID
+		}
 
 		stats, err := store.GetWrappedStats(r.Context(), year, userID)
 		if err != nil {

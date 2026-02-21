@@ -110,7 +110,7 @@ FROM ranked s
 JOIN tracks_with_title t ON t.id = s.track_id
 WHERE r = 1;
 
--- GetTopThreeNewArtistsInYear :many
+-- name: GetTopThreeNewArtistsInYear :many
 WITH first_artist_plays_in_year AS (
     SELECT
         l.user_id,
@@ -119,13 +119,14 @@ WITH first_artist_plays_in_year AS (
     FROM listens l
     JOIN artist_tracks at ON at.track_id = l.track_id
     WHERE EXTRACT(YEAR FROM l.listened_at) = @year::int
+      AND l.user_id = @user_id::int
       AND NOT EXISTS (
           SELECT 1
           FROM listens l2
           JOIN artist_tracks at2 ON at2.track_id = l2.track_id
           WHERE l2.user_id = l.user_id
             AND at2.artist_id = at.artist_id
-            AND l2.listened_at < @first_day_of_year::date
+            AND l2.listened_at < make_date(@year::int, 1, 1)
       )
     GROUP BY l.user_id, at.artist_id
 ),
@@ -155,7 +156,8 @@ SELECT
     a.total_plays_in_year
 FROM ranked a
 JOIN artists_with_name awn ON awn.id = a.artist_id
-WHERE r <= 3;
+WHERE r <= 3
+  AND a.user_id = @user_id::int;
 
 -- name: GetArtistWithLongestGapInYear :one
 WITH first_listens AS (
@@ -243,7 +245,7 @@ WHERE mc.months_played = 12;
 
 -- name: GetWeekWithMostListensInYear :one
 SELECT
-    DATE_TRUNC('week', listened_at + INTERVAL '1 day') - INTERVAL '1 day' AS week_start,
+    (DATE_TRUNC('week', listened_at + INTERVAL '1 day') - INTERVAL '1 day')::timestamptz AS week_start,
     COUNT(*) AS listen_count
 FROM listens 
 WHERE EXTRACT(YEAR FROM listened_at) = @year::int 
@@ -351,6 +353,21 @@ SELECT
     COUNT(DISTINCT at.artist_id) AS artist_count
 FROM listens l
 JOIN artist_tracks at ON at.track_id = l.track_id
+WHERE l.user_id = @user_id::int
+  AND EXTRACT(YEAR FROM l.listened_at) = @year::int;
+
+-- name: GetTrackCountInYear :one
+SELECT
+    COUNT(DISTINCT l.track_id) AS track_count
+FROM listens l
+WHERE l.user_id = @user_id::int
+  AND EXTRACT(YEAR FROM l.listened_at) = @year::int;
+
+-- name: GetAlbumCountInYear :one
+SELECT
+    COUNT(DISTINCT t.release_id) AS album_count
+FROM listens l
+JOIN tracks t ON t.id = l.track_id
 WHERE l.user_id = @user_id::int
   AND EXTRACT(YEAR FROM l.listened_at) = @year::int;
 

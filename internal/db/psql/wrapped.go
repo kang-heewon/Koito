@@ -12,6 +12,18 @@ import (
 
 func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db.WrappedStats, error) {
 	l := logger.FromContext(ctx)
+	parseArtists := func(raw []byte, source string) []models.SimpleArtist {
+		artists := make([]models.SimpleArtist, 0)
+		if len(raw) == 0 {
+			return artists
+		}
+		if err := json.Unmarshal(raw, &artists); err != nil {
+			l.Warn().Err(err).Str("source", source).Msg("Failed to parse artists JSON")
+			return make([]models.SimpleArtist, 0)
+		}
+		return artists
+	}
+
 	stats := &db.WrappedStats{
 		Year: year,
 	}
@@ -46,6 +58,26 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 		stats.UniqueArtists = uniqueArtists
 	}
 
+	uniqueTracks, err := d.q.GetTrackCountInYear(ctx, repository.GetTrackCountInYearParams{
+		UserID: userID,
+		Year:   int32(year),
+	})
+	if err != nil {
+		l.Err(err).Msg("Failed to get unique tracks")
+	} else {
+		stats.UniqueTracks = uniqueTracks
+	}
+
+	uniqueAlbums, err := d.q.GetAlbumCountInYear(ctx, repository.GetAlbumCountInYearParams{
+		UserID: userID,
+		Year:   int32(year),
+	})
+	if err != nil {
+		l.Err(err).Msg("Failed to get unique albums")
+	} else {
+		stats.UniqueAlbums = uniqueAlbums
+	}
+
 	topTracks, err := d.q.GetTopTracksInYear(ctx, repository.GetTopTracksInYearParams{
 		Limit:  10,
 		UserID: userID,
@@ -56,13 +88,29 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 	} else {
 		stats.TopTracks = make([]*models.Track, len(topTracks))
 		for i, row := range topTracks {
-			artists := make([]models.SimpleArtist, 0)
-			_ = json.Unmarshal(row.Artists, &artists)
+			artists := parseArtists(row.Artists, "GetTopTracksInYear")
 			stats.TopTracks[i] = &models.Track{
 				ID:          row.TrackID,
 				Title:       row.Title,
 				Artists:     artists,
 				ListenCount: row.ListenCount,
+			}
+		}
+	}
+
+	topNewArtists, err := d.q.GetTopThreeNewArtistsInYear(ctx, repository.GetTopThreeNewArtistsInYearParams{
+		UserID: userID,
+		Year:   int32(year),
+	})
+	if err != nil {
+		l.Debug().Err(err).Msg("Failed to get top new artists")
+	} else {
+		stats.TopNewArtists = make([]*models.Artist, len(topNewArtists))
+		for i, row := range topNewArtists {
+			stats.TopNewArtists[i] = &models.Artist{
+				ID:          row.ArtistID,
+				Name:        row.ArtistName,
+				ListenCount: row.TotalPlaysInYear,
 			}
 		}
 	}
@@ -110,8 +158,7 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 	if err != nil {
 		l.Debug().Err(err).Msg("Failed to get most replayed track")
 	} else {
-		artists := make([]models.SimpleArtist, 0)
-		_ = json.Unmarshal(mostReplayed.Artists, &artists)
+		artists := parseArtists(mostReplayed.Artists, "GetMostReplayedTrackInYear")
 		stats.MostReplayedTrack = &db.TrackStreak{
 			Track: &models.Track{
 				ID:       mostReplayed.ID,
@@ -141,7 +188,18 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 		}
 	}
 
-	// Ignoring WeekWithMostListensInYear due to type mismatch in generated code (int32 vs expected timestamp)
+	busiestWeek, err := d.q.GetWeekWithMostListensInYear(ctx, repository.GetWeekWithMostListensInYearParams{
+		Year:   int32(year),
+		UserID: userID,
+	})
+	if err != nil {
+		l.Debug().Err(err).Msg("Failed to get week with most listens")
+	} else {
+		stats.BusiestWeek = &db.WeekStats{
+			WeekStart:   busiestWeek.WeekStart,
+			ListenCount: busiestWeek.ListenCount,
+		}
+	}
 
 	firstListen, err := d.q.GetFirstListenInYear(ctx, repository.GetFirstListenInYearParams{
 		UserID: userID,
@@ -150,8 +208,7 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 	if err != nil {
 		l.Err(err).Msg("Failed to get first listen")
 	} else {
-		artists := make([]models.SimpleArtist, 0)
-		_ = json.Unmarshal(firstListen.Artists, &artists)
+		artists := parseArtists(firstListen.Artists, "GetFirstListenInYear")
 		stats.FirstListen = &models.Listen{
 			Time: firstListen.ListenedAt,
 			Track: models.Track{

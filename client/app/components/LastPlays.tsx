@@ -43,20 +43,25 @@ export default function LastPlays(props: Props) {
   });
 
   const [items, setItems] = useState<Listen[] | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleDelete = async (listen: Listen) => {
     if (!data) return;
+    setDeleteError(null);
     try {
       const res = await deleteListen(listen);
       if (res.ok || (res.status >= 200 && res.status < 300)) {
         setItems((prev) =>
           (prev ?? data.items).filter((i) => i.time !== listen.time)
         );
+        setDeleteError(null);
       } else {
         console.error("Failed to delete listen:", res.status);
+        setDeleteError("청취 기록 삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       }
     } catch (err) {
       console.error("Error deleting listen:", err);
+      setDeleteError("청취 기록 삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -88,6 +93,11 @@ export default function LastPlays(props: Props) {
       <h2 className="hover:underline">
         <Link to={`/listens?period=all_time${params}`}>Last Played</Link>
       </h2>
+      {deleteError ? (
+        <p className="mt-2 text-sm text-(--color-error)" role="alert" aria-live="polite">
+          {deleteError}
+        </p>
+      ) : null}
       <table className="-ml-4">
         <tbody>
           {props.showNowPlaying && npData && npData.currently_playing && (

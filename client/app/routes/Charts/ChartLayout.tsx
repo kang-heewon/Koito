@@ -8,6 +8,16 @@ import { average } from "color.js"
 import { imageUrl, type PaginatedResponse } from "api/api"
 import PeriodSelector from "~/components/PeriodSelector"
 
+function hasImage(value: unknown): value is { image: string } {
+	if (typeof value !== "object" || value === null) {
+		return false
+	}
+	if (!("image" in value)) {
+		return false
+	}
+	return typeof value.image === "string" && value.image.length > 0
+}
+
 interface ChartLayoutProps<T> {
 	title: "Top Albums" | "Top Tracks" | "Top Artists" | "Last Played"
 	initialData: PaginatedResponse<T>
@@ -33,21 +43,22 @@ export default function ChartLayout<T>({
 	const navigate = useNavigate()
 
 	const currentParams = new URLSearchParams(location.search)
+	const currentQuery = currentParams.toString()
 	const currentPage = parseInt(currentParams.get("page") || "1", 10)
 
 	const data: PaginatedResponse<T> = fetcher.data?.[endpoint]
 		? fetcher.data[endpoint]
 		: initialData
 
-	const [bgColor, setBgColor] = useState<string>("(--color-bg)")
+	const [bgColor, setBgColor] = useState<string>("var(--color-bg)")
 
 	useEffect(() => {
 		if ((data?.items?.length ?? 0) === 0) return
 
-		const img = (data.items[0] as any)?.image
-		if (!img) return
+		const firstItem = data.items[0]
+		if (!hasImage(firstItem)) return
 
-		average(imageUrl(img, "small"), { amount: 1 }).then((color) => {
+		average(imageUrl(firstItem.image, "small"), { amount: 1 }).then((color) => {
 			setBgColor(`rgba(${color[0]},${color[1]},${color[2]},0.4)`)
 		})
 	}, [data])
@@ -83,10 +94,10 @@ export default function ChartLayout<T>({
         })        
 	}
 	const handleSetYear = (val: string) => {
-        if (val == "") {
-            updateParams({
-                period: period,
-                page: "1",
+		if (val === "") {
+			updateParams({
+				period: period,
+				page: "1",
                 year: null,
                 month: null,
                 week: null
@@ -118,14 +129,13 @@ export default function ChartLayout<T>({
 	}
 
 	useEffect(() => {
-		fetcher.load(`/${endpoint}?${currentParams.toString()}`)
-	}, [location.search])
+		fetcher.load(`/${endpoint}?${currentQuery}`)
+	}, [currentQuery, endpoint, fetcher])
 
 	const setPage = (nextPage: number) => {
 		const nextParams = new URLSearchParams(location.search)
 		nextParams.set("page", String(nextPage))
 		const url = `/${endpoint}?${nextParams.toString()}`
-		fetcher.load(url)
 		navigate(url, { replace: false })
 	}
 
@@ -206,7 +216,7 @@ export default function ChartLayout<T>({
 			className="w-full min-h-screen"
 			style={{
 				background: `linear-gradient(to bottom, ${bgColor}, var(--color-bg) 500px)`,
-				transition: "1000",
+				transition: "1000ms",
 			}}
 		>
 			<title>{pgTitle}</title>

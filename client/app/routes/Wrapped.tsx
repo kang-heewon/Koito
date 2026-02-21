@@ -128,7 +128,7 @@ export default function Wrapped() {
                  <div className="flex items-center justify-center h-32 opacity-50">데이터 없음</div>
                ) : (
                <div className="space-y-6">
-                  {(data.top_new_artists || []).slice(0, 5).map((artist, i) => (
+                  {(data.top_new_artists || []).slice(0, 5).map((artist) => (
                    <Link to={`/artist/${artist.id}`} key={artist.id} className="flex items-center gap-4 group hover:bg-[var(--color-fg-tertiary)] p-2 rounded-lg transition-colors -mx-2">
                      <div className="w-14 h-14 rounded-full overflow-hidden shadow-sm">
                        <img src={imageUrl(artist.image, "small")} alt={artist.name} className="w-full h-full object-cover" />
@@ -184,16 +184,20 @@ function StatCard({ title, value }: { title: string, value: React.ReactNode }) {
   );
 }
 
-function TopList({ title, items, type }: { title: string, items: any[], type: 'track' | 'artist' | 'album' }) {
-  const safeItems = items || [];
+type TopListProps =
+  | { title: string; type: "track"; items: WrappedTrack[] }
+  | { title: string; type: "artist"; items: WrappedArtist[] }
+  | { title: string; type: "album"; items: WrappedAlbum[] };
+
+function TopList(props: TopListProps) {
   return (
     <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
-      <h2 className="text-2xl font-bold mb-8">{title}</h2>
-      {safeItems.length === 0 ? (
+      <h2 className="text-2xl font-bold mb-8">{props.title}</h2>
+      {props.items.length === 0 ? (
         <div className="flex items-center justify-center h-32 opacity-50">데이터 없음</div>
       ) : (
       <div className="space-y-6">
-        {safeItems.slice(0, 5).map((item, i) => (
+        {props.type === "track" ? props.items.slice(0, 5).map((item, i) => (
           <div key={item.id} className="flex items-center gap-4 group">
             <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center font-black text-xl 
                 ${i === 0 ? 'text-[var(--color-accent)] scale-110' : 
@@ -201,22 +205,73 @@ function TopList({ title, items, type }: { title: string, items: any[], type: 't
                   i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
               {i + 1}
             </div>
-            <Link to={`/${type}/${item.id}`} className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
-               <img src={imageUrl(item.image, "small")} alt={item.title || item.name} className="w-full h-full object-cover" />
+            <Link to={`/track/${item.id}`} className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+              <img
+                src={imageUrl(item.image, "small")}
+                alt={item.title}
+                className="w-full h-full object-cover"
+              />
             </Link>
             <div className="flex-1 min-w-0">
-               <Link to={`/${type}/${item.id}`} className="font-bold text-lg truncate block hover:text-[var(--color-primary)] transition-colors">
-                  {type === 'track' ? item.title : item.name || item.title}
-               </Link>
-               <div className="text-sm opacity-60 truncate">
-                 {type === 'track' && item.artists.map((a: any) => a.name).join(", ")}
-                 {type === 'album' && item.artists && item.artists.map((a: any) => a.name).join(", ")}
-                 <span className="mx-1">•</span>
-                 {item.listen_count}회
-               </div>
+              <Link to={`/track/${item.id}`} className="font-bold text-lg truncate block hover:text-[var(--color-primary)] transition-colors">
+                {item.title}
+              </Link>
+              <div className="text-sm opacity-60 truncate">
+                {item.artists.map((a) => a.name).join(", ")}
+                <span className="mx-1">•</span>
+                {item.listen_count}회
+              </div>
             </div>
+          </div>
+        )) : null}
+
+        {props.type === "artist" ? props.items.slice(0, 5).map((item, i) => (
+          <div key={item.id} className="flex items-center gap-4 group">
+            <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center font-black text-xl 
+                ${i === 0 ? 'text-[var(--color-accent)] scale-110' : 
+                  i === 1 ? 'text-[var(--color-fg)] opacity-80' : 
+                  i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
+              {i + 1}
             </div>
-          ))}
+            <Link to={`/artist/${item.id}`} className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+              <img
+                src={imageUrl(item.image, "small")}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Link to={`/artist/${item.id}`} className="font-bold text-lg truncate block hover:text-[var(--color-primary)] transition-colors">
+                {item.name}
+              </Link>
+              <div className="text-sm opacity-60 truncate">{item.listen_count}회</div>
+            </div>
+          </div>
+        )) : null}
+
+        {props.type === "album" ? props.items.slice(0, 5).map((item, i) => (
+          <div key={item.id} className="flex items-center gap-4 group">
+            <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center font-black text-xl 
+                ${i === 0 ? 'text-[var(--color-accent)] scale-110' : 
+                  i === 1 ? 'text-[var(--color-fg)] opacity-80' : 
+                  i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
+              {i + 1}
+            </div>
+            <Link to={`/album/${item.id}`} className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+              <img
+                src={imageUrl(item.image, "small")}
+                alt={item.title}
+                className="w-full h-full object-cover"
+              />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Link to={`/album/${item.id}`} className="font-bold text-lg truncate block hover:text-[var(--color-primary)] transition-colors">
+                {item.title}
+              </Link>
+              <div className="text-sm opacity-60 truncate">{item.listen_count}회</div>
+            </div>
+          </div>
+        )) : null}
       </div>
       )}
     </div>
