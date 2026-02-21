@@ -12,7 +12,7 @@ import { timeListenedString } from "~/utils/utils";
 export async function clientLoader({ params }: LoaderFunctionArgs) {
   const res = await fetch(`/apis/web/v1/artist?id=${params.id}`);
   if (!res.ok) {
-    throw new Response("Failed to load artist", { status: 500 });
+    throw new Response("Failed to load artist", { status: res.status });
   }
   const artist: ArtistItem = await res.json();
   return artist;

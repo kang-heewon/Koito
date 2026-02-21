@@ -7,7 +7,6 @@ import { useAppContext } from "~/providers/AppProvider";
 import MergeModal from "~/components/modals/MergeModal";
 import ImageReplaceModal from "~/components/modals/ImageReplaceModal";
 import DeleteModal from "~/components/modals/DeleteModal";
-import RenameModal from "~/components/modals/EditModal/EditModal";
 import EditModal from "~/components/modals/EditModal/EditModal";
 import AddListenModal from "~/components/modals/AddListenModal";
 
@@ -28,7 +27,7 @@ interface Props {
 }
 
 export default function MediaLayout(props: Props) {
-    const [bgColor, setBgColor] = useState<string>("(--color-bg)");
+    const [bgColor, setBgColor] = useState<string>("var(--color-bg)");
     const [mergeModalOpen, setMergeModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -39,7 +38,9 @@ export default function MediaLayout(props: Props) {
     useEffect(() => {
         average(imageUrl(props.img, 'small'), { amount: 1 }).then((color) => {
         setBgColor(`rgba(${color[0]},${color[1]},${color[2]},0.4)`);
-        });
+        }).catch(() => {
+            setBgColor("var(--color-bg)")
+        })
     }, [props.img]);
 
     const replaceImageCallback = () => {
@@ -51,16 +52,14 @@ export default function MediaLayout(props: Props) {
     const mobileIconSize = 22
     const normalIconSize = 30
 
-    let vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
-
-    let iconSize = vw > 768 ? normalIconSize : mobileIconSize
+    const iconSize = typeof window !== "undefined" && window.innerWidth > 768 ? normalIconSize : mobileIconSize
 
     return (
         <main
         className="w-full flex flex-col flex-grow"
         style={{
             background: `linear-gradient(to bottom, ${bgColor}, var(--color-bg) 700px)`,
-            transition: '1000',
+            transition: "background 1000ms",
         }}
         >
         <ImageDropHandler itemType={props.type.toLowerCase() === 'artist' ? 'artist' : 'album'} onComplete={replaceImageCallback} />
@@ -84,14 +83,14 @@ export default function MediaLayout(props: Props) {
                     <div className="absolute left-1 sm:right-1 sm:left-auto -top-9 sm:top-1 flex gap-3 items-center">
                         { props.type === "Track" &&
                         <>
-                            <button title="Add Listen" className="hover:cursor-pointer" onClick={() => setAddListenModalOpen(true)}><Plus size={iconSize} /></button>
+                            <button type="button" title="Add Listen" className="hover:cursor-pointer" onClick={() => setAddListenModalOpen(true)}><Plus size={iconSize} /></button>
                             <AddListenModal open={addListenModalOpen} setOpen={setAddListenModalOpen} trackid={props.id} />
                         </>
                         }
-                        <button title="Edit Item" className="hover:cursor-pointer" onClick={() => setRenameModalOpen(true)}><Edit size={iconSize} /></button>
-                        <button title="Replace Image" className="hover:cursor-pointer" onClick={() => setImageModalOpen(true)}><ImageIcon size={iconSize} /></button>
-                        <button title="Merge Items" className="hover:cursor-pointer" onClick={() => setMergeModalOpen(true)}><Merge size={iconSize} /></button>
-                        <button title="Delete Item" className="hover:cursor-pointer" onClick={() => setDeleteModalOpen(true)}><Trash size={iconSize} /></button>
+                        <button type="button" title="Edit Item" className="hover:cursor-pointer" onClick={() => setRenameModalOpen(true)}><Edit size={iconSize} /></button>
+                        <button type="button" title="Replace Image" className="hover:cursor-pointer" onClick={() => setImageModalOpen(true)}><ImageIcon size={iconSize} /></button>
+                        <button type="button" title="Merge Items" className="hover:cursor-pointer" onClick={() => setMergeModalOpen(true)}><Merge size={iconSize} /></button>
+                        <button type="button" title="Delete Item" className="hover:cursor-pointer" onClick={() => setDeleteModalOpen(true)}><Trash size={iconSize} /></button>
                         <EditModal open={renameModalOpen} setOpen={setRenameModalOpen} type={props.type.toLowerCase()} id={props.id}/>
                         <ImageReplaceModal open={imageModalOpen} setOpen={setImageModalOpen} id={props.imgItemId} musicbrainzId={props.musicbrainzId} type={props.type === "Track" ? "Album" : props.type} />
                         <MergeModal currentTitle={props.title} mergeFunc={props.mergeFunc} mergeCleanerFunc={props.mergeCleanerFunc} type={props.type} currentId={props.id} open={mergeModalOpen} setOpen={setMergeModalOpen} />

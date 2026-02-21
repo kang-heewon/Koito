@@ -11,7 +11,7 @@ import { timeListenedString } from "~/utils/utils";
 export async function clientLoader({ params }: LoaderFunctionArgs) {
   const res = await fetch(`/apis/web/v1/album?id=${params.id}`);
   if (!res.ok) {
-    throw new Response("Failed to load album", { status: 500 });
+    throw new Response("Failed to load album", { status: res.status });
   }
   const album: AlbumItem = await res.json();
   return album;

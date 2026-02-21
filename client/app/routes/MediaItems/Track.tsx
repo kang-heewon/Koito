@@ -23,7 +23,7 @@ export async function clientLoader({ params }: LoaderFunctionArgs) {
   return { track: track, album: album };
 }
 
-export default function Track() {
+export default function TrackPage() {
   const { track, album } = useLoaderData();
   const [period, setPeriod] = useState("week");
 
@@ -37,14 +37,11 @@ export default function Track() {
       imgItemId={track.album_id}
       mergeFunc={mergeTracks}
       mergeCleanerFunc={(r, id) => {
-        r.albums = [];
-        r.artists = [];
-        for (let i = 0; i < r.tracks.length; i++) {
-          if (r.tracks[i].id === id) {
-            delete r.tracks[i];
-          }
-        }
-        return r;
+        return {
+          albums: [],
+          artists: [],
+          tracks: r.tracks.filter((track) => track.id !== id),
+        };
       }}
       subContent={
         <div className="flex flex-col gap-2 items-start">

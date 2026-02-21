@@ -2,55 +2,72 @@ import { replaceImage } from 'api/api';
 import { useEffect } from 'react';
 
 interface Props {
-    itemType: string,
-    onComplete: Function
+    itemType: string;
+    onComplete: () => void;
 }
 
 export default function ImageDropHandler({ itemType, onComplete }: Props) {
   useEffect(() => {
+    const parseResponseError = async (r: Response): Promise<string> => {
+      try {
+        const body = (await r.json()) as { error?: string };
+        if (body && typeof body.error === 'string' && body.error.length > 0) {
+          return body.error;
+        }
+      } catch {
+        return `Upload failed (${r.status})`;
+      }
+      return `Upload failed (${r.status})`;
+    };
+
     const handleDragOver = (e: DragEvent) => {
-        console.log('dragover!!')
-        e.preventDefault(); 
+      e.preventDefault();
     };
 
     const handleDrop = async (e: DragEvent) => {
-        e.preventDefault();
-        if (!e.dataTransfer?.files.length) return;
+      e.preventDefault();
+      if (!e.dataTransfer?.files.length) return;
 
-        const imageFile = Array.from(e.dataTransfer.files).find(file =>
-            file.type.startsWith('image/')
+      const imageFile = Array.from(e.dataTransfer.files).find((file) =>
+        file.type.startsWith('image/')
+      );
+      if (!imageFile) return;
+
+      const pathname = window.location.pathname;
+      const segments = pathname.split('/').filter((segment) => segment !== '');
+      const lastSegment = segments[segments.length - 1];
+      const itemId = Number(lastSegment);
+      if (!Number.isInteger(itemId) || itemId <= 0) {
+        console.error('Upload failed: invalid route id');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      formData.append(`${itemType.toLowerCase()}_id`, String(itemId));
+
+      try {
+        const r = await replaceImage(formData);
+        if (r.ok) {
+          onComplete();
+          return;
+        }
+        console.error(await parseResponseError(r));
+      } catch (err) {
+        console.error(
+          `Upload failed: ${err instanceof Error ? err.message : String(err)}`
         );
-        if (!imageFile) return;
-
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        const pathname = window.location.pathname;
-        const segments = pathname.split('/');
-        const filteredSegments = segments.filter(segment => segment !== '');
-        const lastSegment = filteredSegments[filteredSegments.length - 1];
-        formData.append(itemType.toLowerCase()+'_id', lastSegment)
-        replaceImage(formData).then((r) => {
-            if (r.status >= 200 && r.status < 300) {
-                onComplete()
-                console.log("Replacement image uploaded successfully")
-            } else {
-                r.json().then((body) => {
-                    console.log(`Upload failed: ${r.statusText} - ${body}`)
-                })
-            }
-        }).catch((err) => {
-            console.log(`Upload failed: ${err}`)
-        })
+      }
     };
 
     window.addEventListener('dragover', handleDragOver);
     window.addEventListener('drop', handleDrop);
 
     return () => {
-        window.removeEventListener('dragover', handleDragOver);
-        window.removeEventListener('drop', handleDrop);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
     };
-  }, []);
+  }, [itemType, onComplete]);
 
   return null;
 }
