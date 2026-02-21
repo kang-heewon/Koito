@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 type Props = {
     children: React.ReactNode
@@ -10,13 +10,39 @@ type Props = {
 
 export function AsyncButton(props: Props) {
     const [awaitingConfirm, setAwaitingConfirm] = useState(false)
+    const confirmTimeoutRef = useRef<number | null>(null)
+
+    useEffect(() => {
+        if (props.loading || props.disabled) {
+            setAwaitingConfirm(false)
+        }
+    }, [props.loading, props.disabled])
+
+    useEffect(() => {
+        return () => {
+            if (confirmTimeoutRef.current !== null) {
+                window.clearTimeout(confirmTimeoutRef.current)
+            }
+        }
+    }, [])
 
     const handleClick = () => {
         if (props.confirm) {
             if (!awaitingConfirm) {
                 setAwaitingConfirm(true)
-                setTimeout(() => setAwaitingConfirm(false), 3000)
+                if (confirmTimeoutRef.current !== null) {
+                    window.clearTimeout(confirmTimeoutRef.current)
+                }
+                confirmTimeoutRef.current = window.setTimeout(() => {
+                    setAwaitingConfirm(false)
+                    confirmTimeoutRef.current = null
+                }, 3000)
                 return
+            }
+
+            if (confirmTimeoutRef.current !== null) {
+                window.clearTimeout(confirmTimeoutRef.current)
+                confirmTimeoutRef.current = null
             }
             setAwaitingConfirm(false)
         }
@@ -26,6 +52,7 @@ export function AsyncButton(props: Props) {
 
     return (
         <button
+            type="button"
             onClick={handleClick}
             disabled={props.loading || props.disabled}
             className={`relative px-5 py-2 rounded-md large-button flex disabled:opacity-50 items-center`}

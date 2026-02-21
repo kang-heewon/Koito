@@ -15,13 +15,24 @@ func GetListensHandler(store db.DB) func(w http.ResponseWriter, r *http.Request)
 
 		l.Debug().Msg("GetListensHandler: Received request to retrieve listens")
 
-		opts := OptsFromRequest(r)
+		opts, err := OptsFromRequest(r)
+		if err != nil {
+			l.Err(err).Msg("GetListensHandler: Invalid query parameters")
+			utils.WriteError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		l.Debug().Msgf("GetListensHandler: Retrieving listens with options: %+v", opts)
 
 		listens, err := store.GetListensPaginated(ctx, opts)
 		if err != nil {
 			l.Err(err).Msg("GetListensHandler: Failed to retrieve listens")
-			utils.WriteError(w, "failed to get listens: "+err.Error(), http.StatusBadRequest)
+			if isDateRangeValidationError(err) {
+				utils.WriteError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			utils.WriteError(w, "failed to get listens", http.StatusInternalServerError)
 			return
 		}
 

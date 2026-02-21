@@ -43,9 +43,15 @@ async function getLastListens(
     limit: String(args.limit),
     page: String(args.page),
   });
-  if (args.artist_id !== undefined) params.set("artist_id", String(args.artist_id));
-  if (args.album_id !== undefined) params.set("album_id", String(args.album_id));
-  if (args.track_id !== undefined) params.set("track_id", String(args.track_id));
+  if (args.artist_id !== undefined) {
+    params.set("artist_id", String(args.artist_id));
+  }
+  if (args.album_id !== undefined) {
+    params.set("album_id", String(args.album_id));
+  }
+  if (args.track_id !== undefined) {
+    params.set("track_id", String(args.track_id));
+  }
 
   const r = await fetch(`/apis/web/v1/listens?${params.toString()}`);
   return handleJson<PaginatedResponse<Listen>>(r);
@@ -54,30 +60,47 @@ async function getLastListens(
 async function getTopTracks(
   args: getItemsArgs
 ): Promise<PaginatedResponse<Track>> {
-  let url = `/apis/web/v1/top-tracks?period=${args.period}&limit=${args.limit}&page=${args.page}`;
+  const params = new URLSearchParams({
+    period: args.period,
+    limit: String(args.limit),
+    page: String(args.page),
+  });
+  if (args.artist_id !== undefined) {
+    params.set("artist_id", String(args.artist_id));
+  }
+  if (args.album_id !== undefined) {
+    params.set("album_id", String(args.album_id));
+  }
 
-  if (args.artist_id) url += `&artist_id=${args.artist_id}`;
-  else if (args.album_id) url += `&album_id=${args.album_id}`;
-
-  const r = await fetch(url);
+  const r = await fetch(`/apis/web/v1/top-tracks?${params.toString()}`);
   return handleJson<PaginatedResponse<Track>>(r);
 }
 
 async function getTopAlbums(
   args: getItemsArgs
 ): Promise<PaginatedResponse<Album>> {
-  let url = `/apis/web/v1/top-albums?period=${args.period}&limit=${args.limit}&page=${args.page}`;
-  if (args.artist_id) url += `&artist_id=${args.artist_id}`;
+  const params = new URLSearchParams({
+    period: args.period,
+    limit: String(args.limit),
+    page: String(args.page),
+  });
+  if (args.artist_id !== undefined) {
+    params.set("artist_id", String(args.artist_id));
+  }
 
-  const r = await fetch(url);
+  const r = await fetch(`/apis/web/v1/top-albums?${params.toString()}`);
   return handleJson<PaginatedResponse<Album>>(r);
 }
 
 async function getTopArtists(
   args: getItemsArgs
 ): Promise<PaginatedResponse<Artist>> {
-  const url = `/apis/web/v1/top-artists?period=${args.period}&limit=${args.limit}&page=${args.page}`;
-  const r = await fetch(url);
+  const params = new URLSearchParams({
+    period: args.period,
+    limit: String(args.limit),
+    page: String(args.page),
+  });
+  const r = await fetch(`/apis/web/v1/top-artists?${params.toString()}`);
   return handleJson<PaginatedResponse<Artist>>(r);
 }
 

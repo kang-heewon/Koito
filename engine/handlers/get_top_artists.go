@@ -15,13 +15,24 @@ func GetTopArtistsHandler(store db.DB) func(w http.ResponseWriter, r *http.Reque
 
 		l.Debug().Msg("GetTopArtistsHandler: Received request to retrieve top artists")
 
-		opts := OptsFromRequest(r)
+		opts, err := OptsFromRequest(r)
+		if err != nil {
+			l.Err(err).Msg("GetTopArtistsHandler: Invalid query parameters")
+			utils.WriteError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		l.Debug().Msgf("GetTopArtistsHandler: Retrieving top artists with options: %+v", opts)
 
 		artists, err := store.GetTopArtistsPaginated(ctx, opts)
 		if err != nil {
 			l.Err(err).Msg("GetTopArtistsHandler: Failed to retrieve top artists")
-			utils.WriteError(w, "failed to get artists", http.StatusBadRequest)
+			if isDateRangeValidationError(err) {
+				utils.WriteError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			utils.WriteError(w, "failed to get artists", http.StatusInternalServerError)
 			return
 		}
 

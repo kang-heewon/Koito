@@ -12,13 +12,11 @@ import type { Route } from "./+types/root";
 import './themes.css'
 import "./app.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { ThemeProvider } from './providers/ThemeProvider';
 import Sidebar from "./components/sidebar/Sidebar";
 import Footer from "./components/Footer";
 import { AppProvider } from "./providers/AppProvider";
-
-// Create a client
-const queryClient = new QueryClient()
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -58,6 +56,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
     <>
         <AppProvider>
@@ -78,7 +78,11 @@ export default function App() {
 }
 
 export function HydrateFallback() {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="fg">Loading...</p>
+      </div>
+    )
 }
 
 export function ErrorBoundary() {
@@ -109,7 +113,7 @@ export function ErrorBoundary() {
                     <div className="w-full flex flex-col">
                         <main className="pt-16 p-4 container mx-auto flex-grow">
                             <div className="flex gap-4 items-end">
-                                <img className="w-[200px] rounded" src="../yuu.jpg" />
+                                <img className="w-[200px] rounded" src="/yuu.jpg" alt="Koito mascot" />
                                 <div>
                                     <h1>{message}</h1>
                                     <p>{details}</p>

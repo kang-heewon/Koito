@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,24 +14,29 @@ import (
 const defaultLimitSize = 100
 const maximumLimit = 500
 
-func OptsFromRequest(r *http.Request) db.GetItemsOpts {
+func OptsFromRequest(r *http.Request) (db.GetItemsOpts, error) {
 	l := logger.FromContext(r.Context())
 
 	l.Debug().Msg("OptsFromRequest: Parsing query parameters")
 
-	parseOptionalInt := func(key string) int {
+	parseOptionalInt := func(key string) (int, error) {
 		value := strings.TrimSpace(r.URL.Query().Get(key))
 		if value == "" {
-			return 0
+			return 0, nil
 		}
 
 		parsed, err := strconv.Atoi(value)
 		if err != nil {
 			l.Debug().Msgf("OptsFromRequest: Invalid integer for query parameter '%s': %q", key, value)
-			return 0
+			return 0, fmt.Errorf("invalid %s parameter", key)
 		}
 
-		return parsed
+		if parsed < 0 {
+			l.Debug().Msgf("OptsFromRequest: Negative integer for query parameter '%s': %q", key, value)
+			return 0, fmt.Errorf("invalid %s parameter", key)
+		}
+
+		return parsed, nil
 	}
 
 	limitStr := strings.TrimSpace(r.URL.Query().Get("limit"))
@@ -51,15 +57,53 @@ func OptsFromRequest(r *http.Request) db.GetItemsOpts {
 		page = 1
 	}
 
-	week := parseOptionalInt("week")
-	month := parseOptionalInt("month")
-	year := parseOptionalInt("year")
-	from := parseOptionalInt("from")
-	to := parseOptionalInt("to")
+	week, err := parseOptionalInt("week")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
 
-	artistId := parseOptionalInt("artist_id")
-	albumId := parseOptionalInt("album_id")
-	trackId := parseOptionalInt("track_id")
+	month, err := parseOptionalInt("month")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
+
+	year, err := parseOptionalInt("year")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
+
+	from, err := parseOptionalInt("from")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
+
+	to, err := parseOptionalInt("to")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
+
+	artistId, err := parseOptionalInt("artist_id")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
+
+	albumId, err := parseOptionalInt("album_id")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
+
+	trackId, err := parseOptionalInt("track_id")
+	if err != nil {
+		return db.GetItemsOpts{}, err
+	}
+
+	if (from == 0) != (to == 0) {
+		return db.GetItemsOpts{}, fmt.Errorf("from and to must be specified together")
+	}
+
+	if from != 0 && to != 0 && from > to {
+		return db.GetItemsOpts{}, fmt.Errorf("from must be less than or equal to to")
+	}
 
 	var period db.Period
 	switch strings.ToLower(r.URL.Query().Get("period")) {
@@ -93,5 +137,13 @@ func OptsFromRequest(r *http.Request) db.GetItemsOpts {
 		ArtistID: artistId,
 		AlbumID:  albumId,
 		TrackID:  trackId,
+	}, nil
+}
+
+func isDateRangeValidationError(err error) bool {
+	if err == nil {
+		return false
 	}
+
+	return strings.Contains(strings.ToLower(err.Error()), "daterange:")
 }
