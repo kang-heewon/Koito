@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { createApiKey, getApiKeys, type ApiKey } from "api/api";
+import { getApiKeys, type ApiKey } from "api/api";
 import { useDeleteApiKey } from "../../hooks/useDeleteApiKey";
+import { useCreateApiKey } from "../../hooks/useCreateApiKey";
 import { AsyncButton } from "../AsyncButton";
 import { useEffect, useRef, useState } from "react";
 import { Copy, Trash } from "lucide-react";
@@ -13,8 +14,8 @@ type CopiedState = {
 
 export default function ApiKeysModal() {
     const [input, setInput] = useState('')
-    const [loading, setLoading ] = useState(false)
     const deleteApiKeyMutation = useDeleteApiKey()
+    const createApiKeyMutation = useCreateApiKey()
     const [err, setError ] = useState<string>()
     const [displayData, setDisplayData] = useState<ApiKey[]>([])
     const [copied, setCopied] = useState<CopiedState | null>(null);
@@ -106,21 +107,12 @@ export default function ApiKeysModal() {
             setError("a label must be provided")
             return
         }
-
-        if (loading) {
-            return
-        }
-
-        setLoading(true)
-
         try {
-            const createdKey = await createApiKey(input)
+            const createdKey = await createApiKeyMutation.mutateAsync(input)
             setDisplayData((prev) => [createdKey, ...prev])
             setInput('')
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to create API key")
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -170,7 +162,7 @@ export default function ApiKeysModal() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                 />
-                <AsyncButton loading={loading} onClick={handleCreateApiKey}>Create</AsyncButton>
+                <AsyncButton loading={createApiKeyMutation.isPending} onClick={handleCreateApiKey}>Create</AsyncButton>
             </div>
             {err && <p className="error">{err}</p>}
             {copied?.visible && (
