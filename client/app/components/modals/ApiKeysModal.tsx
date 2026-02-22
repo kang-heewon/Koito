@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { createApiKey, deleteApiKey, getApiKeys, type ApiKey } from "api/api";
+import { createApiKey, getApiKeys, type ApiKey } from "api/api";
+import { useDeleteApiKey } from "../../hooks/useDeleteApiKey";
 import { AsyncButton } from "../AsyncButton";
 import { useEffect, useRef, useState } from "react";
 import { Copy, Trash } from "lucide-react";
@@ -13,6 +14,7 @@ type CopiedState = {
 export default function ApiKeysModal() {
     const [input, setInput] = useState('')
     const [loading, setLoading ] = useState(false)
+    const deleteApiKeyMutation = useDeleteApiKey()
     const [err, setError ] = useState<string>()
     const [displayData, setDisplayData] = useState<ApiKey[]>([])
     const [copied, setCopied] = useState<CopiedState | null>(null);
@@ -124,15 +126,8 @@ export default function ApiKeysModal() {
 
     const handleDeleteApiKey = async (id: number) => {
         setError(undefined)
-
-        if (loading) {
-            return
-        }
-
-        setLoading(true)
-
         try {
-            const r = await deleteApiKey(id)
+            const r = await deleteApiKeyMutation.mutateAsync(id)
             if (r.ok) {
                 setDisplayData((prev) => prev.filter((v) => v.id !== id))
             } else {
@@ -141,8 +136,6 @@ export default function ApiKeysModal() {
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to delete API key")
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -166,7 +159,7 @@ export default function ApiKeysModal() {
                         {expandedKey === v.key ? v.key : `${v.key.slice(0, 8)}... ${v.label}`}
                     </button>
                     <button type="button" onClick={(e) => handleCopy(e, v.key)} className="large-button px-5 rounded-md" aria-label="Copy API key"><Copy size={16} /></button>
-                    <AsyncButton loading={loading} onClick={() => handleDeleteApiKey(v.id)} confirm><Trash size={16} /></AsyncButton>
+                    <AsyncButton loading={deleteApiKeyMutation.isPending} onClick={() => handleDeleteApiKey(v.id)} confirm><Trash size={16} /></AsyncButton>
                 </div>
             ))}
             <div className="flex gap-2 w-3/5">

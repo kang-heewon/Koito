@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal } from "./Modal";
 import { AsyncButton } from "../AsyncButton";
-import { submitListen } from "api/api";
+import { useSubmitListen } from "../../hooks/useSubmitListen";
 import { useNavigate } from "react-router";
 
 interface Props {
@@ -12,35 +12,24 @@ interface Props {
 
 export default function AddListenModal({ open, setOpen, trackid }: Props) {
     const [ts, setTS] = useState<Date>(new Date);
-    const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const navigate = useNavigate()
-
+    const submitMutation = useSubmitListen()
     const close = () => {
         setOpen(false)
     }
-
     const submit = async () => {
-        if (loading) {
-            return
-        }
-
         setError('')
-        setLoading(true)
-
         try {
-            const r = await submitListen(trackid.toString(), ts)
+            const r = await submitMutation.mutateAsync({ trackId: trackid.toString(), ts })
             if (r.ok) {
                 navigate(0)
                 return
             }
-
             const body = (await r.json().catch(() => null)) as { error?: string } | null
             setError(body?.error ?? `failed to add listen (${r.status})`)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'failed to add listen')
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -59,7 +48,7 @@ export default function AddListenModal({ open, setOpen, trackid }: Props) {
                     value={formatForDatetimeLocal(ts)}
                     onChange={(e) => setTS(new Date(e.target.value))}
                 />
-                <AsyncButton loading={loading} onClick={() => { void submit() }}>Submit</AsyncButton>
+                <AsyncButton loading={submitMutation.isPending} onClick={() => { void submit() }}>Submit</AsyncButton>
                 <p className="error">{error}</p>
             </div>
         </Modal>
