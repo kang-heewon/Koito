@@ -42,7 +42,7 @@ SELECT
     ranked.release_id,
     ranked.image,
     ranked.score,
-    get_artists_for_track(ranked.id) AS artists
+    artists.artists
 FROM (
     SELECT
         t.id,
@@ -57,8 +57,17 @@ FROM (
     JOIN releases r ON t.release_id = r.id
     WHERE bigm_similarity(ta.alias, $1) > 0.22
 ) ranked
-WHERE rn = 1
-ORDER BY score DESC, title
+CROSS JOIN LATERAL (
+    SELECT json_agg(
+        jsonb_build_object('id', a.id, 'name', a.name)
+        ORDER BY at.is_primary DESC, a.name
+    ) AS artists
+    FROM artist_tracks at
+    JOIN artists_with_name a ON a.id = at.artist_id
+    WHERE at.track_id = ranked.id
+) artists
+WHERE ranked.rn = 1
+ORDER BY ranked.score DESC, ranked.title
 LIMIT $2;
 
 -- name: SearchTracksBySubstring :many
@@ -69,7 +78,7 @@ SELECT
     ranked.release_id,
     ranked.image,
     ranked.score,
-    get_artists_for_track(ranked.id) AS artists
+    artists.artists
 FROM (
     SELECT
         t.id,
@@ -84,8 +93,17 @@ FROM (
     JOIN releases r ON t.release_id = r.id
     WHERE ta.alias ILIKE $1 || '%'
 ) ranked
-WHERE rn = 1
-ORDER BY score DESC, title
+CROSS JOIN LATERAL (
+    SELECT json_agg(
+        jsonb_build_object('id', a.id, 'name', a.name)
+        ORDER BY at.is_primary DESC, a.name
+    ) AS artists
+    FROM artist_tracks at
+    JOIN artists_with_name a ON a.id = at.artist_id
+    WHERE at.track_id = ranked.id
+) artists
+WHERE ranked.rn = 1
+ORDER BY ranked.score DESC, ranked.title
 LIMIT $2;
 
 -- name: SearchReleases :many
@@ -96,7 +114,7 @@ SELECT
     ranked.image,
     ranked.various_artists,
     ranked.score,
-    get_artists_for_release(ranked.id) AS artists
+    artists.artists
 FROM (
     SELECT
         r.id,
@@ -110,8 +128,17 @@ FROM (
     JOIN releases_with_title r ON ra.release_id = r.id
     WHERE bigm_similarity(ra.alias, $1) > 0.22
 ) ranked
-WHERE rn = 1
-ORDER BY score DESC, title
+CROSS JOIN LATERAL (
+    SELECT json_agg(
+        jsonb_build_object('id', a.id, 'name', a.name)
+        ORDER BY ar.is_primary DESC, a.name
+    ) AS artists
+    FROM artist_releases ar
+    JOIN artists_with_name a ON a.id = ar.artist_id
+    WHERE ar.release_id = ranked.id
+) artists
+WHERE ranked.rn = 1
+ORDER BY ranked.score DESC, ranked.title
 LIMIT $2;
 
 -- name: SearchReleasesBySubstring :many
@@ -122,7 +149,7 @@ SELECT
     ranked.image,
     ranked.various_artists,
     ranked.score,
-    get_artists_for_release(ranked.id) AS artists
+    artists.artists
 FROM (
     SELECT
         r.id,
@@ -130,12 +157,21 @@ FROM (
         r.musicbrainz_id,
         r.image,
         r.various_artists,
-        1.0 AS score, -- idk why
+        1.0 AS score,
         ROW_NUMBER() OVER (PARTITION BY r.id ORDER BY ra.alias) AS rn
     FROM release_aliases ra
     JOIN releases_with_title r ON ra.release_id = r.id
     WHERE ra.alias ILIKE $1 || '%'
 ) ranked
-WHERE rn = 1
-ORDER BY score DESC, title
+CROSS JOIN LATERAL (
+    SELECT json_agg(
+        jsonb_build_object('id', a.id, 'name', a.name)
+        ORDER BY ar.is_primary DESC, a.name
+    ) AS artists
+    FROM artist_releases ar
+    JOIN artists_with_name a ON a.id = ar.artist_id
+    WHERE ar.release_id = ranked.id
+) artists
+WHERE ranked.rn = 1
+ORDER BY ranked.score DESC, ranked.title
 LIMIT $2;

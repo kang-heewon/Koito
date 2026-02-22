@@ -8,9 +8,18 @@ SELECT
   l.*,
   t.title AS track_title,
   t.release_id AS release_id,
-  get_artists_for_track(t.id) AS artists
+  artists.artists
 FROM listens l
 JOIN tracks_with_title t ON l.track_id = t.id
+CROSS JOIN LATERAL (
+    SELECT json_agg(
+        jsonb_build_object('id', a.id, 'name', a.name)
+        ORDER BY at.is_primary DESC, a.name
+    ) AS artists
+    FROM artist_tracks at
+    JOIN artists_with_name a ON a.id = at.artist_id
+    WHERE at.track_id = t.id
+) artists
 WHERE l.listened_at BETWEEN $1 AND $2
 ORDER BY l.listened_at DESC
 LIMIT $3 OFFSET $4;
@@ -66,9 +75,18 @@ SELECT
   l.*,
   t.title AS track_title,
   t.release_id AS release_id,
-  get_artists_for_track(t.id) AS artists
+  artists.artists
 FROM listens l
 JOIN tracks_with_title t ON l.track_id = t.id
+CROSS JOIN LATERAL (
+    SELECT json_agg(
+        jsonb_build_object('id', a.id, 'name', a.name)
+        ORDER BY at.is_primary DESC, a.name
+    ) AS artists
+    FROM artist_tracks at
+    JOIN artists_with_name a ON a.id = at.artist_id
+    WHERE at.track_id = t.id
+) artists
 WHERE l.listened_at BETWEEN $1 AND $2
   AND t.id = $5
 ORDER BY l.listened_at DESC
