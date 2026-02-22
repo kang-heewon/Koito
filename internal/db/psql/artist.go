@@ -158,13 +158,14 @@ func (d *Psql) SaveArtistAliases(ctx context.Context, id int32, aliases []string
 	if id == 0 {
 		return errors.New("SaveArtistAliases: artist id not specified")
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("SaveArtistAliases: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	l.Debug().Msgf("Fetching existing artist aliases for artist %d...", id)
 	existing, err := qtx.GetAllArtistAliases(ctx, id)
 	if err != nil {
@@ -191,7 +192,13 @@ func (d *Psql) SaveArtistAliases(ctx context.Context, id int32, aliases []string
 			return fmt.Errorf("SaveArtistAliases: InsertArtistAlias: %w", err)
 		}
 	}
-	return tx.Commit(ctx)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("SaveArtistAliases: Commit: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d *Psql) DeleteArtist(ctx context.Context, id int32) error {
@@ -209,13 +216,14 @@ func (d *Psql) SaveArtist(ctx context.Context, opts db.SaveArtistOpts) (*models.
 	if opts.Image != uuid.Nil {
 		insertImage = &opts.Image
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return nil, fmt.Errorf("SaveArtist: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	opts.Name = strings.TrimSpace(opts.Name)
 	if opts.Name == "" {
 		return nil, errors.New("SaveArtist: name must not be blank")
@@ -240,10 +248,12 @@ func (d *Psql) SaveArtist(ctx context.Context, opts db.SaveArtistOpts) (*models.
 		l.Err(err).Msgf("SaveArtist: error inserting canonical alias for artist '%s'", opts.Name)
 		return nil, fmt.Errorf("SaveArtist: InsertArtistAlias: %w", err)
 	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		l.Err(err).Msg("Failed to commit insert artist transaction")
-		return nil, fmt.Errorf("SaveArtist: Commit: %w", err)
+	if ownsTx {
+		err = tx.Commit(ctx)
+		if err != nil {
+			l.Err(err).Msg("Failed to commit insert artist transaction")
+			return nil, fmt.Errorf("SaveArtist: Commit: %w", err)
+		}
 	}
 	artist := &models.Artist{
 		ID:      a.ID,
@@ -268,13 +278,14 @@ func (d *Psql) UpdateArtist(ctx context.Context, opts db.UpdateArtistOpts) error
 	if opts.ID == 0 {
 		return errors.New("UpdateArtist: artist id not specified")
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("UpdateArtist: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	if opts.MusicBrainzID != uuid.Nil {
 		l.Debug().Msgf("Updating artist with id %d with MusicBrainz ID %s", opts.ID, opts.MusicBrainzID)
 		err := qtx.UpdateArtistMbzID(ctx, repository.UpdateArtistMbzIDParams{
@@ -296,10 +307,12 @@ func (d *Psql) UpdateArtist(ctx context.Context, opts db.UpdateArtistOpts) error
 			return fmt.Errorf("UpdateArtist: UpdateArtistImage: %w", err)
 		}
 	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		l.Err(err).Msg("Failed to commit update artist transaction")
-		return fmt.Errorf("UpdateArtist: Commit: %w", err)
+	if ownsTx {
+		err = tx.Commit(ctx)
+		if err != nil {
+			l.Err(err).Msg("Failed to commit update artist transaction")
+			return fmt.Errorf("UpdateArtist: Commit: %w", err)
+		}
 	}
 	return nil
 }

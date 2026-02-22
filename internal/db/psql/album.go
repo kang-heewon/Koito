@@ -142,13 +142,14 @@ func (d *Psql) SaveAlbum(ctx context.Context, opts db.SaveAlbumOpts) (*models.Al
 			return nil, errors.New("SaveAlbum: none of 'ArtistIDs' may be 0")
 		}
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return nil, fmt.Errorf("SaveAlbum: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	l.Debug().Msgf("Inserting release '%s' into DB", opts.Title)
 	r, err := qtx.InsertRelease(ctx, repository.InsertReleaseParams{
 		MusicBrainzID:  insertMbzID,
@@ -182,9 +183,11 @@ func (d *Psql) SaveAlbum(ctx context.Context, opts db.SaveAlbumOpts) (*models.Al
 		return nil, fmt.Errorf("SaveAlbum: InsertReleaseAlias: %w", err)
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SaveAlbum: Commit: %w", err)
+	if ownsTx {
+		err = tx.Commit(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("SaveAlbum: Commit: %w", err)
+		}
 	}
 
 	err = d.SaveAlbumAliases(ctx, r.ID, opts.Aliases, "MusicBrainz")
@@ -203,13 +206,14 @@ func (d *Psql) SaveAlbum(ctx context.Context, opts db.SaveAlbumOpts) (*models.Al
 
 func (d *Psql) AddArtistsToAlbum(ctx context.Context, opts db.AddArtistsToAlbumOpts) error {
 	l := logger.FromContext(ctx)
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("AddArtistsToAlbum: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	for _, id := range opts.ArtistIDs {
 		err := qtx.AssociateArtistToRelease(ctx, repository.AssociateArtistToReleaseParams{
 			ReleaseID: opts.AlbumID,
@@ -220,7 +224,13 @@ func (d *Psql) AddArtistsToAlbum(ctx context.Context, opts db.AddArtistsToAlbumO
 			return fmt.Errorf("AddArtistsToAlbum: AssociateArtistToRelease: %w", err)
 		}
 	}
-	return tx.Commit(ctx)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("AddArtistsToAlbum: Commit: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d *Psql) UpdateAlbum(ctx context.Context, opts db.UpdateAlbumOpts) error {
@@ -228,13 +238,14 @@ func (d *Psql) UpdateAlbum(ctx context.Context, opts db.UpdateAlbumOpts) error {
 	if opts.ID == 0 {
 		return errors.New("missing album id")
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("UpdateAlbum: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	if opts.MusicBrainzID != uuid.Nil {
 		l.Debug().Msgf("Updating release with ID %d with MusicBrainz ID %s", opts.ID, opts.MusicBrainzID)
 		err := qtx.UpdateReleaseMbzID(ctx, repository.UpdateReleaseMbzIDParams{
@@ -266,7 +277,13 @@ func (d *Psql) UpdateAlbum(ctx context.Context, opts db.UpdateAlbumOpts) error {
 			return fmt.Errorf("UpdateAlbum: UpdateReleaseVariousArtists: %w", err)
 		}
 	}
-	return tx.Commit(ctx)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("UpdateAlbum: Commit: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d *Psql) SaveAlbumAliases(ctx context.Context, id int32, aliases []string, source string) error {
@@ -274,13 +291,14 @@ func (d *Psql) SaveAlbumAliases(ctx context.Context, id int32, aliases []string,
 	if id == 0 {
 		return errors.New("album id not specified")
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("SaveAlbumAliases: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	existing, err := qtx.GetAllReleaseAliases(ctx, id)
 	if err != nil {
 		return fmt.Errorf("SaveAlbumAliases: GetAllReleaseAliases: %w", err)
@@ -303,7 +321,13 @@ func (d *Psql) SaveAlbumAliases(ctx context.Context, id int32, aliases []string,
 			return fmt.Errorf("SaveAlbumAliases: InsertReleaseAlias: %w", err)
 		}
 	}
-	return tx.Commit(ctx)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("SaveAlbumAliases: Commit: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d *Psql) DeleteAlbum(ctx context.Context, id int32) error {

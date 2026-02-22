@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -182,19 +183,33 @@ func Run(
 		Handler: mux,
 	}
 
-	go func() {
+	var goroutineWG sync.WaitGroup
+	runTrackedGoroutine := func(fn func()) {
+		goroutineWG.Add(1)
+		go func() {
+			defer goroutineWG.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					l.Error().Interface("recover", r).Msg("Engine: tracked goroutine panicked")
+				}
+			}()
+			fn()
+		}()
+	}
+
+	runTrackedGoroutine(func() {
 		ready.Store(true)
 		l.Info().Msgf("Engine: Listening on %s", cfg.ListenAddr())
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			l.Fatal().Err(err).Msg("Engine: Error when running ListenAndServe")
 		}
-	}()
+	})
 
 	l.Debug().Msg("Engine: Checking import configuration")
 	if !cfg.SkipImport() {
-		go func() {
+		runTrackedGoroutine(func() {
 			RunImporter(l, store, mbzC)
-		}()
+		})
 	}
 
 	// l.Info().Msg("Creating test export file")
@@ -206,13 +221,19 @@ func Run(
 	// }()
 
 	l.Info().Msg("Engine: Pruning orphaned images")
-	go catalog.PruneOrphanedImages(logger.NewContext(l), store)
+	runTrackedGoroutine(func() {
+		catalog.PruneOrphanedImages(logger.NewContext(l), store)
+	})
 
 	if !cfg.MusicBrainzDisabled() {
 		l.Info().Msg("Engine: Backfilling genres for existing data")
-		go catalog.BackfillGenres(logger.NewContext(l), store, mbzC)
+		runTrackedGoroutine(func() {
+			catalog.BackfillGenres(logger.NewContext(l), store, mbzC)
+		})
 		l.Info().Msg("Engine: Backfilling track durations")
-		go catalog.BackfillTrackDurations(logger.NewContext(l), store, mbzC)
+		runTrackedGoroutine(func() {
+			catalog.BackfillTrackDurations(logger.NewContext(l), store, mbzC)
+		})
 	}
 
 	l.Info().Msg("Engine: Initialization finished")
@@ -230,6 +251,7 @@ func Run(
 		l.Fatal().Err(err).Msg("Engine: Error during server shutdown")
 		return err
 	}
+	goroutineWG.Wait()
 	l.Info().Msg("Engine: Shutdown successful")
 	return nil
 }

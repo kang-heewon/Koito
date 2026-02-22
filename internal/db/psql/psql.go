@@ -25,6 +25,7 @@ const (
 type Psql struct {
 	q    *repository.Queries
 	conn *pgxpool.Pool
+	tx   pgx.Tx
 }
 
 func New() (*Psql, error) {
@@ -95,6 +96,47 @@ func (d *Psql) Close(ctx context.Context) {
 
 func (d *Psql) Ping(ctx context.Context) error {
 	return d.conn.Ping(ctx)
+}
+
+func (d *Psql) withTx(ctx context.Context) (pgx.Tx, *repository.Queries, bool, error) {
+	if d.tx != nil {
+		return d.tx, d.q, false, nil
+	}
+
+	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	return tx, d.q.WithTx(tx), true, nil
+}
+
+func (d *Psql) RunInTransaction(ctx context.Context, fn func(db.DB) error) error {
+	if d.tx != nil {
+		return fn(d)
+	}
+
+	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("RunInTransaction: BeginTx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	txStore := &Psql{
+		q:    d.q.WithTx(tx),
+		conn: d.conn,
+		tx:   tx,
+	}
+
+	if err := fn(txStore); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("RunInTransaction: Commit: %w", err)
+	}
+
+	return nil
 }
 
 func stepToInterval(p db.StepInterval) pgtype.Interval {

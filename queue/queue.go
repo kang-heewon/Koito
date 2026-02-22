@@ -85,6 +85,11 @@ func (q *RequestQueue) start() {
 	q.wg.Add(1)
 	go func() {
 		defer q.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Println("[queue] worker goroutine panicked:", r)
+			}
+		}()
 		for req := range q.queue {
 			if err := q.limiter.Wait(q.ctx); err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {

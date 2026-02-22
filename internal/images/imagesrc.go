@@ -57,6 +57,8 @@ type caaImage struct {
 	Image      string            `json:"image"`
 	Front      bool              `json:"front"`
 	Back       bool              `json:"back"`
+	Width      int               `json:"width"`
+	Height     int               `json:"height"`
 	Thumbnails map[string]string `json:"thumbnails"`
 }
 
@@ -87,6 +89,8 @@ func caaCoverImageExtract(ctx context.Context, url string) (string, error) {
 			URL:        image.Image,
 			Front:      image.Front,
 			Back:       image.Back,
+			Width:      image.Width,
+			Height:     image.Height,
 			Thumbnails: image.Thumbnails,
 		})
 	}

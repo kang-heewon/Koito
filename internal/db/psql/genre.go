@@ -7,7 +7,6 @@ import (
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/logger"
 	"github.com/gabehf/koito/internal/repository"
-	"github.com/jackc/pgx/v5"
 )
 
 func (d *Psql) SaveAlbumGenres(ctx context.Context, id int32, genres []string) error {
@@ -19,13 +18,14 @@ func (d *Psql) SaveAlbumGenres(ctx context.Context, id int32, genres []string) e
 		return nil
 	}
 
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("SaveAlbumGenres: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 
 	for _, genreName := range genres {
 		genre, err := qtx.InsertGenre(ctx, genreName)
@@ -41,7 +41,13 @@ func (d *Psql) SaveAlbumGenres(ctx context.Context, id int32, genres []string) e
 		}
 	}
 
-	return tx.Commit(ctx)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("SaveAlbumGenres: Commit: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d *Psql) SaveArtistGenres(ctx context.Context, id int32, genres []string) error {
@@ -53,13 +59,14 @@ func (d *Psql) SaveArtistGenres(ctx context.Context, id int32, genres []string) 
 		return nil
 	}
 
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("SaveArtistGenres: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 
 	for _, genreName := range genres {
 		genre, err := qtx.InsertGenre(ctx, genreName)
@@ -75,7 +82,13 @@ func (d *Psql) SaveArtistGenres(ctx context.Context, id int32, genres []string) 
 		}
 	}
 
-	return tx.Commit(ctx)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("SaveArtistGenres: Commit: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d *Psql) getGenresForRelease(ctx context.Context, id int32) ([]string, error) {

@@ -119,13 +119,14 @@ func (d *Psql) SaveTrack(ctx context.Context, opts db.SaveTrackOpts) (*models.Tr
 	if opts.AlbumID == 0 {
 		return nil, errors.New("SaveTrack: required parameter 'AlbumID' missing")
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return nil, fmt.Errorf("SaveTrack: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	l.Debug().Msgf("Inserting new track '%s' into DB", opts.Title)
 	trackRow, err := qtx.InsertTrack(ctx, repository.InsertTrackParams{
 		MusicBrainzID: insertMbzID,
@@ -156,9 +157,11 @@ func (d *Psql) SaveTrack(ctx context.Context, opts db.SaveTrackOpts) (*models.Tr
 	if err != nil {
 		return nil, fmt.Errorf("SaveTrack: InsertTrackAlias: %w", err)
 	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SaveTrack: Commit: %w", err)
+	if ownsTx {
+		err = tx.Commit(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("SaveTrack: Commit: %w", err)
+		}
 	}
 	return &models.Track{
 		ID:       trackRow.ID,
@@ -173,13 +176,14 @@ func (d *Psql) UpdateTrack(ctx context.Context, opts db.UpdateTrackOpts) error {
 	if opts.ID == 0 {
 		return errors.New("UpdateTrack: track id not specified")
 	}
-	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, qtx, ownsTx, err := d.withTx(ctx)
 	if err != nil {
 		l.Err(err).Msg("Failed to begin transaction")
 		return fmt.Errorf("UpdateTrack: BeginTx: %w", err)
 	}
-	defer tx.Rollback(ctx)
-	qtx := d.q.WithTx(tx)
+	if ownsTx {
+		defer tx.Rollback(ctx)
+	}
 	if opts.MusicBrainzID != uuid.Nil {
 		l.Debug().Msgf("Updating MusicBrainz ID for track %d", opts.ID)
 		err := qtx.UpdateTrackMbzID(ctx, repository.UpdateTrackMbzIDParams{
@@ -200,7 +204,13 @@ func (d *Psql) UpdateTrack(ctx context.Context, opts db.UpdateTrackOpts) error {
 			return fmt.Errorf("UpdateTrack: UpdateTrackDuration: %w", err)
 		}
 	}
-	return tx.Commit(ctx)
+	if ownsTx {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("UpdateTrack: Commit: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d *Psql) SaveTrackAliases(ctx context.Context, id int32, aliases []string, source string) error {

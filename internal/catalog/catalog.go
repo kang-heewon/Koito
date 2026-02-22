@@ -63,19 +63,34 @@ type SubmitListenOpts struct {
 	IsNowPlaying bool
 }
 
+type submitListenTxRunner interface {
+	RunInTransaction(ctx context.Context, fn func(db.DB) error) error
+}
+
 const (
 	ImageSourceUserUpload = "User Upload"
 )
 
 func SubmitListen(ctx context.Context, store db.DB, opts SubmitListenOpts) error {
-	l := logger.FromContext(ctx)
-
 	if opts.Artist == "" || opts.TrackTitle == "" {
 		return errors.New("track name and artist are required")
 	}
 
 	// bandaid to ensure new activity does not have sub-second precision
 	opts.Time = opts.Time.Truncate(time.Second)
+
+	txRunner, ok := store.(submitListenTxRunner)
+	if !ok {
+		return submitListen(ctx, store, opts)
+	}
+
+	return txRunner.RunInTransaction(ctx, func(txStore db.DB) error {
+		return submitListen(ctx, txStore, opts)
+	})
+}
+
+func submitListen(ctx context.Context, store db.DB, opts SubmitListenOpts) error {
+	l := logger.FromContext(ctx)
 
 	artists, err := AssociateArtists(
 		ctx,
