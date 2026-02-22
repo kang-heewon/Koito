@@ -14,11 +14,11 @@ import (
 	"github.com/google/uuid"
 )
 
-type MiddlwareContextKey string
+type MiddlewareContextKey string
 
 const (
-	UserContextKey   MiddlwareContextKey = "user"
-	apikeyContextKey MiddlwareContextKey = "apikeyID"
+	UserContextKey   MiddlewareContextKey = "user"
+	apikeyContextKey MiddlewareContextKey = "apikeyID"
 )
 
 func ValidateSession(store db.DB) func(next http.Handler) http.Handler {
@@ -62,7 +62,20 @@ func ValidateSession(store db.DB) func(next http.Handler) http.Handler {
 
 			l.Debug().Msgf("ValidateSession: Refreshing session for user '%s'", u.Username)
 
-			store.RefreshSession(r.Context(), sid, time.Now().Add(30*24*time.Hour))
+			session, err := store.GetSession(r.Context(), sid)
+			if err != nil {
+				l.Err(err).Msg("ValidateSession: Failed to get session for refresh")
+			} else {
+				var expiresAt time.Time
+				if session.Persistent {
+					expiresAt = time.Now().Add(30 * 24 * time.Hour)
+				} else {
+					expiresAt = time.Now().Add(24 * time.Hour)
+				}
+				if err := store.RefreshSession(r.Context(), sid, expiresAt); err != nil {
+					l.Err(err).Msg("ValidateSession: Failed to refresh session")
+				}
+			}
 
 			l.Debug().Msgf("ValidateSession: Refreshed session for user '%s'", u.Username)
 

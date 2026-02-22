@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gabehf/koito/internal/logger"
 	"github.com/google/uuid"
@@ -43,6 +44,8 @@ type AlbumImageOpts struct {
 }
 
 const caaBaseUrl = "https://coverartarchive.org"
+
+var caaClient = &http.Client{Timeout: 15 * time.Second}
 
 // all functions are no-op if no providers are enabled
 func Initialize(opts ImageSourceOpts) {
@@ -141,10 +144,11 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 		l.Debug().Msg("Attempting to find album image from CoverArtArchive")
 		if opts.ReleaseMbzID != nil && *opts.ReleaseMbzID != uuid.Nil {
 			url := fmt.Sprintf(caaBaseUrl+"/release/%s/front", opts.ReleaseMbzID.String())
-			resp, err := http.DefaultClient.Head(url)
+			resp, err := caaClient.Head(url)
 			if err != nil {
 				return "", err
 			}
+			defer resp.Body.Close()
 			if resp.StatusCode == 200 {
 				return url, nil
 			}
@@ -152,10 +156,11 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 		}
 		if opts.ReleaseGroupMbzID != nil && *opts.ReleaseGroupMbzID != uuid.Nil {
 			url := fmt.Sprintf(caaBaseUrl+"/release-group/%s/front", opts.ReleaseGroupMbzID.String())
-			resp, err := http.DefaultClient.Head(url)
+			resp, err := caaClient.Head(url)
 			if err != nil {
 				return "", err
 			}
+			defer resp.Body.Close()
 			if resp.StatusCode == 200 {
 				return url, nil
 			}

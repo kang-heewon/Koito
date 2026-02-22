@@ -31,6 +31,20 @@ func (d *Psql) SaveSession(ctx context.Context, userID int32, expiresAt time.Tim
 	}, nil
 }
 
+func (d *Psql) GetSession(ctx context.Context, sessionId uuid.UUID) (*models.Session, error) {
+	session, err := d.q.GetSession(ctx, sessionId)
+	if err != nil {
+		return nil, fmt.Errorf("GetSession: %w", err)
+	}
+	return &models.Session{
+		ID:         session.ID,
+		UserID:     session.UserID,
+		CreatedAt:  session.CreatedAt,
+		ExpiresAt:  session.ExpiresAt,
+		Persistent: session.Persistent,
+	}, nil
+}
+
 func (d *Psql) RefreshSession(ctx context.Context, sessionId uuid.UUID, expiresAt time.Time) error {
 	return d.q.UpdateSessionExpiry(ctx, repository.UpdateSessionExpiryParams{
 		ID:        sessionId,

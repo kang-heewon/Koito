@@ -26,6 +26,7 @@ type DB interface {
 	GetAllTrackAliases(ctx context.Context, id int32) ([]models.Alias, error)
 	GetApiKeysByUserID(ctx context.Context, id int32) ([]models.ApiKey, error)
 	GetUserBySession(ctx context.Context, sessionId uuid.UUID) (*models.User, error)
+	GetSession(ctx context.Context, sessionId uuid.UUID) (*models.Session, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	GetUserByApiKey(ctx context.Context, key string) (*models.User, error)
 	// Save

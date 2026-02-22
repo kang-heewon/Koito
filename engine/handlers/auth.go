@@ -8,6 +8,7 @@ import (
 	"github.com/gabehf/koito/engine/middleware"
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/logger"
+	"github.com/gabehf/koito/internal/cfg"
 	"github.com/gabehf/koito/internal/utils"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -70,7 +71,7 @@ func LoginHandler(store db.DB) http.HandlerFunc {
 			Expires:  expiresAt,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false,
+			Secure:   cfg.SecureCookiesEnabled(),
 		})
 
 		l.Debug().Msgf("LoginHandler: User %d authenticated", user.ID)
@@ -101,6 +102,7 @@ func LogoutHandler(store db.DB) http.HandlerFunc {
 			Path:     "/",
 			HttpOnly: true,
 			MaxAge:   -1,
+			Secure:   cfg.SecureCookiesEnabled(),
 		})
 
 		l.Debug().Msg("LogoutHandler: Session terminated")

@@ -50,6 +50,7 @@ const (
 	LOGIN_GATE_ENV                 = "KOITO_LOGIN_GATE"
 	SPOTIFY_CLIENT_ID_ENV          = "KOITO_SPOTIFY_CLIENT_ID"
 	SPOTIFY_CLIENT_SECRET_ENV      = "KOITO_SPOTIFY_CLIENT_SECRET"
+	SECURE_COOKIES_ENV            = "KOITO_SECURE_COOKIES"
 )
 
 type config struct {
@@ -89,6 +90,7 @@ type config struct {
 	loginGate              bool
 	spotifyClientID        string
 	spotifyClientSecret    string
+	secureCookies         bool
 	spotifyEnabled         bool
 }
 
@@ -234,6 +236,8 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 		}
 		cfg.spotifyEnabled = true
 	}
+
+	cfg.secureCookies = parseBool(getenv(SECURE_COOKIES_ENV))
 
 	switch strings.ToLower(getenv(LOG_LEVEL_ENV)) {
 	case "debug":
@@ -478,4 +482,11 @@ func SpotifyClientSecret() string {
 	lock.RLock()
 	defer lock.RUnlock()
 	return globalConfig.spotifyClientSecret
+}
+
+
+func SecureCookiesEnabled() bool {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.secureCookies
 }

@@ -3,7 +3,6 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -11,12 +10,19 @@ import (
 	"os"
 	"strings"
 	"time"
-
 	"github.com/gabehf/koito/internal/mbz"
 	"github.com/gabehf/koito/internal/models"
 	"github.com/google/uuid"
 )
 
+// DateRangeValidationError represents an error in date range validation.
+type DateRangeValidationError struct {
+	Message string
+}
+
+func (e *DateRangeValidationError) Error() string {
+	return "DateRange: " + e.Message
+}
 func IDFromString(s string) string {
 	s = strings.ToLower(s)
 	s = strings.ReplaceAll(s, " ", "-")
@@ -90,22 +96,22 @@ func DateRange(week, month, year int) (time.Time, time.Time, error) {
 	}
 
 	if month != 0 && (month < 1 || month > 12) {
-		return time.Time{}, time.Time{}, errors.New("DateRange: invalid month")
+		return time.Time{}, time.Time{}, &DateRangeValidationError{"invalid month"}
 	}
 
 	if week != 0 && (week < 1 || week > 53) {
-		return time.Time{}, time.Time{}, errors.New("DateRange: invalid week")
+		return time.Time{}, time.Time{}, &DateRangeValidationError{"invalid week"}
 	}
 
 	if year < 1 {
-		return time.Time{}, time.Time{}, errors.New("DateRange: invalid year")
+		return time.Time{}, time.Time{}, &DateRangeValidationError{"invalid year"}
 	}
 
 	loc := time.Local
 
 	if week != 0 {
 		if month != 0 {
-			return time.Time{}, time.Time{}, errors.New("DateRange: cannot specify both week and month")
+			return time.Time{}, time.Time{}, &DateRangeValidationError{"cannot specify both week and month"}
 		}
 		// Specific week
 		start := time.Date(year, 1, 1, 0, 0, 0, 0, loc)

@@ -128,7 +128,8 @@ func Run(
 			Role:     models.UserRoleAdmin,
 		})
 		if err != nil {
-			l.Fatal().Err(err).Msg("Engine: Failed to save default user in database")
+			l.Error().Err(err).Msg("Engine: Failed to save default user in database")
+			return fmt.Errorf("failed to save default user: %w", err)
 		}
 		apikey, err := utils.GenerateRandomString(48)
 		if err != nil {
@@ -141,7 +142,8 @@ func Run(
 			Label:  label,
 		})
 		if err != nil {
-			l.Fatal().Err(err).Msg("Engine: Failed to save default API key in database")
+			l.Error().Err(err).Msg("Engine: Failed to save default API key in database")
+			return fmt.Errorf("failed to save default API key: %w", err)
 		}
 		l.Info().Msgf("Engine: Default user created. Login: %s : %s", cfg.DefaultUsername(), cfg.DefaultPassword())
 	}

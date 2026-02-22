@@ -27,7 +27,7 @@ func (h RequestIDHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	}
 }
 
-const requestIDKey MiddlwareContextKey = "requestID"
+const requestIDKey MiddlewareContextKey = "requestID"
 
 const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 

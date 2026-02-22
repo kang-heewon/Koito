@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/logger"
+	"github.com/gabehf/koito/internal/utils"
 )
 
 const defaultLimitSize = 100
@@ -141,9 +143,6 @@ func OptsFromRequest(r *http.Request) (db.GetItemsOpts, error) {
 }
 
 func isDateRangeValidationError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	return strings.Contains(strings.ToLower(err.Error()), "daterange:")
+	var dateRangeErr *utils.DateRangeValidationError
+	return errors.As(err, &dateRangeErr)
 }
