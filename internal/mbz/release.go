@@ -42,7 +42,7 @@ const releaseWithGenresFmtStr = "%s/ws/2/release/%s?inc=release-groups+genres"
 
 func (c *MusicBrainzClient) GetReleaseGroup(ctx context.Context, id uuid.UUID) (*MusicBrainzReleaseGroup, error) {
 	mbzRG := new(MusicBrainzReleaseGroup)
-	err := c.getEntity(ctx, releaseGroupFmtStr, id, mbzRG)
+	err := c.getEntityCached(ctx, mbzCacheKey("release-group", id), releaseGroupCacheTTL, releaseGroupFmtStr, id, mbzRG)
 	if err != nil {
 		return nil, fmt.Errorf("GetReleaseGroup: %w", err)
 	}
@@ -51,7 +51,7 @@ func (c *MusicBrainzClient) GetReleaseGroup(ctx context.Context, id uuid.UUID) (
 
 func (c *MusicBrainzClient) GetRelease(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
 	mbzRelease := new(MusicBrainzRelease)
-	err := c.getEntity(ctx, releaseFmtStr, id, mbzRelease)
+	err := c.getEntityCached(ctx, mbzCacheKey("release", id), releaseCacheTTL, releaseFmtStr, id, mbzRelease)
 	if err != nil {
 		return nil, fmt.Errorf("GetRelease: %w", err)
 	}
@@ -60,7 +60,7 @@ func (c *MusicBrainzClient) GetRelease(ctx context.Context, id uuid.UUID) (*Musi
 
 func (c *MusicBrainzClient) GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
 	mbzRelease := new(MusicBrainzRelease)
-	err := c.getEntity(ctx, releaseWithGenresFmtStr, id, mbzRelease)
+	err := c.getEntityCached(ctx, mbzCacheKey("release-with-genres", id), releaseWithGenresCacheTTL, releaseWithGenresFmtStr, id, mbzRelease)
 	if err != nil {
 		return nil, fmt.Errorf("GetReleaseWithGenres: %w", err)
 	}

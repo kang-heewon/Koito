@@ -27,7 +27,14 @@ type AssociateAlbumOpts struct {
 	SkipCacheImage    bool
 }
 
-func AssociateAlbum(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*models.Album, error) {
+type AlbumWithoutImages struct {
+	ID             int32
+	MbzID          *uuid.UUID
+	Title          string
+	VariousArtists bool
+}
+
+func AssociateAlbum(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*AlbumWithoutImages, error) {
 	l := logger.FromContext(ctx)
 	if opts.TrackName == "" {
 		return nil, errors.New("AssociateAlbum: required parameter TrackName missing")
@@ -48,17 +55,16 @@ func AssociateAlbum(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*mod
 	}
 }
 
-func matchAlbumByMbzReleaseID(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*models.Album, error) {
+func matchAlbumByMbzReleaseID(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*AlbumWithoutImages, error) {
 	l := logger.FromContext(ctx)
 	a, err := d.GetAlbum(ctx, db.GetAlbumOpts{MusicBrainzID: opts.ReleaseMbzID})
 	if err == nil {
 		l.Debug().Msgf("Found release '%s' by MusicBrainz Release ID", a.Title)
-		return &models.Album{
+		return &AlbumWithoutImages{
 			ID:             a.ID,
 			MbzID:          &opts.ReleaseMbzID,
 			Title:          a.Title,
 			VariousArtists: a.VariousArtists,
-			Image:          a.Image,
 		}, nil
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("matchAlbumByMbzReleaseID: %w", err)
@@ -72,7 +78,7 @@ func matchAlbumByMbzReleaseID(ctx context.Context, d db.DB, opts AssociateAlbumO
 	}
 }
 
-func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*models.Album, error) {
+func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*AlbumWithoutImages, error) {
 	l := logger.FromContext(ctx)
 
 	release, err := opts.Mbzc.GetRelease(ctx, opts.ReleaseMbzID)
@@ -206,7 +212,7 @@ func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts Asso
 		l.Info().Msgf("Created album '%s' with MusicBrainz Release ID", album.Title)
 	}
 
-	return &models.Album{
+	return &AlbumWithoutImages{
 		ID:             album.ID,
 		MbzID:          &opts.ReleaseMbzID,
 		Title:          album.Title,
@@ -214,7 +220,7 @@ func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts Asso
 	}, nil
 }
 
-func matchAlbumByTitle(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*models.Album, error) {
+func matchAlbumByTitle(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*AlbumWithoutImages, error) {
 	l := logger.FromContext(ctx)
 
 	var releaseName string
@@ -285,7 +291,7 @@ func matchAlbumByTitle(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*
 		l.Info().Msgf("Created album '%s' with artist and title", a.Title)
 	}
 
-	return &models.Album{
+	return &AlbumWithoutImages{
 		ID:    a.ID,
 		Title: a.Title,
 	}, nil

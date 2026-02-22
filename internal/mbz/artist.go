@@ -28,7 +28,7 @@ const artistAliasFmtStr = "%s/ws/2/artist/%s?inc=aliases+genres"
 
 func (c *MusicBrainzClient) getArtist(ctx context.Context, id uuid.UUID) (*MusicBrainzArtist, error) {
 	mbzArtist := new(MusicBrainzArtist)
-	err := c.getEntity(ctx, artistAliasFmtStr, id, mbzArtist)
+	err := c.getEntityCached(ctx, mbzCacheKey("artist", id), artistCacheTTL, artistAliasFmtStr, id, mbzArtist)
 	if err != nil {
 		return nil, fmt.Errorf("getArtist: %w", err)
 	}
