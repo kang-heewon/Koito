@@ -221,6 +221,9 @@ func resolveAliasOrCreateArtist(ctx context.Context, mbzID uuid.UUID, names []st
 		}
 	}
 
+	if len(aliases) == 0 {
+		return nil, errors.New("resolveAliasOrCreateArtist: no aliases found from MusicBrainz")
+	}
 	canonical := aliases[0]
 	for _, alias := range aliases {
 		for _, name := range names {

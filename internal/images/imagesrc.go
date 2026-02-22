@@ -89,12 +89,16 @@ func GetArtistImage(ctx context.Context, opts ArtistImageOpts) (string, error) {
 		}
 	}
 	if imgsrc.subsonicEnabled {
+	if len(opts.Aliases) == 0 {
+		l.Debug().Msg("GetArtistImage: no aliases provided, skipping Subsonic")
+	} else {
 		img, err := imgsrc.subsonicC.GetArtistImage(ctx, opts.Aliases[0])
 		if err != nil {
 			l.Debug().Err(err).Msg("Could not find artist image from Subsonic")
 		} else if img != "" {
 			return img, nil
 		}
+	}
 	}
 	if imgsrc.deezerEnabled {
 		l.Debug().Msg("Attempting to find artist image from Deezer")
@@ -120,6 +124,9 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 		}
 	}
 	if imgsrc.subsonicEnabled {
+	if len(opts.Artists) == 0 {
+		l.Debug().Msg("GetAlbumImage: no artists provided, skipping Subsonic")
+	} else {
 		img, err := imgsrc.subsonicC.GetAlbumImage(ctx, opts.Artists[0], opts.Album)
 		if err != nil {
 			return "", err
@@ -128,6 +135,7 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			return img, nil
 		}
 		l.Debug().Msg("Could not find album cover from Subsonic")
+	}
 	}
 	if imgsrc.caaEnabled {
 		l.Debug().Msg("Attempting to find album image from CoverArtArchive")

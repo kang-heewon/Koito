@@ -32,6 +32,9 @@ func AssociateAlbum(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*mod
 	if opts.TrackName == "" {
 		return nil, errors.New("AssociateAlbum: required parameter TrackName missing")
 	}
+	if len(opts.Artists) == 0 {
+		return nil, errors.New("AssociateAlbum: at least one artist is required")
+	}
 	releaseTitle := opts.ReleaseName
 	if releaseTitle == "" {
 		releaseTitle = opts.TrackName
@@ -82,6 +85,9 @@ func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts Asso
 	titles := []string{release.Title, opts.ReleaseName}
 	utils.Unique(&titles)
 
+	if len(opts.Artists) == 0 {
+		return nil, errors.New("createOrUpdateAlbumWithMbzReleaseID: at least one artist is required")
+	}
 	l.Debug().Msgf("Searching for albums '%v' from artist id %d in DB", titles, opts.Artists[0].ID)
 	album, err = d.GetAlbum(ctx, db.GetAlbumOpts{
 		ArtistID: opts.Artists[0].ID,
@@ -218,6 +224,9 @@ func matchAlbumByTitle(ctx context.Context, d db.DB, opts AssociateAlbumOpts) (*
 		releaseName = opts.TrackName
 	}
 
+	if len(opts.Artists) == 0 {
+		return nil, errors.New("matchAlbumByTitle: at least one artist is required")
+	}
 	a, err := d.GetAlbum(ctx, db.GetAlbumOpts{
 		Title:    releaseName,
 		ArtistID: opts.Artists[0].ID,
