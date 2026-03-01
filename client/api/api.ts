@@ -1,4 +1,4 @@
-interface getItemsArgs {
+interface GetItemsArgs {
   limit: number;
   period: string;
   page: number;
@@ -36,7 +36,7 @@ async function handleJson<T>(r: Response): Promise<T> {
   return (await r.json()) as T;
 }
 async function getLastListens(
-  args: getItemsArgs
+  args: GetItemsArgs
 ): Promise<PaginatedResponse<Listen>> {
   const params = new URLSearchParams({
     period: args.period,
@@ -58,7 +58,7 @@ async function getLastListens(
 }
 
 async function getTopTracks(
-  args: getItemsArgs
+  args: GetItemsArgs
 ): Promise<PaginatedResponse<Track>> {
   const params = new URLSearchParams({
     period: args.period,
@@ -77,7 +77,7 @@ async function getTopTracks(
 }
 
 async function getTopAlbums(
-  args: getItemsArgs
+  args: GetItemsArgs
 ): Promise<PaginatedResponse<Album>> {
   const params = new URLSearchParams({
     period: args.period,
@@ -93,7 +93,7 @@ async function getTopAlbums(
 }
 
 async function getTopArtists(
-  args: getItemsArgs
+  args: GetItemsArgs
 ): Promise<PaginatedResponse<Artist>> {
   const params = new URLSearchParams({
     period: args.period,
@@ -138,35 +138,29 @@ function replaceImage(form: FormData): Promise<Response> {
   });
 }
 
-function mergeTracks(from: number, to: number): Promise<Response> {
-  return fetch(`/apis/web/v1/merge/tracks?from_id=${from}&to_id=${to}`, {
+function mergeEntities(
+  type: "tracks" | "albums" | "artists",
+  from: number,
+  to: number,
+  replaceImage?: boolean
+): Promise<Response> {
+  const params = new URLSearchParams({
+    from_id: String(from),
+    to_id: String(to),
+  });
+  if (replaceImage !== undefined) {
+    params.set("replace_image", String(replaceImage));
+  }
+  return fetch(`/apis/web/v1/merge/${type}?${params.toString()}`, {
     method: "POST",
   });
 }
-function mergeAlbums(
-  from: number,
-  to: number,
-  replaceImage: boolean
-): Promise<Response> {
-  return fetch(
-    `/apis/web/v1/merge/albums?from_id=${from}&to_id=${to}&replace_image=${replaceImage}`,
-    {
-      method: "POST",
-    }
-  );
-}
-function mergeArtists(
-  from: number,
-  to: number,
-  replaceImage: boolean
-): Promise<Response> {
-  return fetch(
-    `/apis/web/v1/merge/artists?from_id=${from}&to_id=${to}&replace_image=${replaceImage}`,
-    {
-      method: "POST",
-    }
-  );
-}
+const mergeTracks = (from: number, to: number, replaceImage: boolean) =>
+  mergeEntities("tracks", from, to, replaceImage);
+const mergeAlbums = (from: number, to: number, replaceImage: boolean) =>
+  mergeEntities("albums", from, to, replaceImage);
+const mergeArtists = (from: number, to: number, replaceImage: boolean) =>
+  mergeEntities("artists", from, to, replaceImage);
 function login(
   username: string,
   password: string,
@@ -349,6 +343,7 @@ export {
   getStats,
   search,
   replaceImage,
+  mergeEntities,
   mergeTracks,
   mergeAlbums,
   mergeArtists,
@@ -491,7 +486,7 @@ type RecommendationsResponse = {
 export type {
   RecommendationTrack,
   RecommendationsResponse,
-  getItemsArgs,
+  GetItemsArgs,
   getActivityArgs,
   Track,
   Artist,

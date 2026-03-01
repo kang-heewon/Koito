@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { getTopAlbums, imageUrl, type getItemsArgs } from "api/api"
+import { getTopAlbums, imageUrl, type GetItemsArgs } from "api/api"
 import { Link } from "react-router"
 
 interface Props {
@@ -12,7 +12,7 @@ export default function ArtistAlbums({artistId, name, period}: Props) {
 
     const { isPending, isError, data, error } = useQuery({ 
         queryKey: ['top-albums', {limit: 99, period: "all_time", artist_id: artistId, page: 0}], 
-        queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as getItemsArgs),
+        queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as GetItemsArgs),
     })
 
     if (isPending) {

@@ -3,7 +3,7 @@ import { useEffect } from "react"
 const PERIODS = ["day", "week", "month", "year", "all_time"]
 
 interface Props {
-    setter: Function
+    setter: (value: string) => void
     current: string
     disableCache?: boolean
 }

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getTopAlbums, type getItemsArgs } from "api/api";
+import { getTopAlbums, type GetItemsArgs } from "api/api";
 import { Link } from "react-router";
 import TopListSkeleton from "./skeletons/TopListSkeleton";
 import TopItemList from "./TopItemList";
@@ -21,7 +21,7 @@ export default function TopAlbums(props: Props) {
           page: 0,
         },
       ],
-    queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as getItemsArgs),
+    queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as GetItemsArgs),
   });
 
   if (isPending) {

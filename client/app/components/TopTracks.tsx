@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getTopTracks, type getItemsArgs } from "api/api";
+import { getTopTracks, type GetItemsArgs } from "api/api";
 import { Link } from "react-router";
 import TopListSkeleton from "./skeletons/TopListSkeleton";
 import TopItemList from "./TopItemList";
@@ -23,7 +23,7 @@ const TopTracks = (props: Props) => {
         page: 0,
       },
     ],
-    queryFn: ({ queryKey }) => getTopTracks(queryKey[1] as getItemsArgs),
+    queryFn: ({ queryKey }) => getTopTracks(queryKey[1] as GetItemsArgs),
   });
 
   if (isPending) {

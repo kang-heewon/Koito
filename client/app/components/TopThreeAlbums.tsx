@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { getTopAlbums, type getItemsArgs } from "api/api"
+import { getTopAlbums, type GetItemsArgs } from "api/api"
 import AlbumDisplay from "./AlbumDisplay"
 
 interface Props {
@@ -13,7 +13,7 @@ export default function TopThreeAlbums(props: Props) {
 
     const { isPending, isError, data, error } = useQuery({ 
         queryKey: ['top-albums', {limit: 3, period: props.period, artist_id: props.artistId, page: 0}], 
-        queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as getItemsArgs),
+        queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as GetItemsArgs),
     })
 
     if (isPending) {

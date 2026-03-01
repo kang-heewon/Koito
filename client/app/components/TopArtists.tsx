@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getTopArtists, type getItemsArgs } from "api/api";
+import { getTopArtists, type GetItemsArgs } from "api/api";
 import { Link } from "react-router";
 import TopListSkeleton from "./skeletons/TopListSkeleton";
 import TopItemList from "./TopItemList";
@@ -17,7 +17,7 @@ export default function TopArtists(props: Props) {
       "top-artists",
       { limit: props.limit, period: props.period, page: 0 },
     ],
-    queryFn: ({ queryKey }) => getTopArtists(queryKey[1] as getItemsArgs),
+    queryFn: ({ queryKey }) => getTopArtists(queryKey[1] as GetItemsArgs),
   });
 
   if (isPending) {

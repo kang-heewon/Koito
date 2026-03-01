@@ -5,7 +5,7 @@ import { Link } from "react-router";
 interface Props {
     name: string;
     to?: string;
-    onClick: Function;
+    onClick: () => void;
     children: React.ReactNode;
     modal: React.ReactNode;
     keyHint?: React.ReactNode;

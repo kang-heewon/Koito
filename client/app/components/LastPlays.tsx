@@ -6,7 +6,7 @@ import {
   deleteListen,
   getLastListens,
   getNowPlaying,
-  type getItemsArgs,
+  type GetItemsArgs,
   type Listen,
 } from "api/api";
 import { Link } from "react-router";
@@ -35,7 +35,7 @@ export default function LastPlays(props: Props) {
         page: 1,
       },
     ],
-    queryFn: ({ queryKey }) => getLastListens(queryKey[1] as getItemsArgs),
+    queryFn: ({ queryKey }) => getLastListens(queryKey[1] as GetItemsArgs),
   });
   const { data: npData } = useQuery({
     queryKey: ["now-playing"],
