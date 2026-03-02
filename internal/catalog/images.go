@@ -55,15 +55,22 @@ func ParseImageSize(size string) (ImageSize, error) {
 		return "", fmt.Errorf("unknown image size: %s", size)
 	}
 }
+// GetImageSize returns pixel dimensions for each image size tier.
+// Sized for 2x Retina displays.
+//
+// Cache upgrade note: existing cached images are NOT automatically upgraded.
+// To apply new resolutions: delete image_cache/small and image_cache/medium directories.
+// Do NOT delete image_cache/large (or full) — it serves as the source image for resizing.
+
 func GetImageSize(size ImageSize) int {
 	var px int
 	switch size {
 	case "small":
-		px = 48
+		px = 96   // was 48. 2x retina for 48px frontend display
 	case "medium":
-		px = 256
+		px = 512  // was 256. 2x retina for ~130-256px frontend display
 	case "large":
-		px = 500
+		px = 1000 // was 500. 2x retina for ~385px frontend display
 	case "xl":
 		px = 1000
 	}
