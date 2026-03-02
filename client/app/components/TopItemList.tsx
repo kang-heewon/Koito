@@ -35,7 +35,7 @@ export default function TopItemList<T extends Item>({ data, separators, type, cl
 
 function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artist" }) {
 
-    const itemClasses = `flex items-center gap-2`
+    const itemClasses = `flex items-center gap-2 w-full`
 
     switch (type) {
         case "album": {
@@ -43,22 +43,21 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
     
             return (
                 <div style={{fontSize: 12}} className={itemClasses}>
-                    <Link to={`/album/${album.id}`}>
+                    <Link to={`/album/${album.id}`} className="shrink-0">
                         <img loading="lazy" src={imageUrl(album.image, "small")} alt={album.title} className="w-12 h-12 object-cover rounded-lg" />
                     </Link>
-                    <div>
-                        <Link to={`/album/${album.id}`} className="hover:text-(--color-fg-secondary)">
+                    <div className="min-w-0 flex-1">
+                        <Link to={`/album/${album.id}`} className="hover:text-(--color-fg-secondary) block truncate">
                             <span style={{fontSize: 14}}>{album.title}</span>
                         </Link>
-                        <br />
                         {album.is_various_artists ?
-                        <span className="color-fg-secondary">Various Artists</span>
+                        <div className="color-fg-secondary truncate">Various Artists</div>
                         :
-                        <div>
+                        <div className="truncate">
                            <ArtistLinks artists={album.artists && album.artists.length > 0 ? [album.artists[0]] : [{id: 0, name: 'Unknown Artist'}]}/>
                         </div>
                         }
-                        <div className="color-fg-secondary">{album.listen_count} plays</div>
+                        <div className="color-fg-secondary truncate">{album.listen_count} plays</div>
                     </div>
                 </div>
             );
@@ -68,18 +67,17 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
 
             return (
                 <div style={{fontSize: 12}} className={itemClasses}>
-                <Link to={`/track/${track.id}`}>
+                <Link to={`/track/${track.id}`} className="shrink-0">
                     <img loading="lazy" src={imageUrl(track.image, "small")} alt={track.title} className="w-12 h-12 object-cover rounded-lg" />
                 </Link>
-                    <div>
-                        <Link to={`/track/${track.id}`} className="hover:text-(--color-fg-secondary)">
+                    <div className="min-w-0 flex-1">
+                        <Link to={`/track/${track.id}`} className="hover:text-(--color-fg-secondary) block truncate">
                             <span style={{fontSize: 14}}>{track.title}</span>
                         </Link>
-                        <br />
-                            <div>
+                            <div className="truncate">
                                <ArtistLinks artists={track.artists || [{id: 0, name: 'Unknown Artist'}]}/>
                             </div>
-                        <div className="color-fg-secondary">{track.listen_count} plays</div>
+                        <div className="color-fg-secondary truncate">{track.listen_count} plays</div>
                     </div>
                 </div>
             );
@@ -87,12 +85,12 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
         case "artist": {
             const artist = item as Artist;
             return (
-                <div style={{fontSize: 12}}>
+                <div style={{fontSize: 12}} className="w-full">
                     <Link className={itemClasses+' mt-1 mb-[6px] hover:text-(--color-fg-secondary)'} to={`/artist/${artist.id}`}>
-                        <img loading="lazy" src={imageUrl(artist.image, "small")} alt={artist.name} className="w-12 h-12 object-cover rounded-lg" />
-                        <div>
-                            <span style={{fontSize: 14}}>{artist.name}</span>
-                            <div className="color-fg-secondary">{artist.listen_count} plays</div>
+                        <img loading="lazy" src={imageUrl(artist.image, "small")} alt={artist.name} className="w-12 h-12 object-cover rounded-lg shrink-0" />
+                        <div className="min-w-0 flex-1">
+                            <div style={{fontSize: 14}} className="truncate">{artist.name}</div>
+                            <div className="color-fg-secondary truncate">{artist.listen_count} plays</div>
                         </div>
                     </Link>
                 </div>
