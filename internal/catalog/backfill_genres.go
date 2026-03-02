@@ -16,6 +16,11 @@ func BackfillAlbumGenres(ctx context.Context, store db.DB, mbzc mbz.MusicBrainzC
 	totalProcessed := 0
 
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		albums, err := store.AlbumsWithoutGenres(ctx, lastID)
 		if err != nil {
 			l.Err(err).Msg("BackfillAlbumGenres: Failed to get albums without genres")
@@ -68,6 +73,11 @@ func BackfillArtistGenres(ctx context.Context, store db.DB, mbzc mbz.MusicBrainz
 	totalProcessed := 0
 
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		artists, err := store.ArtistsWithoutGenres(ctx, lastID)
 		if err != nil {
 			l.Err(err).Msg("BackfillArtistGenres: Failed to get artists without genres")

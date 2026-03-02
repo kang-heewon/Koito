@@ -16,6 +16,11 @@ func BackfillTrackDurations(ctx context.Context, store db.DB, mbzc mbz.MusicBrai
 	totalProcessed := 0
 
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		tracks, err := store.TracksWithoutDuration(ctx, lastID)
 		if err != nil {
 			l.Err(err).Msg("BackfillTrackDurations: Failed to get tracks without duration")
