@@ -59,21 +59,21 @@ func ImageHandler(store db.DB) http.HandlerFunc {
 					l.Warn().Msgf("ImageHandler: Could not find requested image %s. Attempting to download from source", imgid.String())
 					sourcePath, err = downloadMissingImage(r.Context(), store, imgid)
 					if err != nil {
-						l.Err(err).Msg("ImageHandler: Failed to redownload missing image")
-						w.WriteHeader(http.StatusInternalServerError)
-						return
+l.Err(err).Msg("ImageHandler: Failed to redownload missing image")
+					serveDefaultImage(w, r, imageSize)
+					return
 					}
 				} else if err != nil {
-					l.Err(err).Msg("ImageHandler: Failed to access source image file at large size")
-					w.WriteHeader(http.StatusInternalServerError)
+l.Err(err).Msg("ImageHandler: Failed to access source image file at large size")
+					serveDefaultImage(w, r, imageSize)
 					return
 				} else {
 					sourcePath = largeSizePath
 				}
 			} else if err != nil {
-				l.Err(err).Msg("ImageHandler: Failed to access source image file at full size")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+l.Err(err).Msg("ImageHandler: Failed to access source image file at full size")
+					serveDefaultImage(w, r, imageSize)
+					return
 			} else {
 				sourcePath = fullSizePath
 			}
@@ -82,20 +82,20 @@ func ImageHandler(store db.DB) http.HandlerFunc {
 
 			imageBuf, err := os.ReadFile(sourcePath)
 			if err != nil {
-				l.Err(err).Msg("ImageHandler: Failed to read source image file")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+l.Err(err).Msg("ImageHandler: Failed to read source image file")
+					serveDefaultImage(w, r, imageSize)
+					return
 			}
 
 			err = catalog.CompressAndSaveImage(r.Context(), imgid.String(), imageSize, bytes.NewReader(imageBuf))
 			if err != nil {
-				l.Err(err).Msg("ImageHandler: Failed to save compressed image to cache")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+l.Err(err).Msg("ImageHandler: Failed to save compressed image to cache")
+					serveDefaultImage(w, r, imageSize)
+					return
 			}
 		} else if err != nil {
-			l.Err(err).Msg("ImageHandler: Failed to access desired image file")
-			w.WriteHeader(http.StatusInternalServerError)
+l.Err(err).Msg("ImageHandler: Failed to access desired image file")
+			serveDefaultImage(w, r, imageSize)
 			return
 		}
 
