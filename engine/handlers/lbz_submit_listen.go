@@ -100,7 +100,6 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 		}
 
 		decoder := json.NewDecoder(bytes.NewBuffer(requestBytes))
-		decoder.DisallowUnknownFields()
 
 		if err := decoder.Decode(&req); err != nil {
 			l.Err(err).Msg("LbzSubmitListenHandler: Failed to decode request")
