@@ -189,9 +189,6 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 		} else if img != "" {
 			return img, nil
 		}
-		if img != "" {
-			return img, nil
-		}
 	}
 	if imgsrc.subsonicEnabled {
 		if len(opts.Artists) == 0 {
@@ -201,9 +198,6 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			if err != nil {
 				l.Debug().Err(err).Msg("Could not find album image from Subsonic")
 			} else if img != "" {
-				return img, nil
-			}
-			if img != "" {
 				return img, nil
 			}
 			l.Debug().Msg("Could not find album cover from Subsonic")
@@ -219,18 +213,12 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			} else if img != "" {
 				return img, nil
 			}
-			if img != "" {
-				return img, nil
-			}
 
 			frontURL := fmt.Sprintf(caaBaseUrl+"/release/%s/front", opts.ReleaseMbzID.String())
 			img, status, err := caaFrontImage(frontURL)
 			if err != nil {
 				l.Debug().Err(err).Msg("Could not find album cover from Cover Art Archive")
 			} else if img != "" {
-				return img, nil
-			}
-			if img != "" {
 				return img, nil
 			}
 			l.Debug().Str("url", frontURL).Str("status", status).Msg("Could not find album cover from CoverArtArchive with MusicBrainz release ID")
@@ -241,9 +229,6 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			if err != nil {
 				l.Debug().Err(err).Msg("Could not find album cover from Cover Art Archive")
 			} else if img != "" {
-				return img, nil
-			}
-			if img != "" {
 				return img, nil
 			}
 

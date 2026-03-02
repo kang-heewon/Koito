@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getTopAlbums, type GetItemsArgs } from "api/api";
 import { Link } from "react-router";
 import TopListSkeleton from "./skeletons/TopListSkeleton";
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function TopAlbums(props: Props) {
-  const { isPending, isError, data, error } = useQuery({
+  const { isPending, isError, data, error, isFetching } = useQuery({
     queryKey: [
         "top-albums",
         {
@@ -22,9 +22,9 @@ export default function TopAlbums(props: Props) {
         },
       ],
     queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as GetItemsArgs),
+    placeholderData: keepPreviousData,
   });
-
-  if (isPending) {
+  if (isPending || isFetching) {
     return (
       <div className="w-[300px]">
         <h2>Top Albums</h2>
@@ -43,7 +43,7 @@ export default function TopAlbums(props: Props) {
   if (!data?.items) return null;
 
   return (
-    <div>
+    <div className="w-[300px]">
       <h2 className="hover:underline">
         <Link
           to={`/chart/top-albums?period=${props.period}${

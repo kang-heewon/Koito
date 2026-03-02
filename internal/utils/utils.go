@@ -103,7 +103,7 @@ func DateRange(week, month, year int) (time.Time, time.Time, error) {
 		return time.Time{}, time.Time{}, &DateRangeValidationError{"invalid week"}
 	}
 
-	if year < 1 {
+	if year != 0 && year < 1 {
 		return time.Time{}, time.Time{}, &DateRangeValidationError{"invalid year"}
 	}
 
@@ -113,6 +113,9 @@ func DateRange(week, month, year int) (time.Time, time.Time, error) {
 		if month != 0 {
 			return time.Time{}, time.Time{}, &DateRangeValidationError{"cannot specify both week and month"}
 		}
+		if year == 0 {
+			return time.Time{}, time.Time{}, &DateRangeValidationError{"year is required when week is specified"}
+		}
 		// Specific week
 		start := time.Date(year, 1, 1, 0, 0, 0, 0, loc)
 		start = start.AddDate(0, 0, (week-1)*7)
@@ -120,8 +123,16 @@ func DateRange(week, month, year int) (time.Time, time.Time, error) {
 		return start, end, nil
 	}
 
-	if month == 0 {
-		// Whole year
+	if month != 0 {
+		if year == 0 {
+			return time.Time{}, time.Time{}, &DateRangeValidationError{"year is required when month is specified"}
+		}
+		start := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, loc)
+		end := start.AddDate(0, 1, 0)
+		return start, end, nil
+	}
+
+	if year != 0 {
 		start := time.Date(year, 1, 1, 0, 0, 0, 0, loc)
 		end := start.AddDate(1, 0, 0)
 		return start, end, nil
