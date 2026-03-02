@@ -205,7 +205,7 @@ function TopList(props: TopListProps) {
                   i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
               {i + 1}
             </div>
-            <Link to={`/track/${item.id}`} className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+            <Link to={`/track/${item.id}`} className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
               <img
                 src={imageUrl(item.image, "small")}
                 alt={item.title}
@@ -233,7 +233,7 @@ function TopList(props: TopListProps) {
                   i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
               {i + 1}
             </div>
-            <Link to={`/artist/${item.id}`} className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+            <Link to={`/artist/${item.id}`} className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
               <img
                 src={imageUrl(item.image, "small")}
                 alt={item.name}
@@ -257,7 +257,7 @@ function TopList(props: TopListProps) {
                   i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
               {i + 1}
             </div>
-            <Link to={`/album/${item.id}`} className="w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+            <Link to={`/album/${item.id}`} className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
               <img
                 src={imageUrl(item.image, "small")}
                 alt={item.title}

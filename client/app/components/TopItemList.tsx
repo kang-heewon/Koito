@@ -44,7 +44,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
             return (
                 <div style={{fontSize: 12}} className={itemClasses}>
                     <Link to={`/album/${album.id}`}>
-                        <img loading="lazy" src={imageUrl(album.image, "small")} alt={album.title} className="min-w-[48px]" />
+                        <img loading="lazy" src={imageUrl(album.image, "small")} alt={album.title} className="w-12 h-12 object-cover rounded-lg" />
                     </Link>
                     <div>
                         <Link to={`/album/${album.id}`} className="hover:text-(--color-fg-secondary)">
@@ -69,7 +69,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
             return (
                 <div style={{fontSize: 12}} className={itemClasses}>
                 <Link to={`/track/${track.id}`}>
-                    <img loading="lazy" src={imageUrl(track.image, "small")} alt={track.title} className="min-w-[48px]" />
+                    <img loading="lazy" src={imageUrl(track.image, "small")} alt={track.title} className="w-12 h-12 object-cover rounded-lg" />
                 </Link>
                     <div>
                         <Link to={`/track/${track.id}`} className="hover:text-(--color-fg-secondary)">
@@ -89,7 +89,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
             return (
                 <div style={{fontSize: 12}}>
                     <Link className={itemClasses+' mt-1 mb-[6px] hover:text-(--color-fg-secondary)'} to={`/artist/${artist.id}`}>
-                        <img loading="lazy" src={imageUrl(artist.image, "small")} alt={artist.name} className="min-w-[48px]" />
+                        <img loading="lazy" src={imageUrl(artist.image, "small")} alt={artist.name} className="w-12 h-12 object-cover rounded-lg" />
                         <div>
                             <span style={{fontSize: 14}}>{artist.name}</span>
                             <div className="color-fg-secondary">{artist.listen_count} plays</div>

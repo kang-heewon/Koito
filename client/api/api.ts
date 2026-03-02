@@ -125,6 +125,19 @@ async function search(q: string): Promise<SearchResponse> {
   return handleJson<SearchResponse>(r);
 }
 
+type ImageTier = "small" | "medium" | "large";
+
+/**
+ * Display pixel size → optimal backend image tier.
+ * Targets ~3x resolution for crisp rendering on high-DPI screens.
+ * Backend tiers: small=96px, medium=512px, large=1000px
+ */
+function getImageTier(displayPx: number): ImageTier {
+  if (displayPx <= 48) return "small";
+  if (displayPx <= 200) return "medium";
+  return "large";
+}
+
 function imageUrl(id: string, size: string) {
   if (!id) {
     id = "default";
@@ -348,6 +361,7 @@ export {
   mergeAlbums,
   mergeArtists,
   imageUrl,
+  getImageTier,
   login,
   logout,
   getCfg,
@@ -486,6 +500,7 @@ type RecommendationsResponse = {
 export type {
   RecommendationTrack,
   RecommendationsResponse,
+  ImageTier,
   GetItemsArgs,
   getActivityArgs,
   Track,

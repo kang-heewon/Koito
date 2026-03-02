@@ -1,4 +1,4 @@
-import { imageUrl, type Album } from "api/api";
+import { imageUrl, getImageTier, type Album } from "api/api";
 import { Link } from "react-router";
 
 interface Props {
@@ -11,7 +11,7 @@ export default function AlbumDisplay({ album, size }: Props) {
         <div className="flex gap-3" key={album.id}>
             <div>
                 <Link to={`/album/${album.id}`}>
-                <img src={imageUrl(album.image, "large")} alt={album.title} style={{width: size}}/>
+                <img src={imageUrl(album.image, getImageTier(size))} alt={album.title} className="aspect-square object-cover rounded-lg" style={{width: size}}/>
                 </Link>
             </div>
             <div className="flex flex-col items-start" style={{width: size}}>
