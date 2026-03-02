@@ -185,7 +185,9 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 		l.Debug().Msg("Attempting to find album image from Spotify")
 		img, err := imgsrc.spotifyC.GetAlbumImage(ctx, opts.Artists, opts.Album)
 		if err != nil {
-			return "", err
+			l.Debug().Err(err).Msg("Could not find album image from Spotify")
+		} else if img != "" {
+			return img, nil
 		}
 		if img != "" {
 			return img, nil
@@ -197,7 +199,9 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 		} else {
 			img, err := imgsrc.subsonicC.GetAlbumImage(ctx, opts.Artists[0], opts.Album)
 			if err != nil {
-				return "", err
+				l.Debug().Err(err).Msg("Could not find album image from Subsonic")
+			} else if img != "" {
+				return img, nil
 			}
 			if img != "" {
 				return img, nil
@@ -211,7 +215,9 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			url := fmt.Sprintf(caaBaseUrl+"/release/%s", opts.ReleaseMbzID.String())
 			img, err := caaCoverImageExtract(ctx, url)
 			if err != nil {
-				return "", err
+				l.Debug().Err(err).Msg("Could not find album cover from Cover Art Archive")
+			} else if img != "" {
+				return img, nil
 			}
 			if img != "" {
 				return img, nil
@@ -220,7 +226,9 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			frontURL := fmt.Sprintf(caaBaseUrl+"/release/%s/front", opts.ReleaseMbzID.String())
 			img, status, err := caaFrontImage(frontURL)
 			if err != nil {
-				return "", err
+				l.Debug().Err(err).Msg("Could not find album cover from Cover Art Archive")
+			} else if img != "" {
+				return img, nil
 			}
 			if img != "" {
 				return img, nil
@@ -231,7 +239,9 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			url := fmt.Sprintf(caaBaseUrl+"/release-group/%s", opts.ReleaseGroupMbzID.String())
 			img, err := caaCoverImageExtract(ctx, url)
 			if err != nil {
-				return "", err
+				l.Debug().Err(err).Msg("Could not find album cover from Cover Art Archive")
+			} else if img != "" {
+				return img, nil
 			}
 			if img != "" {
 				return img, nil
@@ -240,7 +250,9 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			frontURL := fmt.Sprintf(caaBaseUrl+"/release-group/%s/front", opts.ReleaseGroupMbzID.String())
 			img, status, err := caaFrontImage(frontURL)
 			if err != nil {
-				return "", err
+				l.Debug().Err(err).Msg("Could not find album cover from Cover Art Archive")
+			} else if img != "" {
+				return img, nil
 			}
 			if img != "" {
 				return img, nil
