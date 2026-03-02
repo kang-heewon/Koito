@@ -17,7 +17,7 @@ interface Props {
   type: string;
   id: number;
   open: boolean;
-  setOpen: Function;
+  setOpen: (open: boolean) => void;
 }
 
 export default function EditModal({ open, setOpen, type, id }: Props) {

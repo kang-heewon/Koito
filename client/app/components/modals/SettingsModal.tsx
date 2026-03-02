@@ -10,7 +10,7 @@ import ExportModal from "./ExportModal";
 
 interface Props {
     open: boolean 
-    setOpen: Function
+    setOpen: (open: boolean) => void
 }
 
 export default function SettingsModal({ open, setOpen } : Props) {

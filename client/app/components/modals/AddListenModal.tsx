@@ -6,7 +6,7 @@ import { useNavigate } from "react-router";
 
 interface Props {
     open: boolean 
-    setOpen: Function
+    setOpen: (open: boolean) => void
     trackid: number
 }
 

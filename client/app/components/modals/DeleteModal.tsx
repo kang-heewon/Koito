@@ -6,7 +6,7 @@ import { useState } from "react"
 
 interface Props {
     open: boolean
-    setOpen: Function
+    setOpen: (open: boolean) => void
     title: string,
     id: number,
     type: string

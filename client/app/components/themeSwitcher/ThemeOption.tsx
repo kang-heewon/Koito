@@ -3,7 +3,7 @@ import type { Theme } from "~/styles/themes.css";
 interface Props {
     theme: Theme
     themeName: string
-    setTheme: Function
+    setTheme: (themeName: string) => void
 }
 
 export default function ThemeOption({ theme, themeName, setTheme }: Props) {
