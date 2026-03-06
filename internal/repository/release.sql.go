@@ -173,7 +173,7 @@ func (q *Queries) GetReleaseByArtistAndTitles(ctx context.Context, arg GetReleas
 }
 
 const getReleaseByImageID = `-- name: GetReleaseByImageID :one
-SELECT id, musicbrainz_id, image, various_artists, image_source FROM releases
+SELECT id, musicbrainz_id, image, various_artists, image_source, musicbrainz_searched_at FROM releases
 WHERE image = $1 LIMIT 1
 `
 
@@ -186,6 +186,7 @@ func (q *Queries) GetReleaseByImageID(ctx context.Context, image *uuid.UUID) (Re
 		&i.Image,
 		&i.VariousArtists,
 		&i.ImageSource,
+		&i.MusicbrainzSearchedAt,
 	)
 	return i, err
 }
@@ -253,6 +254,47 @@ func (q *Queries) GetReleasesWithoutImages(ctx context.Context, arg GetReleasesW
 			&i.Title,
 			&i.Artists,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getReleasesWithoutMbzID = `-- name: GetReleasesWithoutMbzID :many
+SELECT r.id, r.title, get_artists_for_release(r.id) AS artists
+FROM releases_with_title r
+WHERE r.musicbrainz_id IS NULL
+  AND r.musicbrainz_searched_at IS NULL
+  AND r.id > $2
+ORDER BY r.id ASC
+LIMIT $1
+`
+
+type GetReleasesWithoutMbzIDParams struct {
+	Limit int32
+	ID    int32
+}
+
+type GetReleasesWithoutMbzIDRow struct {
+	ID      int32
+	Title   string
+	Artists []byte
+}
+
+func (q *Queries) GetReleasesWithoutMbzID(ctx context.Context, arg GetReleasesWithoutMbzIDParams) ([]GetReleasesWithoutMbzIDRow, error) {
+	rows, err := q.db.Query(ctx, getReleasesWithoutMbzID, arg.Limit, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetReleasesWithoutMbzIDRow
+	for rows.Next() {
+		var i GetReleasesWithoutMbzIDRow
+		if err := rows.Scan(&i.ID, &i.Title, &i.Artists); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -402,7 +444,7 @@ func (q *Queries) GetTopReleasesPaginated(ctx context.Context, arg GetTopRelease
 const insertRelease = `-- name: InsertRelease :one
 INSERT INTO releases (musicbrainz_id, various_artists, image, image_source)
 VALUES ($1, $2, $3, $4)
-RETURNING id, musicbrainz_id, image, various_artists, image_source
+RETURNING id, musicbrainz_id, image, various_artists, image_source, musicbrainz_searched_at
 `
 
 type InsertReleaseParams struct {
@@ -426,8 +468,18 @@ func (q *Queries) InsertRelease(ctx context.Context, arg InsertReleaseParams) (R
 		&i.Image,
 		&i.VariousArtists,
 		&i.ImageSource,
+		&i.MusicbrainzSearchedAt,
 	)
 	return i, err
+}
+
+const markMbzSearched = `-- name: MarkMbzSearched :exec
+UPDATE releases SET musicbrainz_searched_at = NOW() WHERE id = $1
+`
+
+func (q *Queries) MarkMbzSearched(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, markMbzSearched, id)
+	return err
 }
 
 const updateReleaseImage = `-- name: UpdateReleaseImage :exec

@@ -112,3 +112,14 @@ DELETE FROM releases r
 USING artist_releases ar
 WHERE ar.release_id = r.id
   AND ar.artist_id = $1;
+-- name: GetReleasesWithoutMbzID :many
+SELECT r.id, r.title, get_artists_for_release(r.id) AS artists
+FROM releases_with_title r
+WHERE r.musicbrainz_id IS NULL
+  AND r.musicbrainz_searched_at IS NULL
+  AND r.id > $2
+ORDER BY r.id ASC
+LIMIT $1;
+
+-- name: MarkMbzSearched :exec
+UPDATE releases SET musicbrainz_searched_at = NOW() WHERE id = $1;

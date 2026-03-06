@@ -93,6 +93,8 @@ type DB interface {
 	GetImageSource(ctx context.Context, image uuid.UUID) (string, error)
 	AlbumsWithoutImages(ctx context.Context, from int32) ([]*models.Album, error)
 	AlbumsWithoutGenres(ctx context.Context, from int32) ([]ItemWithMbzID, error)
+	AlbumsWithoutMbzID(ctx context.Context, lastID int32) ([]*models.Album, error)
+	MarkMbzSearched(ctx context.Context, albumID int32) error
 	ArtistsWithoutGenres(ctx context.Context, from int32) ([]ItemWithMbzID, error)
 	TracksWithoutDuration(ctx context.Context, lastID int32) ([]TrackWithMbzID, error)
 	UpdateTrackDuration(ctx context.Context, id int32, duration int32) error

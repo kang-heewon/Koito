@@ -234,7 +234,24 @@ func Run(
 		runTrackedGoroutine(func() {
 			catalog.BackfillTrackDurations(logger.NewContext(l), store, mbzC)
 		})
+		l.Info().Msg("Engine: Backfilling MusicBrainz matching for unmatched albums")
+		runTrackedGoroutine(func() {
+			catalog.BackfillMbzMatching(logger.NewContext(l), store, mbzC)
+		})
+		l.Info().Msg("Engine: Backfilling genres for existing data")
+		runTrackedGoroutine(func() {
+			catalog.BackfillGenres(logger.NewContext(l), store, mbzC)
+		})
+		l.Info().Msg("Engine: Backfilling track durations")
+		runTrackedGoroutine(func() {
+			catalog.BackfillTrackDurations(logger.NewContext(l), store, mbzC)
+		})
 	}
+
+	l.Info().Msg("Engine: Backfilling images for albums without covers")
+	runTrackedGoroutine(func() {
+		catalog.BackfillImages(logger.NewContext(l), store)
+	})
 
 	l.Info().Msg("Engine: Initialization finished")
 	quit := make(chan os.Signal, 1)

@@ -342,6 +342,13 @@ func (m *mockDBForValidateSession) Ping(ctx context.Context) error {
 
 func (m *mockDBForValidateSession) Close(ctx context.Context) {}
 
+func (m *mockDBForValidateSession) AlbumsWithoutMbzID(ctx context.Context, from int32) ([]*models.Album, error) {
+	return nil, nil
+}
+
+func (m *mockDBForValidateSession) MarkMbzSearched(ctx context.Context, id int32) error {
+	return nil
+}
 func TestValidateSession_NonPersistent(t *testing.T) {
 	sessionID := uuid.New()
 	now := time.Now()

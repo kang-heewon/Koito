@@ -115,11 +115,12 @@ type Listen struct {
 }
 
 type Release struct {
-	ID             int32
-	MusicBrainzID  *uuid.UUID
-	Image          *uuid.UUID
-	VariousArtists bool
-	ImageSource    pgtype.Text
+	ID                    int32
+	MusicBrainzID         *uuid.UUID
+	Image                 *uuid.UUID
+	VariousArtists        bool
+	ImageSource           pgtype.Text
+	MusicbrainzSearchedAt pgtype.Timestamptz
 }
 
 type ReleaseAlias struct {

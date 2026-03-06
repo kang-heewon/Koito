@@ -90,6 +90,10 @@ func (m *MbzMockCaller) GetArtistGenres(ctx context.Context, id uuid.UUID) ([]st
 	return genres, nil
 }
 
+func (m *MbzMockCaller) SearchRelease(ctx context.Context, artist, title string) (*MusicBrainzSearchResult, error) {
+	return &MusicBrainzSearchResult{Releases: []MusicBrainzSearchRelease{}}, nil
+}
+
 func (m *MbzMockCaller) Shutdown() {}
 
 type MbzErrorCaller struct{}
@@ -120,6 +124,10 @@ func (m *MbzErrorCaller) GetArtistPrimaryAliases(ctx context.Context, id uuid.UU
 
 func (m *MbzErrorCaller) GetArtistGenres(ctx context.Context, id uuid.UUID) ([]string, error) {
 	return nil, fmt.Errorf("error: GetArtistGenres not implemented")
+}
+
+func (m *MbzErrorCaller) SearchRelease(ctx context.Context, artist, title string) (*MusicBrainzSearchResult, error) {
+	return nil, fmt.Errorf("error: SearchRelease not implemented")
 }
 
 func (m *MbzErrorCaller) Shutdown() {}
