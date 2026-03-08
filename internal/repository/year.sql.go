@@ -427,9 +427,11 @@ ranked_streaks AS (
 )
 SELECT
     t.id, t.musicbrainz_id, t.duration, t.release_id, t.title, 
+    r.image,
     get_artists_for_track(t.id) as artists,
     streak_length
 FROM ranked_streaks rs JOIN tracks_with_title t ON rs.track_id = t.id
+JOIN releases r ON t.release_id = r.id
 WHERE user_id = $1::int AND r = 1
 `
 
@@ -444,6 +446,7 @@ type GetMostReplayedTrackInYearRow struct {
 	Duration      int32
 	ReleaseID     int32
 	Title         string
+	Image         *uuid.UUID
 	Artists       []byte
 	StreakLength  int64
 }
@@ -457,6 +460,7 @@ func (q *Queries) GetMostReplayedTrackInYear(ctx context.Context, arg GetMostRep
 		&i.Duration,
 		&i.ReleaseID,
 		&i.Title,
+		&i.Image,
 		&i.Artists,
 		&i.StreakLength,
 	)
@@ -566,13 +570,14 @@ const getTopAlbumsInYear = `-- name: GetTopAlbumsInYear :many
 SELECT
     r.id AS release_id,
     r.title,
+    r.image,
     COUNT(l.*) as listen_count
 FROM listens l
 JOIN tracks t ON l.track_id = t.id
 JOIN releases_with_title r ON t.release_id = r.id
 WHERE l.user_id = $2::int
   AND EXTRACT(YEAR FROM l.listened_at) = $3::int
-GROUP BY r.id, r.title
+GROUP BY r.id, r.title, r.image
 ORDER BY listen_count DESC
 LIMIT $1
 `
@@ -586,6 +591,7 @@ type GetTopAlbumsInYearParams struct {
 type GetTopAlbumsInYearRow struct {
 	ReleaseID   int32
 	Title       string
+	Image       *uuid.UUID
 	ListenCount int64
 }
 
@@ -598,7 +604,12 @@ func (q *Queries) GetTopAlbumsInYear(ctx context.Context, arg GetTopAlbumsInYear
 	var items []GetTopAlbumsInYearRow
 	for rows.Next() {
 		var i GetTopAlbumsInYearRow
-		if err := rows.Scan(&i.ReleaseID, &i.Title, &i.ListenCount); err != nil {
+		if err := rows.Scan(
+			&i.ReleaseID,
+			&i.Title,
+			&i.Image,
+			&i.ListenCount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -613,13 +624,14 @@ const getTopArtistsInYear = `-- name: GetTopArtistsInYear :many
 SELECT
     a.id AS artist_id,
     a.name,
+    a.image,
     COUNT(l.*) as listen_count
 FROM listens l
 JOIN artist_tracks at ON l.track_id = at.track_id
 JOIN artists_with_name a ON at.artist_id = a.id
 WHERE l.user_id = $2::int
   AND EXTRACT(YEAR FROM l.listened_at) = $3::int
-GROUP BY a.id, a.name
+GROUP BY a.id, a.name, a.image
 ORDER BY listen_count DESC
 LIMIT $1
 `
@@ -633,6 +645,7 @@ type GetTopArtistsInYearParams struct {
 type GetTopArtistsInYearRow struct {
 	ArtistID    int32
 	Name        string
+	Image       *uuid.UUID
 	ListenCount int64
 }
 
@@ -645,7 +658,12 @@ func (q *Queries) GetTopArtistsInYear(ctx context.Context, arg GetTopArtistsInYe
 	var items []GetTopArtistsInYearRow
 	for rows.Next() {
 		var i GetTopArtistsInYearRow
-		if err := rows.Scan(&i.ArtistID, &i.Name, &i.ListenCount); err != nil {
+		if err := rows.Scan(
+			&i.ArtistID,
+			&i.Name,
+			&i.Image,
+			&i.ListenCount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -698,6 +716,7 @@ SELECT
     a.user_id,
     a.artist_id,
     awn.name AS artist_name,
+    awn.image,
     a.first_listen,
     a.total_plays_in_year
 FROM ranked a
@@ -715,6 +734,7 @@ type GetTopThreeNewArtistsInYearRow struct {
 	UserID           int32
 	ArtistID         int32
 	ArtistName       string
+	Image            *uuid.UUID
 	FirstListen      interface{}
 	TotalPlaysInYear int64
 }
@@ -732,6 +752,7 @@ func (q *Queries) GetTopThreeNewArtistsInYear(ctx context.Context, arg GetTopThr
 			&i.UserID,
 			&i.ArtistID,
 			&i.ArtistName,
+			&i.Image,
 			&i.FirstListen,
 			&i.TotalPlaysInYear,
 		); err != nil {
@@ -749,13 +770,15 @@ const getTopTracksInYear = `-- name: GetTopTracksInYear :many
 SELECT
     t.id AS track_id,
     t.title,
+    r.image,
     get_artists_for_track(t.id) as artists,
     COUNT(l.*) as listen_count
 FROM listens l
 JOIN tracks_with_title t ON l.track_id = t.id
+JOIN releases r ON t.release_id = r.id
 WHERE l.user_id = $2::int
   AND EXTRACT(YEAR FROM l.listened_at) = $3::int
-GROUP BY t.id, t.title
+GROUP BY t.id, t.title, r.image
 ORDER BY listen_count DESC
 LIMIT $1
 `
@@ -769,6 +792,7 @@ type GetTopTracksInYearParams struct {
 type GetTopTracksInYearRow struct {
 	TrackID     int32
 	Title       string
+	Image       *uuid.UUID
 	Artists     []byte
 	ListenCount int64
 }
@@ -785,6 +809,7 @@ func (q *Queries) GetTopTracksInYear(ctx context.Context, arg GetTopTracksInYear
 		if err := rows.Scan(
 			&i.TrackID,
 			&i.Title,
+			&i.Image,
 			&i.Artists,
 			&i.ListenCount,
 		); err != nil {

@@ -33,9 +33,11 @@ ranked_streaks AS (
 )
 SELECT
     t.*, 
+    r.image,
     get_artists_for_track(t.id) as artists,
     streak_length
 FROM ranked_streaks rs JOIN tracks_with_title t ON rs.track_id = t.id
+JOIN releases r ON t.release_id = r.id
 WHERE user_id = @user_id::int AND r = 1;
 
 -- name: TracksOnlyPlayedOnceInYear :many
@@ -152,6 +154,7 @@ SELECT
     a.user_id,
     a.artist_id,
     awn.name AS artist_name,
+    awn.image,
     a.first_listen,
     a.total_plays_in_year
 FROM ranked a
@@ -413,13 +416,15 @@ WHERE l.user_id = @user_id::int
 SELECT
     t.id AS track_id,
     t.title,
+    r.image,
     get_artists_for_track(t.id) as artists,
     COUNT(l.*) as listen_count
 FROM listens l
 JOIN tracks_with_title t ON l.track_id = t.id
+JOIN releases r ON t.release_id = r.id
 WHERE l.user_id = @user_id::int
   AND EXTRACT(YEAR FROM l.listened_at) = @year::int
-GROUP BY t.id, t.title
+GROUP BY t.id, t.title, r.image
 ORDER BY listen_count DESC
 LIMIT $1;
 
@@ -427,13 +432,14 @@ LIMIT $1;
 SELECT
     a.id AS artist_id,
     a.name,
+    a.image,
     COUNT(l.*) as listen_count
 FROM listens l
 JOIN artist_tracks at ON l.track_id = at.track_id
 JOIN artists_with_name a ON at.artist_id = a.id
 WHERE l.user_id = @user_id::int
   AND EXTRACT(YEAR FROM l.listened_at) = @year::int
-GROUP BY a.id, a.name
+GROUP BY a.id, a.name, a.image
 ORDER BY listen_count DESC
 LIMIT $1;
 
@@ -441,13 +447,14 @@ LIMIT $1;
 SELECT
     r.id AS release_id,
     r.title,
+    r.image,
     COUNT(l.*) as listen_count
 FROM listens l
 JOIN tracks t ON l.track_id = t.id
 JOIN releases_with_title r ON t.release_id = r.id
 WHERE l.user_id = @user_id::int
   AND EXTRACT(YEAR FROM l.listened_at) = @year::int
-GROUP BY r.id, r.title
+GROUP BY r.id, r.title, r.image
 ORDER BY listen_count DESC
 LIMIT $1;
 

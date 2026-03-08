@@ -5,8 +5,9 @@ import { Link } from "react-router";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function Wrapped() {
-  const [year, setYear] = useState(new Date().getFullYear());
-  const years = [2022, 2023, 2024, 2025, 2026];
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+  const years = Array.from({ length: currentYear - 2021 }, (_, i) => 2022 + i);
 
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["wrapped", year],
@@ -20,31 +21,46 @@ export default function Wrapped() {
   const totalMinutes = Math.floor((data.total_seconds_listened % 3600) / 60);
 
   return (
-    <main className="flex flex-grow justify-center pb-4">
-      <div className="flex-1 flex flex-col items-center gap-16 min-h-0 mt-20">
-        <div className="w-full max-w-[1400px] px-5 flex flex-col gap-12">
-        
-          <div className="flex flex-col md:flex-row justify-between items-end md:items-center border-b border-[var(--color-fg-tertiary)] pb-6">
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-[var(--color-fg)] mb-4 md:mb-0">
-              {year} Wrapped
-            </h1>
-            <select 
-              value={year} 
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="px-4 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-fg-tertiary)] text-[var(--color-fg)] focus:outline-none focus:border-[var(--color-primary)] font-medium cursor-pointer"
-            >
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
+    <main className="flex min-h-screen flex-grow justify-center px-0 pb-8 pt-6 sm:pb-10 sm:pt-12">
+      <div className="flex w-full flex-1 justify-center">
+        <div className="w-19/20 sm:17/20 flex max-w-[1400px] flex-col gap-8 sm:gap-10 lg:gap-12">
+          <div className="border-b border-[var(--color-fg-tertiary)] pb-6 sm:pb-8">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+              <h1 className="text-4xl font-black tracking-tight text-[var(--color-fg)] sm:text-5xl md:text-6xl">
+                {year} Wrapped
+              </h1>
+              <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
+                {years.map((optionYear) => {
+                  const isActive = optionYear === year;
+
+                  return (
+                    <button
+                      key={optionYear}
+                      type="button"
+                      onClick={() => setYear(optionYear)}
+                      disabled={isActive}
+                      className={`min-w-[84px] flex-1 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors cursor-pointer sm:flex-none ${
+                        isActive
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-bg)]"
+                          : "border-[var(--color-accent)] bg-[var(--color-bg-secondary)] text-[var(--color-fg)] hover:bg-[var(--color-accent)]/10 hover:border-[var(--color-primary)]"
+                      }`}
+                    >
+                      {optionYear}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 sm:gap-6">
             <StatCard title="총 재생 횟수" value={data.total_listens.toLocaleString()} />
             <StatCard title="총 청취 시간" value={<>{totalHours}<span className="text-xl ml-1 mr-2 opacity-60">시간</span>{totalMinutes}<span className="text-xl ml-1 opacity-60">분</span></>} />
             <StatCard title="아티스트" value={data.unique_artists.toLocaleString()} />
             <StatCard title="트랙" value={data.unique_tracks.toLocaleString()} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
             <div className="col-span-1 lg:col-span-2 bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
                   <span className="text-[var(--color-accent)]">●</span> 시간대별 청취
@@ -86,40 +102,40 @@ export default function Wrapped() {
                </div>
             </div>
 
-            <div className="flex flex-col gap-6 h-full">
-               <div className="flex-1 bg-[var(--color-bg-secondary)] p-6 rounded-lg border border-[var(--color-fg-tertiary)] flex flex-col justify-center">
-                  <h2 className="text-lg font-bold mb-1 opacity-80">가장 바빴던 주</h2>
+            <div className="flex h-full flex-col gap-6">
+               <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
+                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">가장 바빴던 주</h2>
                    {data.busiest_week ? (
                       <>
-                          <div className="text-4xl font-black text-[var(--color-fg)]">{data.busiest_week.listen_count}회</div>
-                          <div className="text-sm opacity-60 mt-1">{new Date(data.busiest_week.week_start).toLocaleDateString()} 주간</div>
+                          <div className="text-4xl font-black tracking-tight text-[var(--color-fg)]">{data.busiest_week.listen_count}회</div>
+                          <div className="mt-2 text-sm text-[var(--color-fg-secondary)]">{new Date(data.busiest_week.week_start).toLocaleDateString()} 주간</div>
                       </>
-                   ) : <div className="opacity-50">데이터 없음</div>}
+                   ) : <div className="text-sm text-[var(--color-fg-secondary)]/80">데이터 없음</div>}
                </div>
-               <div className="flex-1 bg-[var(--color-bg-secondary)] p-6 rounded-lg border border-[var(--color-fg-tertiary)] flex flex-col justify-center">
-                  <h2 className="text-lg font-bold mb-1 opacity-80">아티스트 집중도</h2>
+               <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
+                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">아티스트 집중도</h2>
                   <div className="flex items-baseline gap-2">
-                    <div className="text-4xl font-black text-[var(--color-primary)]">{data.artist_concentration}%</div>
+                    <div className="text-4xl font-black tracking-tight text-[var(--color-primary)]">{data.artist_concentration}%</div>
                   </div>
-                  <p className="text-sm opacity-60 mt-2">청취량 중 상위 아티스트 비율</p>
+                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">청취량 중 상위 아티스트 비율</p>
                </div>
-               <div className="flex-1 bg-[var(--color-bg-secondary)] p-6 rounded-lg border border-[var(--color-fg-tertiary)] flex flex-col justify-center">
-                  <h2 className="text-lg font-bold mb-1 opacity-80">트랙 집중도</h2>
+               <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
+                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">트랙 집중도</h2>
                   <div className="flex items-baseline gap-2">
-                    <div className="text-4xl font-black text-[var(--color-accent)]">{data.track_concentration}%</div>
+                    <div className="text-4xl font-black tracking-tight text-[var(--color-accent)]">{data.track_concentration}%</div>
                   </div>
-                  <p className="text-sm opacity-60 mt-2">청취량 중 상위 트랙 비율</p>
+                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">청취량 중 상위 트랙 비율</p>
                </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
             <TopList title="최다 재생 트랙" items={data.top_tracks} type="track" />
             <TopList title="최다 재생 아티스트" items={data.top_artists} type="artist" />
             <TopList title="최다 재생 앨범" items={data.top_albums} type="album" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
             <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
                <h2 className="text-2xl font-bold mb-8 flex items-center gap-2">
                   <span className="text-[var(--color-primary)]">★</span> 새로 발견한 아티스트
@@ -177,9 +193,9 @@ export default function Wrapped() {
 
 function StatCard({ title, value }: { title: string, value: React.ReactNode }) {
   return (
-    <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)] flex flex-col justify-between h-full">
-      <div className="text-sm uppercase tracking-wider opacity-60 font-bold mb-4">{title}</div>
-      <div className="text-4xl lg:text-5xl font-black text-[var(--color-fg)] tracking-tight">{value}</div>
+    <div className="flex h-full flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-7 md:px-8 md:py-8">
+      <div className="mb-5 text-xs font-bold uppercase tracking-[0.3em] text-[var(--color-primary)]">{title}</div>
+      <div className="text-4xl font-black tracking-tight text-[var(--color-fg)] lg:text-5xl">{value}</div>
     </div>
   );
 }
@@ -191,21 +207,21 @@ type TopListProps =
 
 function TopList(props: TopListProps) {
   return (
-    <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
-      <h2 className="text-2xl font-bold mb-8">{props.title}</h2>
+    <div className="rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-7 shadow-[0_24px_80px_-56px_rgba(0,0,0,0.9)] md:px-8 md:py-8">
+      <h2 className="mb-6 text-sm font-bold tracking-[0.24em] text-[var(--color-primary)]">{props.title}</h2>
       {props.items.length === 0 ? (
-        <div className="flex items-center justify-center h-32 opacity-50">데이터 없음</div>
+        <div className="flex h-32 items-center justify-center text-sm text-[var(--color-fg-secondary)]/80">데이터 없음</div>
       ) : (
-      <div className="space-y-6">
+      <div className="space-y-3">
         {props.type === "track" ? props.items.slice(0, 5).map((item, i) => (
-          <div key={item.id} className="flex items-center gap-4 group">
-            <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center font-black text-xl 
-                ${i === 0 ? 'text-[var(--color-accent)] scale-110' : 
-                  i === 1 ? 'text-[var(--color-fg)] opacity-80' : 
-                  i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
+          <div key={item.id} className="group flex items-center gap-4 rounded-2xl border border-transparent bg-[var(--color-bg-secondary)]/45 px-3 py-3 transition-all duration-200 hover:border-[var(--color-primary)]/15 hover:bg-[var(--color-bg-secondary)]/80">
+            <div className={`flex h-10 w-8 flex-shrink-0 items-center justify-center text-xl font-black tracking-tight 
+                ${i === 0 ? 'text-[var(--color-accent)]' : 
+                  i === 1 ? 'text-[var(--color-fg)]/85' : 
+                  i === 2 ? 'text-[var(--color-fg)]/65' : 'text-[var(--color-fg)]/45 text-lg'}`}>
               {i + 1}
             </div>
-            <Link to={`/track/${item.id}`} className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+            <Link to={`/track/${item.id}`} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/8 bg-black/20 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.95)] transition-transform duration-200 group-hover:scale-[1.03]">
               <img
                 src={imageUrl(item.image, "small")}
                 alt={item.title}
@@ -213,10 +229,10 @@ function TopList(props: TopListProps) {
               />
             </Link>
             <div className="flex-1 min-w-0">
-              <Link to={`/track/${item.id}`} className="font-bold text-lg truncate block hover:text-[var(--color-primary)] transition-colors">
+              <Link to={`/track/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
                 {item.title}
               </Link>
-              <div className="text-sm opacity-60 truncate">
+              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">
                 {item.artists.map((a) => a.name).join(", ")}
                 <span className="mx-1">•</span>
                 {item.listen_count}회
@@ -226,14 +242,14 @@ function TopList(props: TopListProps) {
         )) : null}
 
         {props.type === "artist" ? props.items.slice(0, 5).map((item, i) => (
-          <div key={item.id} className="flex items-center gap-4 group">
-            <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center font-black text-xl 
-                ${i === 0 ? 'text-[var(--color-accent)] scale-110' : 
-                  i === 1 ? 'text-[var(--color-fg)] opacity-80' : 
-                  i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
+          <div key={item.id} className="group flex items-center gap-4 rounded-2xl border border-transparent bg-[var(--color-bg-secondary)]/45 px-3 py-3 transition-all duration-200 hover:border-[var(--color-primary)]/15 hover:bg-[var(--color-bg-secondary)]/80">
+            <div className={`flex h-10 w-8 flex-shrink-0 items-center justify-center text-xl font-black tracking-tight 
+                ${i === 0 ? 'text-[var(--color-accent)]' : 
+                  i === 1 ? 'text-[var(--color-fg)]/85' : 
+                  i === 2 ? 'text-[var(--color-fg)]/65' : 'text-[var(--color-fg)]/45 text-lg'}`}>
               {i + 1}
             </div>
-            <Link to={`/artist/${item.id}`} className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+            <Link to={`/artist/${item.id}`} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/8 bg-black/20 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.95)] transition-transform duration-200 group-hover:scale-[1.03]">
               <img
                 src={imageUrl(item.image, "small")}
                 alt={item.name}
@@ -241,23 +257,23 @@ function TopList(props: TopListProps) {
               />
             </Link>
             <div className="flex-1 min-w-0">
-              <Link to={`/artist/${item.id}`} className="font-bold text-lg truncate block hover:text-[var(--color-primary)] transition-colors">
+              <Link to={`/artist/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
                 {item.name}
               </Link>
-              <div className="text-sm opacity-60 truncate">{item.listen_count}회</div>
+              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count}회</div>
             </div>
           </div>
         )) : null}
 
         {props.type === "album" ? props.items.slice(0, 5).map((item, i) => (
-          <div key={item.id} className="flex items-center gap-4 group">
-            <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center font-black text-xl 
-                ${i === 0 ? 'text-[var(--color-accent)] scale-110' : 
-                  i === 1 ? 'text-[var(--color-fg)] opacity-80' : 
-                  i === 2 ? 'text-[var(--color-fg)] opacity-60' : 'text-[var(--color-fg)] opacity-40 text-lg'}`}>
+          <div key={item.id} className="group flex items-center gap-4 rounded-2xl border border-transparent bg-[var(--color-bg-secondary)]/45 px-3 py-3 transition-all duration-200 hover:border-[var(--color-primary)]/15 hover:bg-[var(--color-bg-secondary)]/80">
+            <div className={`flex h-10 w-8 flex-shrink-0 items-center justify-center text-xl font-black tracking-tight 
+                ${i === 0 ? 'text-[var(--color-accent)]' : 
+                  i === 1 ? 'text-[var(--color-fg)]/85' : 
+                  i === 2 ? 'text-[var(--color-fg)]/65' : 'text-[var(--color-fg)]/45 text-lg'}`}>
               {i + 1}
             </div>
-            <Link to={`/album/${item.id}`} className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-black/20 shadow-sm relative group-hover:scale-105 transition-transform duration-200">
+            <Link to={`/album/${item.id}`} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/8 bg-black/20 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.95)] transition-transform duration-200 group-hover:scale-[1.03]">
               <img
                 src={imageUrl(item.image, "small")}
                 alt={item.title}
@@ -265,10 +281,10 @@ function TopList(props: TopListProps) {
               />
             </Link>
             <div className="flex-1 min-w-0">
-              <Link to={`/album/${item.id}`} className="font-bold text-lg truncate block hover:text-[var(--color-primary)] transition-colors">
+              <Link to={`/album/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
                 {item.title}
               </Link>
-              <div className="text-sm opacity-60 truncate">{item.listen_count}회</div>
+              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count}회</div>
             </div>
           </div>
         )) : null}

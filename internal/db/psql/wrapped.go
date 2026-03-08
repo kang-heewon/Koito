@@ -94,6 +94,7 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 				Title:       row.Title,
 				Artists:     artists,
 				ListenCount: row.ListenCount,
+				Image:       row.Image,
 			}
 		}
 	}
@@ -111,6 +112,7 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 				ID:          row.ArtistID,
 				Name:        row.ArtistName,
 				ListenCount: row.TotalPlaysInYear,
+				Image:       row.Image,
 			}
 		}
 	}
@@ -129,6 +131,7 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 				ID:          row.ArtistID,
 				Name:        row.Name,
 				ListenCount: row.ListenCount,
+				Image:       row.Image,
 			}
 		}
 	}
@@ -147,6 +150,7 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 				ID:          row.ReleaseID,
 				Title:       row.Title,
 				ListenCount: row.ListenCount,
+				Image:       row.Image,
 			}
 		}
 	}
@@ -167,6 +171,7 @@ func (d *Psql) GetWrappedStats(ctx context.Context, year int, userID int32) (*db
 				Duration: mostReplayed.Duration,
 				AlbumID:  mostReplayed.ReleaseID,
 				Artists:  artists,
+				Image:    mostReplayed.Image,
 			},
 			StreakCount: int(mostReplayed.StreakLength),
 		}
