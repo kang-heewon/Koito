@@ -104,5 +104,26 @@ const timeListenedString = (seconds: number) => {
   return `${minutes} minutes listened`;
 };
 
-export { hexToHSL, timeListenedString };
+const getRewindYear = (searchParams?: URLSearchParams): number => {
+  const year = Number.parseInt(searchParams?.get("year") || "", 10);
+
+  if (!Number.isNaN(year)) {
+    return year;
+  }
+
+  return new Date().getFullYear();
+};
+
+const getRewindParams = (
+  searchParams?: URLSearchParams
+): { month: number; year: number } => {
+  const month = Number.parseInt(searchParams?.get("month") || "", 10);
+
+  return {
+    month: Number.isNaN(month) ? 0 : month,
+    year: getRewindYear(searchParams),
+  };
+};
+
+export { hexToHSL, timeListenedString, getRewindYear, getRewindParams };
 export type { hsl };

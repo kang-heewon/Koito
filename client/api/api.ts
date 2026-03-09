@@ -16,6 +16,14 @@ interface getActivityArgs {
   track_id: number;
 }
 
+interface GetRewindStatsArgs {
+  year?: number;
+  month?: number;
+  week?: number;
+  from?: number;
+  to?: number;
+}
+
 async function parseApiError(r: Response): Promise<string> {
   try {
     const err = (await r.json()) as ApiError;
@@ -345,7 +353,31 @@ function getWrapped(year: number): Promise<WrappedStats> {
   );
 }
 
+async function getRewindStats(args: GetRewindStatsArgs): Promise<RewindStats> {
+  const params = new URLSearchParams();
+
+  if (args.year !== undefined) {
+    params.set("year", String(args.year));
+  }
+  if (args.month !== undefined) {
+    params.set("month", String(args.month));
+  }
+  if (args.week !== undefined) {
+    params.set("week", String(args.week));
+  }
+  if (args.from !== undefined) {
+    params.set("from", String(args.from));
+  }
+  if (args.to !== undefined) {
+    params.set("to", String(args.to));
+  }
+
+  const r = await fetch(`/apis/web/v1/summary?${params.toString()}`);
+  return handleJson<RewindStats>(r);
+}
+
 export {
+  getRewindStats,
   getWrapped,
   getRecommendations,
   getLastListens,
@@ -432,6 +464,12 @@ type PaginatedResponse<T> = {
   current_page: number;
   items_per_page: number;
 };
+type Ranked<T> = {
+  item: T;
+  rank: number;
+  listen_count: number;
+  time_listened: number;
+};
 type ListenActivityItem = {
   start_time: Date;
   listens: number;
@@ -497,18 +535,36 @@ type RecommendationsResponse = {
   tracks: RecommendationTrack[];
 };
 
+type RewindStats = {
+  title: string;
+  top_artists: Ranked<Artist>[];
+  top_albums: Ranked<Album>[];
+  top_tracks: Ranked<Track>[];
+  minutes_listened: number;
+  plays: number;
+  avg_plays_per_day: number;
+  unique_tracks: number;
+  unique_albums: number;
+  unique_artists: number;
+  new_tracks: number;
+  new_albums: number;
+  new_artists: number;
+};
+
 export type {
   RecommendationTrack,
   RecommendationsResponse,
   ImageTier,
   GetItemsArgs,
   getActivityArgs,
+  GetRewindStatsArgs,
   Track,
   Artist,
   Album,
   Listen,
   SearchResponse,
   PaginatedResponse,
+  Ranked,
   ListenActivityItem,
   User,
   Alias,
@@ -526,6 +582,7 @@ export type {
   TrackStreak,
   HourDistribution,
   WeekStats,
+  RewindStats,
 };
 
 type WrappedTrack = { id: number; title: string; artists: SimpleArtists[]; image: string; listen_count: number };
