@@ -14,8 +14,8 @@ export default function Wrapped() {
     queryFn: () => getWrapped(year),
   });
 
-  if (isPending) return <div className="flex justify-center mt-20 text-xl font-medium">로딩 중...</div>;
-  if (isError) return <div className="flex justify-center mt-20 text-red-500 font-medium">오류: {error.message}</div>;
+  if (isPending) return <div className="flex justify-center mt-20 text-xl font-medium">Loading...</div>;
+  if (isError) return <div className="flex justify-center mt-20 text-red-500 font-medium">Error: {error.message}</div>;
 
   const totalHours = Math.floor(data.total_seconds_listened / 3600);
   const totalMinutes = Math.floor((data.total_seconds_listened % 3600) / 60);
@@ -54,16 +54,16 @@ export default function Wrapped() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            <StatCard title="총 재생 횟수" value={data.total_listens.toLocaleString()} />
-            <StatCard title="총 청취 시간" value={<>{totalHours}<span className="text-xl ml-1 mr-2 opacity-60">시간</span>{totalMinutes}<span className="text-xl ml-1 opacity-60">분</span></>} />
-            <StatCard title="아티스트" value={data.unique_artists.toLocaleString()} />
-            <StatCard title="트랙" value={data.unique_tracks.toLocaleString()} />
+            <StatCard title="Total Plays" value={data.total_listens.toLocaleString()} />
+            <StatCard title="Total Listening Time" value={<>{totalHours}<span className="text-xl ml-1 mr-2 opacity-60">hrs</span>{totalMinutes}<span className="text-xl ml-1 opacity-60">min</span></>} />
+            <StatCard title="Artists" value={data.unique_artists.toLocaleString()} />
+            <StatCard title="Tracks" value={data.unique_tracks.toLocaleString()} />
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
             <div className="col-span-1 lg:col-span-2 bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                  <span className="text-[var(--color-accent)]">●</span> 시간대별 청취
+                  <span className="text-[var(--color-accent)]">●</span> Listening by Hour
                </h2>
                <div className="h-[300px]">
                  {(data.listening_hours || []).length > 0 ? (
@@ -97,51 +97,51 @@ export default function Wrapped() {
                     </BarChart>
                   </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-full opacity-50">데이터 없음</div>
+                    <div className="flex items-center justify-center h-full opacity-50">No data</div>
                   )}
                </div>
             </div>
 
             <div className="flex h-full flex-col gap-6">
                <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">가장 바빴던 주</h2>
+                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">Busiest Week</h2>
                    {data.busiest_week ? (
                       <>
-                          <div className="text-4xl font-black tracking-tight text-[var(--color-fg)]">{data.busiest_week.listen_count}회</div>
-                          <div className="mt-2 text-sm text-[var(--color-fg-secondary)]">{new Date(data.busiest_week.week_start).toLocaleDateString()} 주간</div>
+                          <div className="text-4xl font-black tracking-tight text-[var(--color-fg)]">{data.busiest_week.listen_count} plays</div>
+                          <div className="mt-2 text-sm text-[var(--color-fg-secondary)]">week of {new Date(data.busiest_week.week_start).toLocaleDateString()}</div>
                       </>
-                   ) : <div className="text-sm text-[var(--color-fg-secondary)]/80">데이터 없음</div>}
+                   ) : <div className="text-sm text-[var(--color-fg-secondary)]/80">No data</div>}
                </div>
                <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">아티스트 집중도</h2>
+                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">Artist Concentration</h2>
                   <div className="flex items-baseline gap-2">
                     <div className="text-4xl font-black tracking-tight text-[var(--color-primary)]">{data.artist_concentration}%</div>
                   </div>
-                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">청취량 중 상위 아티스트 비율</p>
+                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">Top artist share of total listens</p>
                </div>
                <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">트랙 집중도</h2>
+                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">Track Concentration</h2>
                   <div className="flex items-baseline gap-2">
                     <div className="text-4xl font-black tracking-tight text-[var(--color-accent)]">{data.track_concentration}%</div>
                   </div>
-                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">청취량 중 상위 트랙 비율</p>
+                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">Top track share of total listens</p>
                </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
-            <TopList title="최다 재생 트랙" items={data.top_tracks} type="track" />
-            <TopList title="최다 재생 아티스트" items={data.top_artists} type="artist" />
-            <TopList title="최다 재생 앨범" items={data.top_albums} type="album" />
+            <TopList title="Top Tracks" items={data.top_tracks} type="track" />
+            <TopList title="Top Artists" items={data.top_artists} type="artist" />
+            <TopList title="Top Albums" items={data.top_albums} type="album" />
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
             <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
                <h2 className="text-2xl font-bold mb-8 flex items-center gap-2">
-                  <span className="text-[var(--color-primary)]">★</span> 새로 발견한 아티스트
+                  <span className="text-[var(--color-primary)]">★</span> New Artists Discovered
                </h2>
                {(data.top_new_artists || []).length === 0 ? (
-                 <div className="flex items-center justify-center h-32 opacity-50">데이터 없음</div>
+                 <div className="flex items-center justify-center h-32 opacity-50">No data</div>
                ) : (
                <div className="space-y-6">
                   {(data.top_new_artists || []).slice(0, 5).map((artist) => (
@@ -151,7 +151,7 @@ export default function Wrapped() {
                      </div>
                      <div className="flex-1 min-w-0">
                        <div className="font-bold truncate group-hover:text-[var(--color-primary)] transition-colors">{artist.name}</div>
-                       <div className="text-sm opacity-60">{artist.listen_count}회</div>
+                      <div className="text-sm opacity-60">{artist.listen_count} plays</div>
                      </div>
                    </Link>
                   ))}
@@ -161,25 +161,25 @@ export default function Wrapped() {
 
             <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)] flex flex-col">
                <h2 className="text-2xl font-bold mb-8 flex items-center gap-2">
-                  <span className="text-[var(--color-accent)]">↻</span> 가장 많이 반복한 곡
+                  <span className="text-[var(--color-accent)]">↻</span> Most Replayed Track
                </h2>
                {data.most_replayed_track ? (
                  <div className="flex-1 flex flex-col items-center justify-center text-center">
                     <div className="w-48 h-48 rounded-lg overflow-hidden mb-6 shadow-md relative group">
                        <img src={imageUrl(data.most_replayed_track.track.image, "medium")} alt={data.most_replayed_track.track.title} className="w-full h-full object-cover" />
                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link to={`/track/${data.most_replayed_track.track.id}`} className="px-4 py-2 bg-white text-black rounded-full font-bold text-sm">트랙 보기</Link>
+                          <Link to={`/track/${data.most_replayed_track.track.id}`} className="px-4 py-2 bg-white text-black rounded-full font-bold text-sm">View Track</Link>
                        </div>
                     </div>
                     <h3 className="text-2xl font-bold mb-1">{data.most_replayed_track.track.title}</h3>
                     <p className="text-lg opacity-70 mb-6">{data.most_replayed_track.track.artists.map(a => a.name).join(", ")}</p>
                     <div className="inline-block bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-6 py-3 rounded-full font-bold border border-[var(--color-primary)]/30">
-                      {data.most_replayed_track.streak_count}회 연속 재생
+                      {data.most_replayed_track.streak_count} consecutive plays
                     </div>
                  </div>
                ) : (
                  <div className="flex-1 flex items-center justify-center opacity-50">
-                   데이터 없음
+                  No data
                  </div>
                )}
             </div>
@@ -210,7 +210,7 @@ function TopList(props: TopListProps) {
     <div className="rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-7 shadow-[0_24px_80px_-56px_rgba(0,0,0,0.9)] md:px-8 md:py-8">
       <h2 className="mb-6 text-sm font-bold tracking-[0.24em] text-[var(--color-primary)]">{props.title}</h2>
       {props.items.length === 0 ? (
-        <div className="flex h-32 items-center justify-center text-sm text-[var(--color-fg-secondary)]/80">데이터 없음</div>
+        <div className="flex h-32 items-center justify-center text-sm text-[var(--color-fg-secondary)]/80">No data</div>
       ) : (
       <div className="space-y-3">
         {props.type === "track" ? props.items.slice(0, 5).map((item, i) => (
@@ -235,7 +235,7 @@ function TopList(props: TopListProps) {
               <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">
                 {item.artists.map((a) => a.name).join(", ")}
                 <span className="mx-1">•</span>
-                {item.listen_count}회
+                {item.listen_count} plays
               </div>
             </div>
           </div>
@@ -260,7 +260,7 @@ function TopList(props: TopListProps) {
               <Link to={`/artist/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
                 {item.name}
               </Link>
-              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count}회</div>
+              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count} plays</div>
             </div>
           </div>
         )) : null}
@@ -284,7 +284,7 @@ function TopList(props: TopListProps) {
               <Link to={`/album/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
                 {item.title}
               </Link>
-              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count}회</div>
+              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count} plays</div>
             </div>
           </div>
         )) : null}

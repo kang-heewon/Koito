@@ -1,4 +1,4 @@
-import { ExternalLink, Home, Info, PieChart, RefreshCw, Sparkles } from "lucide-react";
+import { ExternalLink, History, Home, Info, PieChart, RefreshCw, Sparkles } from "lucide-react";
 import SidebarSearch from "./SidebarSearch";
 import SidebarItem from "./SidebarItem";
 import SidebarSettings from "./SidebarSettings";
@@ -34,14 +34,17 @@ export default function Sidebar() {
                     <Home size={iconSize} />
                 </SidebarItem>
                 <SidebarSearch size={iconSize} />
-                <SidebarItem space={10} to="/chart/genres" name="장르 통계" onClick={() => {}} modal={<></>}>
+                <SidebarItem space={10} to="/chart/genres" name="Genre Stats" onClick={() => {}} modal={<></>}>
                     <PieChart size={iconSize} />
                 </SidebarItem>
-                <SidebarItem space={10} to="/recommendations" name="다시 들어볼 곡" onClick={() => {}} modal={<></>}>
+                <SidebarItem space={10} to="/recommendations" name="Recommendations" onClick={() => {}} modal={<></>}>
                     <RefreshCw size={iconSize} />
                 </SidebarItem>
-                <SidebarItem space={10} to="/wrapped" name="연간 리포트" onClick={() => {}} modal={<></>}>
+                <SidebarItem space={10} to="/wrapped" name="Wrapped" onClick={() => {}} modal={<></>}>
                     <Sparkles size={iconSize} />
+                </SidebarItem>
+                <SidebarItem space={10} to="/rewind" name="Rewind" onClick={() => {}} modal={<></>}>
+                    <History size={iconSize} />
                 </SidebarItem>
             </div>
             <div className="flex gap-4 sm:flex-col">

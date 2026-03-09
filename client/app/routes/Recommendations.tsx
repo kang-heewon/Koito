@@ -10,8 +10,8 @@ function timeAgo(dateString: string) {
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  if (diffDays === 0) return "오늘";
-  return `${diffDays}일 전`;
+  if (diffDays === 0) return "Today";
+  return `${diffDays} days ago`;
 }
 
 export default function Recommendations() {
@@ -26,8 +26,8 @@ export default function Recommendations() {
         <div className="flex-1 flex flex-col items-center gap-16 min-h-0 mt-20">
           <div className="w-full max-w-[600px]">
             <div className="mb-6">
-              <h1 className="text-2xl font-bold mb-2">다시 들어볼 곡</h1>
-              <p className="text-(--color-fg-secondary)">잠시 잊고 있었던 추억의 곡들을 다시 만나보세요.</p>
+              <h1 className="text-2xl font-bold mb-2">Tracks to Revisit</h1>
+              <p className="text-(--color-fg-secondary)">Rediscover songs you haven't listened to in a while.</p>
             </div>
             <TopListSkeleton numItems={10} />
           </div>
@@ -41,9 +41,9 @@ export default function Recommendations() {
       <main className="flex flex-grow justify-center pb-4">
         <div className="flex-1 flex flex-col items-center gap-16 min-h-0 mt-20">
           <div className="w-full max-w-[600px]">
-            <h1 className="text-2xl font-bold mb-2">다시 들어볼 곡</h1>
+            <h1 className="text-2xl font-bold mb-2">Tracks to Revisit</h1>
             <div className="p-4 border border-red-500/20 bg-red-500/10 rounded-lg">
-              <p className="text-red-400">추천 목록을 불러오는 중 오류가 발생했습니다.</p>
+              <p className="text-red-400">An error occurred while loading recommendations.</p>
               <p className="text-sm opacity-70 mt-1">{error.message}</p>
             </div>
           </div>
@@ -58,18 +58,18 @@ export default function Recommendations() {
         <div className="w-full max-w-[600px]">
           <div className="mb-8">
             <h1 className="text-2xl font-bold mb-2">
-              다시 들어볼 곡
+              Tracks to Revisit
             </h1>
             <p className="text-(--color-fg-secondary)">
-              과거에 즐겨 들었지만 최근에는 뜸했던 곡들을 모았습니다.
+              A collection of songs you used to enjoy but haven't played recently.
             </p>
           </div>
 
           <div className="space-y-2">
             {data.tracks.length === 0 ? (
               <div className="text-center py-12 border border-dashed border-(--color-fg-tertiary) rounded-xl">
-                <p className="text-(--color-fg-secondary)">아직 추천할 만한 곡이 충분하지 않습니다.</p>
-                <p className="text-sm text-(--color-fg-tertiary) mt-1">음악을 더 많이 들어보세요!</p>
+                <p className="text-(--color-fg-secondary)">Not enough data for recommendations yet.</p>
+                <p className="text-sm text-(--color-fg-tertiary) mt-1">Listen to more music!</p>
               </div>
             ) : (
               <div className="flex flex-col gap-1">
@@ -101,7 +101,7 @@ export default function Recommendations() {
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="text-xs text-(--color-fg-secondary)">
-                        이전 {track.past_listen_count}회
+                        Previously {track.past_listen_count} plays
                       </span>
                       <span className="text-xs text-(--color-fg-tertiary)">
                         {timeAgo(track.last_listened_at)}
