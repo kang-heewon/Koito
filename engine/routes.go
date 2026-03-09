@@ -52,6 +52,7 @@ func bindRoutes(
 			r.Get("/listen-activity", handlers.GetListenActivityHandler(db))
 			r.Get("/now-playing", handlers.NowPlayingHandler(db))
 			r.Get("/stats", handlers.StatsHandler(db))
+			r.Get("/summary", handlers.SummaryHandler(db))
 			r.Get("/wrapped", handlers.WrappedHandler(db))
 			r.Get("/genre-stats", handlers.GenreStatsHandler(db))
 			r.Get("/search", handlers.SearchHandler(db))
