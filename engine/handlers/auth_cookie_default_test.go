@@ -108,79 +108,213 @@ func (m *mockAuthDB) GetUserByUsername(_ context.Context, username string) (*mod
 func (m *mockAuthDB) SaveSession(_ context.Context, userID int32, expiresAt time.Time, rememberMe bool) (*models.Session, error) {
 	return &models.Session{ID: m.sessionID, UserID: userID, ExpiresAt: expiresAt}, nil
 }
-func (m *mockAuthDB) DeleteSession(_ context.Context, sid uuid.UUID) error { return nil }
+func (m *mockAuthDB) DeleteSession(_ context.Context, sid uuid.UUID) error       { return nil }
 func (m *mockAuthDB) UpdateUser(_ context.Context, opts db.UpdateUserOpts) error { return nil }
-func (m *mockAuthDB) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Artist, error) { return nil, nil }
-func (m *mockAuthDB) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Album, error) { return nil, nil }
-func (m *mockAuthDB) GetTrack(ctx context.Context, opts db.GetTrackOpts) (*models.Track, error) { return nil, nil }
-func (m *mockAuthDB) GetArtistsForAlbum(ctx context.Context, id int32) ([]*models.Artist, error) { return nil, nil }
-func (m *mockAuthDB) GetArtistsForTrack(ctx context.Context, id int32) ([]*models.Artist, error) { return nil, nil }
-func (m *mockAuthDB) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Track], error) { return nil, nil }
-func (m *mockAuthDB) GetTopArtistsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Artist], error) { return nil, nil }
-func (m *mockAuthDB) GetTopAlbumsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Album], error) { return nil, nil }
-func (m *mockAuthDB) GetListensPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Listen], error) { return nil, nil }
-func (m *mockAuthDB) GetListenActivity(ctx context.Context, opts db.ListenActivityOpts) ([]db.ListenActivityItem, error) { return nil, nil }
-func (m *mockAuthDB) GetAllArtistAliases(ctx context.Context, id int32) ([]models.Alias, error) { return nil, nil }
-func (m *mockAuthDB) GetAllAlbumAliases(ctx context.Context, id int32) ([]models.Alias, error) { return nil, nil }
-func (m *mockAuthDB) GetAllTrackAliases(ctx context.Context, id int32) ([]models.Alias, error) { return nil, nil }
-func (m *mockAuthDB) GetApiKeysByUserID(ctx context.Context, id int32) ([]models.ApiKey, error) { return nil, nil }
-func (m *mockAuthDB) GetUserBySession(ctx context.Context, sessionId uuid.UUID) (*models.User, error) { return nil, nil }
-func (m *mockAuthDB) GetSession(ctx context.Context, sessionId uuid.UUID) (*models.Session, error) { return nil, nil }
-func (m *mockAuthDB) GetUserByApiKey(ctx context.Context, key string) (*models.User, error) { return nil, nil }
-func (m *mockAuthDB) SaveArtist(ctx context.Context, opts db.SaveArtistOpts) (*models.Artist, error) { return nil, nil }
-func (m *mockAuthDB) SaveArtistAliases(ctx context.Context, id int32, aliases []string, source string) error { return nil }
-func (m *mockAuthDB) SaveArtistGenres(ctx context.Context, id int32, genres []string) error { return nil }
-func (m *mockAuthDB) SaveAlbum(ctx context.Context, opts db.SaveAlbumOpts) (*models.Album, error) { return nil, nil }
-func (m *mockAuthDB) SaveAlbumAliases(ctx context.Context, id int32, aliases []string, source string) error { return nil }
-func (m *mockAuthDB) SaveAlbumGenres(ctx context.Context, id int32, genres []string) error { return nil }
-func (m *mockAuthDB) SaveTrack(ctx context.Context, opts db.SaveTrackOpts) (*models.Track, error) { return nil, nil }
-func (m *mockAuthDB) SaveTrackAliases(ctx context.Context, id int32, aliases []string, source string) error { return nil }
+func (m *mockAuthDB) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Artist, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Album, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetTrack(ctx context.Context, opts db.GetTrackOpts) (*models.Track, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetArtistsForAlbum(ctx context.Context, id int32) ([]*models.Artist, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetArtistsForTrack(ctx context.Context, id int32) ([]*models.Artist, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Track]], error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetTopArtistsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Artist]], error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetTopAlbumsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Album]], error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetListensPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Listen], error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetListenActivity(ctx context.Context, opts db.ListenActivityOpts) ([]db.ListenActivityItem, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetAllArtistAliases(ctx context.Context, id int32) ([]models.Alias, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetAllAlbumAliases(ctx context.Context, id int32) ([]models.Alias, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetAllTrackAliases(ctx context.Context, id int32) ([]models.Alias, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetApiKeysByUserID(ctx context.Context, id int32) ([]models.ApiKey, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetUserBySession(ctx context.Context, sessionId uuid.UUID) (*models.User, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetSession(ctx context.Context, sessionId uuid.UUID) (*models.Session, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetUserByApiKey(ctx context.Context, key string) (*models.User, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SaveArtist(ctx context.Context, opts db.SaveArtistOpts) (*models.Artist, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SaveArtistAliases(ctx context.Context, id int32, aliases []string, source string) error {
+	return nil
+}
+func (m *mockAuthDB) SaveArtistGenres(ctx context.Context, id int32, genres []string) error {
+	return nil
+}
+func (m *mockAuthDB) SaveAlbum(ctx context.Context, opts db.SaveAlbumOpts) (*models.Album, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SaveAlbumAliases(ctx context.Context, id int32, aliases []string, source string) error {
+	return nil
+}
+func (m *mockAuthDB) SaveAlbumGenres(ctx context.Context, id int32, genres []string) error {
+	return nil
+}
+func (m *mockAuthDB) SaveTrack(ctx context.Context, opts db.SaveTrackOpts) (*models.Track, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SaveTrackAliases(ctx context.Context, id int32, aliases []string, source string) error {
+	return nil
+}
 func (m *mockAuthDB) SaveListen(ctx context.Context, opts db.SaveListenOpts) error { return nil }
-func (m *mockAuthDB) SaveUser(ctx context.Context, opts db.SaveUserOpts) (*models.User, error) { return nil, nil }
-func (m *mockAuthDB) SaveApiKey(ctx context.Context, opts db.SaveApiKeyOpts) (*models.ApiKey, error) { return nil, nil }
+func (m *mockAuthDB) SaveUser(ctx context.Context, opts db.SaveUserOpts) (*models.User, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SaveApiKey(ctx context.Context, opts db.SaveApiKeyOpts) (*models.ApiKey, error) {
+	return nil, nil
+}
 func (m *mockAuthDB) UpdateArtist(ctx context.Context, opts db.UpdateArtistOpts) error { return nil }
-func (m *mockAuthDB) UpdateTrack(ctx context.Context, opts db.UpdateTrackOpts) error { return nil }
-func (m *mockAuthDB) UpdateAlbum(ctx context.Context, opts db.UpdateAlbumOpts) error { return nil }
-func (m *mockAuthDB) AddArtistsToAlbum(ctx context.Context, opts db.AddArtistsToAlbumOpts) error { return nil }
-func (m *mockAuthDB) UpdateApiKeyLabel(ctx context.Context, opts db.UpdateApiKeyLabelOpts) error { return nil }
-func (m *mockAuthDB) RefreshSession(ctx context.Context, sessionId uuid.UUID, expiresAt time.Time) error { return nil }
-func (m *mockAuthDB) SetPrimaryArtistAlias(ctx context.Context, id int32, alias string) error { return nil }
-func (m *mockAuthDB) SetPrimaryAlbumAlias(ctx context.Context, id int32, alias string) error { return nil }
-func (m *mockAuthDB) SetPrimaryTrackAlias(ctx context.Context, id int32, alias string) error { return nil }
-func (m *mockAuthDB) SetPrimaryAlbumArtist(ctx context.Context, id int32, artistId int32, value bool) error { return nil }
-func (m *mockAuthDB) SetPrimaryTrackArtist(ctx context.Context, id int32, artistId int32, value bool) error { return nil }
+func (m *mockAuthDB) UpdateTrack(ctx context.Context, opts db.UpdateTrackOpts) error   { return nil }
+func (m *mockAuthDB) UpdateAlbum(ctx context.Context, opts db.UpdateAlbumOpts) error   { return nil }
+func (m *mockAuthDB) AddArtistsToAlbum(ctx context.Context, opts db.AddArtistsToAlbumOpts) error {
+	return nil
+}
+func (m *mockAuthDB) UpdateApiKeyLabel(ctx context.Context, opts db.UpdateApiKeyLabelOpts) error {
+	return nil
+}
+func (m *mockAuthDB) RefreshSession(ctx context.Context, sessionId uuid.UUID, expiresAt time.Time) error {
+	return nil
+}
+func (m *mockAuthDB) SetPrimaryArtistAlias(ctx context.Context, id int32, alias string) error {
+	return nil
+}
+func (m *mockAuthDB) SetPrimaryAlbumAlias(ctx context.Context, id int32, alias string) error {
+	return nil
+}
+func (m *mockAuthDB) SetPrimaryTrackAlias(ctx context.Context, id int32, alias string) error {
+	return nil
+}
+func (m *mockAuthDB) SetPrimaryAlbumArtist(ctx context.Context, id int32, artistId int32, value bool) error {
+	return nil
+}
+func (m *mockAuthDB) SetPrimaryTrackArtist(ctx context.Context, id int32, artistId int32, value bool) error {
+	return nil
+}
 func (m *mockAuthDB) DeleteArtist(ctx context.Context, id int32) error { return nil }
-func (m *mockAuthDB) DeleteAlbum(ctx context.Context, id int32) error { return nil }
-func (m *mockAuthDB) DeleteTrack(ctx context.Context, id int32) error { return nil }
-func (m *mockAuthDB) DeleteListen(ctx context.Context, trackId int32, listenedAt time.Time) error { return nil }
+func (m *mockAuthDB) DeleteAlbum(ctx context.Context, id int32) error  { return nil }
+func (m *mockAuthDB) DeleteTrack(ctx context.Context, id int32) error  { return nil }
+func (m *mockAuthDB) DeleteListen(ctx context.Context, trackId int32, listenedAt time.Time) error {
+	return nil
+}
 func (m *mockAuthDB) DeleteArtistAlias(ctx context.Context, id int32, alias string) error { return nil }
-func (m *mockAuthDB) DeleteAlbumAlias(ctx context.Context, id int32, alias string) error { return nil }
-func (m *mockAuthDB) DeleteTrackAlias(ctx context.Context, id int32, alias string) error { return nil }
-func (m *mockAuthDB) DeleteApiKey(ctx context.Context, id int32) error { return nil }
-func (m *mockAuthDB) CountListens(ctx context.Context, period db.Period) (int64, error) { return 0, nil }
-func (m *mockAuthDB) CountTracks(ctx context.Context, period db.Period) (int64, error) { return 0, nil }
-func (m *mockAuthDB) CountAlbums(ctx context.Context, period db.Period) (int64, error) { return 0, nil }
-func (m *mockAuthDB) CountArtists(ctx context.Context, period db.Period) (int64, error) { return 0, nil }
-func (m *mockAuthDB) CountTimeListened(ctx context.Context, period db.Period) (int64, error) { return 0, nil }
-func (m *mockAuthDB) CountTimeListenedToItem(ctx context.Context, opts db.TimeListenedOpts) (int64, error) { return 0, nil }
+func (m *mockAuthDB) DeleteAlbumAlias(ctx context.Context, id int32, alias string) error  { return nil }
+func (m *mockAuthDB) DeleteTrackAlias(ctx context.Context, id int32, alias string) error  { return nil }
+func (m *mockAuthDB) DeleteApiKey(ctx context.Context, id int32) error                    { return nil }
+func (m *mockAuthDB) CountListens(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountTracks(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountAlbums(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountArtists(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountNewTracks(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountNewAlbums(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountNewArtists(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountTimeListened(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountListensToItem(ctx context.Context, opts db.TimeListenedOpts) (int64, error) {
+	return 0, nil
+}
+func (m *mockAuthDB) CountTimeListenedToItem(ctx context.Context, opts db.TimeListenedOpts) (int64, error) {
+	return 0, nil
+}
 func (m *mockAuthDB) CountUsers(ctx context.Context) (int64, error) { return 0, nil }
-func (m *mockAuthDB) GetGenreStatsByListenCount(ctx context.Context, period db.Period) ([]db.GenreStat, error) { return nil, nil }
-func (m *mockAuthDB) GetGenreStatsByTimeListened(ctx context.Context, period db.Period) ([]db.GenreStat, error) { return nil, nil }
-func (m *mockAuthDB) GetWrappedStats(ctx context.Context, year int, userID int32) (*db.WrappedStats, error) { return nil, nil }
-func (m *mockAuthDB) GetTracksToRevisit(ctx context.Context, opts db.GetRecommendationsOpts) ([]db.TrackRecommendation, error) { return nil, nil }
-func (m *mockAuthDB) SearchArtists(ctx context.Context, q string) ([]*models.Artist, error) { return nil, nil }
-func (m *mockAuthDB) SearchAlbums(ctx context.Context, q string) ([]*models.Album, error) { return nil, nil }
-func (m *mockAuthDB) SearchTracks(ctx context.Context, q string) ([]*models.Track, error) { return nil, nil }
+func (m *mockAuthDB) GetGenreStatsByListenCount(ctx context.Context, period db.Period) ([]db.GenreStat, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetGenreStatsByTimeListened(ctx context.Context, period db.Period) ([]db.GenreStat, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetWrappedStats(ctx context.Context, year int, userID int32) (*db.WrappedStats, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) GetTracksToRevisit(ctx context.Context, opts db.GetRecommendationsOpts) ([]db.TrackRecommendation, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SearchArtists(ctx context.Context, q string) ([]*models.Artist, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SearchAlbums(ctx context.Context, q string) ([]*models.Album, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) SearchTracks(ctx context.Context, q string) ([]*models.Track, error) {
+	return nil, nil
+}
 func (m *mockAuthDB) MergeTracks(ctx context.Context, fromId, toId int32) error { return nil }
-func (m *mockAuthDB) MergeAlbums(ctx context.Context, fromId, toId int32, replaceImage bool) error { return nil }
-func (m *mockAuthDB) MergeArtists(ctx context.Context, fromId, toId int32, replaceImage bool) error { return nil }
-func (m *mockAuthDB) ImageHasAssociation(ctx context.Context, image uuid.UUID) (bool, error) { return false, nil }
-func (m *mockAuthDB) GetImageSource(ctx context.Context, image uuid.UUID) (string, error) { return "", nil }
-func (m *mockAuthDB) AlbumsWithoutImages(ctx context.Context, from int32) ([]*models.Album, error) { return nil, nil }
-func (m *mockAuthDB) AlbumsWithoutGenres(ctx context.Context, from int32) ([]db.ItemWithMbzID, error) { return nil, nil }
-func (m *mockAuthDB) ArtistsWithoutGenres(ctx context.Context, from int32) ([]db.ItemWithMbzID, error) { return nil, nil }
-func (m *mockAuthDB) TracksWithoutDuration(ctx context.Context, lastID int32) ([]db.TrackWithMbzID, error) { return nil, nil }
-func (m *mockAuthDB) UpdateTrackDuration(ctx context.Context, id int32, duration int32) error { return nil }
-func (m *mockAuthDB) GetExportPage(ctx context.Context, opts db.GetExportPageOpts) ([]*db.ExportItem, error) { return nil, nil }
+func (m *mockAuthDB) MergeAlbums(ctx context.Context, fromId, toId int32, replaceImage bool) error {
+	return nil
+}
+func (m *mockAuthDB) MergeArtists(ctx context.Context, fromId, toId int32, replaceImage bool) error {
+	return nil
+}
+func (m *mockAuthDB) ImageHasAssociation(ctx context.Context, image uuid.UUID) (bool, error) {
+	return false, nil
+}
+func (m *mockAuthDB) GetImageSource(ctx context.Context, image uuid.UUID) (string, error) {
+	return "", nil
+}
+func (m *mockAuthDB) AlbumsWithoutImages(ctx context.Context, from int32) ([]*models.Album, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) AlbumsWithoutGenres(ctx context.Context, from int32) ([]db.ItemWithMbzID, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) AlbumsWithoutMbzID(ctx context.Context, lastID int32) ([]*models.Album, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) MarkMbzSearched(ctx context.Context, albumID int32) error { return nil }
+func (m *mockAuthDB) ArtistsWithoutGenres(ctx context.Context, from int32) ([]db.ItemWithMbzID, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) TracksWithoutDuration(ctx context.Context, lastID int32) ([]db.TrackWithMbzID, error) {
+	return nil, nil
+}
+func (m *mockAuthDB) UpdateTrackDuration(ctx context.Context, id int32, duration int32) error {
+	return nil
+}
+func (m *mockAuthDB) GetExportPage(ctx context.Context, opts db.GetExportPageOpts) ([]*db.ExportItem, error) {
+	return nil, nil
+}
 func (m *mockAuthDB) Ping(ctx context.Context) error { return nil }
-func (m *mockAuthDB) Close(ctx context.Context) {}
+func (m *mockAuthDB) Close(ctx context.Context)      {}

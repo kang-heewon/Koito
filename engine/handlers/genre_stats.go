@@ -38,15 +38,17 @@ func GenreStatsHandler(store db.DB) http.HandlerFunc {
 			period = db.PeriodMonth
 		}
 
+		timeframe := db.PeriodToTimeframe(period)
+
 		metric := strings.ToLower(r.URL.Query().Get("metric"))
 
 		var stats []db.GenreStat
 		var err error
 
 		if metric == "time" {
-			stats, err = store.GetGenreStatsByTimeListened(r.Context(), period)
+			stats, err = store.GetGenreStatsByTimeListened(r.Context(), timeframe)
 		} else {
-			stats, err = store.GetGenreStatsByListenCount(r.Context(), period)
+			stats, err = store.GetGenreStatsByListenCount(r.Context(), timeframe)
 		}
 
 		if err != nil {

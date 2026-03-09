@@ -35,8 +35,8 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 			return nil, fmt.Errorf("GetArtist: CountListensFromArtist: %w", err)
 		}
 		seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
-			Period:   db.PeriodAllTime,
-			ArtistID: row.ID,
+			Timeframe: db.PeriodToTimeframe(db.PeriodAllTime),
+			ArtistID:  row.ID,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("GetArtist: CountTimeListenedToItem: %w", err)
@@ -75,8 +75,8 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 			return nil, fmt.Errorf("GetArtist: CountListensFromArtist: %w", err)
 		}
 		seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
-			Period:   db.PeriodAllTime,
-			ArtistID: row.ID,
+			Timeframe: db.PeriodToTimeframe(db.PeriodAllTime),
+			ArtistID:  row.ID,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("GetArtist: CountTimeListenedToItem: %w", err)
@@ -122,8 +122,8 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 			return nil, fmt.Errorf("GetArtist: CountListensFromArtist: %w", err)
 		}
 		seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
-			Period:   db.PeriodAllTime,
-			ArtistID: row.ID,
+			Timeframe: db.PeriodToTimeframe(db.PeriodAllTime),
+			ArtistID:  row.ID,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("GetArtist: CountTimeListenedToItem: %w", err)

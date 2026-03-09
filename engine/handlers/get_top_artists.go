@@ -37,6 +37,6 @@ func GetTopArtistsHandler(store db.DB) func(w http.ResponseWriter, r *http.Reque
 		}
 
 		l.Debug().Msg("GetTopArtistsHandler: Successfully retrieved top artists")
-		utils.WriteJSON(w, http.StatusOK, artists)
+		utils.WriteJSON(w, http.StatusOK, rankedPaginatedResponseFrom(artists))
 	}
 }

@@ -67,7 +67,7 @@ func TestGetListens(t *testing.T) {
 	ctx := context.Background()
 
 	// Test valid
-	resp, err := store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodAllTime})
+	resp, err := store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodAllTime)})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 10)
 	assert.Equal(t, int64(10), resp.TotalCount)
@@ -78,7 +78,7 @@ func TestGetListens(t *testing.T) {
 	assert.Equal(t, "Artist Three", resp.Items[1].Track.Artists[0].Name)
 
 	// Test pagination
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Limit: 1, Page: 2, Period: db.PeriodAllTime})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Limit: 1, Page: 2, Timeframe: db.PeriodToTimeframe(db.PeriodAllTime)})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 	require.Len(t, resp.Items[0].Track.Artists, 1)
@@ -89,7 +89,7 @@ func TestGetListens(t *testing.T) {
 	assert.Equal(t, "Artist Three", resp.Items[0].Track.Artists[0].Name)
 
 	// Test page out of range
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Limit: 10, Page: 10, Period: db.PeriodAllTime})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Limit: 10, Page: 10, Timeframe: db.PeriodToTimeframe(db.PeriodAllTime)})
 	require.NoError(t, err)
 	assert.Empty(t, resp.Items)
 	assert.False(t, resp.HasNextPage)
@@ -102,7 +102,7 @@ func TestGetListens(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test specify period
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodDay})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodDay)})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 0) // empty
 	assert.Equal(t, int64(0), resp.TotalCount)
@@ -112,38 +112,38 @@ func TestGetListens(t *testing.T) {
 	require.Len(t, resp.Items, 0) // empty
 	assert.Equal(t, int64(0), resp.TotalCount)
 
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodWeek})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodWeek)})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 	assert.Equal(t, int64(1), resp.TotalCount)
 
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodMonth})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodMonth)})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 3)
 	assert.Equal(t, int64(3), resp.TotalCount)
 
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodYear})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodYear)})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 6)
 	assert.Equal(t, int64(6), resp.TotalCount)
 
 	// Test filter by artists, releases, and tracks
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodAllTime, ArtistID: 1})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodAllTime), ArtistID: 1})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 4)
 	assert.Equal(t, int64(4), resp.TotalCount)
 
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodAllTime, AlbumID: 2})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodAllTime), AlbumID: 2})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 3)
 	assert.Equal(t, int64(3), resp.TotalCount)
 
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodAllTime, TrackID: 3})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodAllTime), TrackID: 3})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 2)
 	assert.Equal(t, int64(2), resp.TotalCount)
 	// when both artistID and albumID are specified, artist id is ignored
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Period: db.PeriodAllTime, AlbumID: 2, ArtistID: 1})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.PeriodToTimeframe(db.PeriodAllTime), AlbumID: 2, ArtistID: 1})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 3)
 	assert.Equal(t, int64(3), resp.TotalCount)

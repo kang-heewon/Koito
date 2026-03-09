@@ -99,8 +99,8 @@ func (d *Psql) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Albu
 	}
 
 	seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
-		Period:  db.PeriodAllTime,
-		AlbumID: ret.ID,
+		Timeframe: db.PeriodToTimeframe(db.PeriodAllTime),
+		AlbumID:   ret.ID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("GetAlbum: CountTimeListenedToItem: %w", err)

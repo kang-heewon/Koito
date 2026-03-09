@@ -16,9 +16,9 @@ type DB interface {
 	GetTrack(ctx context.Context, opts GetTrackOpts) (*models.Track, error)
 	GetArtistsForAlbum(ctx context.Context, id int32) ([]*models.Artist, error)
 	GetArtistsForTrack(ctx context.Context, id int32) ([]*models.Artist, error)
-	GetTopTracksPaginated(ctx context.Context, opts GetItemsOpts) (*PaginatedResponse[*models.Track], error)
-	GetTopArtistsPaginated(ctx context.Context, opts GetItemsOpts) (*PaginatedResponse[*models.Artist], error)
-	GetTopAlbumsPaginated(ctx context.Context, opts GetItemsOpts) (*PaginatedResponse[*models.Album], error)
+	GetTopTracksPaginated(ctx context.Context, opts GetItemsOpts) (*PaginatedResponse[RankedItem[*models.Track]], error)
+	GetTopArtistsPaginated(ctx context.Context, opts GetItemsOpts) (*PaginatedResponse[RankedItem[*models.Artist]], error)
+	GetTopAlbumsPaginated(ctx context.Context, opts GetItemsOpts) (*PaginatedResponse[RankedItem[*models.Album]], error)
 	GetListensPaginated(ctx context.Context, opts GetItemsOpts) (*PaginatedResponse[*models.Listen], error)
 	GetListenActivity(ctx context.Context, opts ListenActivityOpts) ([]ListenActivityItem, error)
 	GetAllArtistAliases(ctx context.Context, id int32) ([]models.Alias, error)
@@ -66,16 +66,20 @@ type DB interface {
 	DeleteSession(ctx context.Context, sessionId uuid.UUID) error
 	DeleteApiKey(ctx context.Context, id int32) error
 	// Count
-	CountListens(ctx context.Context, period Period) (int64, error)
-	CountTracks(ctx context.Context, period Period) (int64, error)
-	CountAlbums(ctx context.Context, period Period) (int64, error)
-	CountArtists(ctx context.Context, period Period) (int64, error)
-	CountTimeListened(ctx context.Context, period Period) (int64, error)
+	CountListens(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountTracks(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountAlbums(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountArtists(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountNewTracks(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountNewAlbums(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountNewArtists(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountTimeListened(ctx context.Context, timeframe Timeframe) (int64, error)
+	CountListensToItem(ctx context.Context, opts TimeListenedOpts) (int64, error)
 	CountTimeListenedToItem(ctx context.Context, opts TimeListenedOpts) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
 	// Genre Stats
-	GetGenreStatsByListenCount(ctx context.Context, period Period) ([]GenreStat, error)
-	GetGenreStatsByTimeListened(ctx context.Context, period Period) ([]GenreStat, error)
+	GetGenreStatsByListenCount(ctx context.Context, timeframe Timeframe) ([]GenreStat, error)
+	GetGenreStatsByTimeListened(ctx context.Context, timeframe Timeframe) ([]GenreStat, error)
 	// Wrapped
 	GetWrappedStats(ctx context.Context, year int, userID int32) (*WrappedStats, error)
 	// Recommendation

@@ -37,6 +37,6 @@ func GetTopAlbumsHandler(store db.DB) func(w http.ResponseWriter, r *http.Reques
 		}
 
 		l.Debug().Msg("GetTopAlbumsHandler: Successfully retrieved top albums")
-		utils.WriteJSON(w, http.StatusOK, albums)
+		utils.WriteJSON(w, http.StatusOK, rankedPaginatedResponseFrom(albums))
 	}
 }

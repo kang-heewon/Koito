@@ -37,6 +37,6 @@ func GetTopTracksHandler(store db.DB) func(w http.ResponseWriter, r *http.Reques
 		}
 
 		l.Debug().Msg("GetTopTracksHandler: Successfully retrieved top tracks")
-		utils.WriteJSON(w, http.StatusOK, tracks)
+		utils.WriteJSON(w, http.StatusOK, rankedPaginatedResponseFrom(tracks))
 	}
 }

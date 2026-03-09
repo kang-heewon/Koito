@@ -3,19 +3,17 @@ package psql
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/repository"
 )
 
-func (d *Psql) GetGenreStatsByListenCount(ctx context.Context, period db.Period) ([]db.GenreStat, error) {
-	startTime := db.StartTimeFromPeriod(period)
-	endTime := time.Now()
+func (d *Psql) GetGenreStatsByListenCount(ctx context.Context, timeframe db.Timeframe) ([]db.GenreStat, error) {
+	t1, t2 := db.TimeframeToTimeRange(timeframe)
 
 	rows, err := d.q.GetGenreStatsByListenCount(ctx, repository.GetGenreStatsByListenCountParams{
-		ListenedAt:   startTime,
-		ListenedAt_2: endTime,
+		ListenedAt:   t1,
+		ListenedAt_2: t2,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("GetGenreStatsByListenCount: %w", err)
@@ -31,13 +29,12 @@ func (d *Psql) GetGenreStatsByListenCount(ctx context.Context, period db.Period)
 	return stats, nil
 }
 
-func (d *Psql) GetGenreStatsByTimeListened(ctx context.Context, period db.Period) ([]db.GenreStat, error) {
-	startTime := db.StartTimeFromPeriod(period)
-	endTime := time.Now()
+func (d *Psql) GetGenreStatsByTimeListened(ctx context.Context, timeframe db.Timeframe) ([]db.GenreStat, error) {
+	t1, t2 := db.TimeframeToTimeRange(timeframe)
 
 	rows, err := d.q.GetGenreStatsByTimeListened(ctx, repository.GetGenreStatsByTimeListenedParams{
-		ListenedAt:   startTime,
-		ListenedAt_2: endTime,
+		ListenedAt:   t1,
+		ListenedAt_2: t2,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("GetGenreStatsByTimeListened: %w", err)

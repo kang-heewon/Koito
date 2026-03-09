@@ -16,6 +16,28 @@ import (
 const defaultLimitSize = 100
 const maximumLimit = 500
 
+func TimeframeFromRequest(r *http.Request) db.Timeframe {
+	timeframe := db.Timeframe{
+		Period:   strings.ToLower(strings.TrimSpace(r.URL.Query().Get("period"))),
+		Year:     strings.TrimSpace(r.URL.Query().Get("year")),
+		Month:    strings.TrimSpace(r.URL.Query().Get("month")),
+		Week:     strings.TrimSpace(r.URL.Query().Get("week")),
+		FromUnix: strings.TrimSpace(r.URL.Query().Get("from")),
+		ToUnix:   strings.TrimSpace(r.URL.Query().Get("to")),
+		Timezone: strings.TrimSpace(r.URL.Query().Get("tz")),
+	}
+
+	if timeframe.Timezone != "" {
+		return timeframe
+	}
+
+	if cookie, err := r.Cookie("tz"); err == nil {
+		timeframe.Timezone = strings.TrimSpace(cookie.Value)
+	}
+
+	return timeframe
+}
+
 func OptsFromRequest(r *http.Request) (db.GetItemsOpts, error) {
 	l := logger.FromContext(r.Context())
 
@@ -124,25 +146,81 @@ func OptsFromRequest(r *http.Request) (db.GetItemsOpts, error) {
 		period = db.PeriodDay
 	}
 
+	timeframe := db.PeriodToTimeframe(period)
+	if week != 0 {
+		timeframe.Week = strconv.Itoa(week)
+	}
+	if month != 0 {
+		timeframe.Month = strconv.Itoa(month)
+	}
+	if year != 0 {
+		timeframe.Year = strconv.Itoa(year)
+	}
+	if from != 0 {
+		timeframe.FromUnix = strconv.Itoa(from)
+	}
+	if to != 0 {
+		timeframe.ToUnix = strconv.Itoa(to)
+	}
+
 	l.Debug().Msgf("OptsFromRequest: Parsed options: limit=%d, page=%d, week=%d, month=%d, year=%d, from=%d, to=%d, artist_id=%d, album_id=%d, track_id=%d, period=%s",
 		limit, page, week, month, year, from, to, artistId, albumId, trackId, period)
 
 	return db.GetItemsOpts{
-		Limit:    limit,
-		Period:   period,
-		Page:     page,
-		Week:     week,
-		Month:    month,
-		Year:     year,
-		From:     from,
-		To:       to,
-		ArtistID: artistId,
-		AlbumID:  albumId,
-		TrackID:  trackId,
+		Limit:     limit,
+		Timeframe: timeframe,
+		Page:      page,
+		Week:      week,
+		Month:     month,
+		Year:      year,
+		From:      from,
+		To:        to,
+		ArtistID:  artistId,
+		AlbumID:   albumId,
+		TrackID:   trackId,
 	}, nil
 }
 
 func isDateRangeValidationError(err error) bool {
 	var dateRangeErr *utils.DateRangeValidationError
 	return errors.As(err, &dateRangeErr)
+}
+
+type rankedResponseItem[T any] struct {
+	Item         T     `json:"Item"`
+	Rank         int   `json:"Rank"`
+	ListenCount  int64 `json:"ListenCount"`
+	TimeListened int64 `json:"TimeListened"`
+}
+
+type rankedPaginatedResponse[T any] struct {
+	Items        []rankedResponseItem[T] `json:"items"`
+	TotalCount   int64                   `json:"total_record_count"`
+	ItemsPerPage int32                   `json:"items_per_page"`
+	HasNextPage  bool                    `json:"has_next_page"`
+	CurrentPage  int32                   `json:"current_page"`
+}
+
+func rankedPaginatedResponseFrom[T any](response *db.PaginatedResponse[db.RankedItem[T]]) *rankedPaginatedResponse[T] {
+	if response == nil {
+		return nil
+	}
+
+	items := make([]rankedResponseItem[T], len(response.Items))
+	for i, item := range response.Items {
+		items[i] = rankedResponseItem[T]{
+			Item:         item.Item,
+			Rank:         item.Rank,
+			ListenCount:  item.ListenCount,
+			TimeListened: item.TimeListened,
+		}
+	}
+
+	return &rankedPaginatedResponse[T]{
+		Items:        items,
+		TotalCount:   response.TotalCount,
+		ItemsPerPage: response.ItemsPerPage,
+		HasNextPage:  response.HasNextPage,
+		CurrentPage:  response.CurrentPage,
+	}
 }
