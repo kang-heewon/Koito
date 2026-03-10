@@ -64,15 +64,15 @@ func (m *mockDBForValidateSession) GetArtistsForTrack(ctx context.Context, id in
 	return nil, nil
 }
 
-func (m *mockDBForValidateSession) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Track], error) {
+func (m *mockDBForValidateSession) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Track]], error) {
 	return nil, nil
 }
 
-func (m *mockDBForValidateSession) GetTopArtistsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Artist], error) {
+func (m *mockDBForValidateSession) GetTopArtistsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Artist]], error) {
 	return nil, nil
 }
 
-func (m *mockDBForValidateSession) GetTopAlbumsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Album], error) {
+func (m *mockDBForValidateSession) GetTopAlbumsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Album]], error) {
 	return nil, nil
 }
 
@@ -236,23 +236,39 @@ func (m *mockDBForValidateSession) DeleteApiKey(ctx context.Context, id int32) e
 	return nil
 }
 
-func (m *mockDBForValidateSession) CountListens(ctx context.Context, period db.Period) (int64, error) {
+func (m *mockDBForValidateSession) CountListens(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockDBForValidateSession) CountTracks(ctx context.Context, period db.Period) (int64, error) {
+func (m *mockDBForValidateSession) CountTracks(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockDBForValidateSession) CountAlbums(ctx context.Context, period db.Period) (int64, error) {
+func (m *mockDBForValidateSession) CountAlbums(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockDBForValidateSession) CountArtists(ctx context.Context, period db.Period) (int64, error) {
+func (m *mockDBForValidateSession) CountArtists(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockDBForValidateSession) CountTimeListened(ctx context.Context, period db.Period) (int64, error) {
+func (m *mockDBForValidateSession) CountNewTracks(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockDBForValidateSession) CountNewAlbums(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockDBForValidateSession) CountNewArtists(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockDBForValidateSession) CountTimeListened(ctx context.Context, timeframe db.Timeframe) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockDBForValidateSession) CountListensToItem(ctx context.Context, opts db.TimeListenedOpts) (int64, error) {
 	return 0, nil
 }
 
@@ -264,11 +280,11 @@ func (m *mockDBForValidateSession) CountUsers(ctx context.Context) (int64, error
 	return 0, nil
 }
 
-func (m *mockDBForValidateSession) GetGenreStatsByListenCount(ctx context.Context, period db.Period) ([]db.GenreStat, error) {
+func (m *mockDBForValidateSession) GetGenreStatsByListenCount(ctx context.Context, timeframe db.Timeframe) ([]db.GenreStat, error) {
 	return nil, nil
 }
 
-func (m *mockDBForValidateSession) GetGenreStatsByTimeListened(ctx context.Context, period db.Period) ([]db.GenreStat, error) {
+func (m *mockDBForValidateSession) GetGenreStatsByTimeListened(ctx context.Context, timeframe db.Timeframe) ([]db.GenreStat, error) {
 	return nil, nil
 }
 
