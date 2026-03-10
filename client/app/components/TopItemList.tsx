@@ -1,11 +1,12 @@
 import { Link } from "react-router";
 import ArtistLinks from "./ArtistLinks";
-import { imageUrl, type Album, type Artist, type Track, type PaginatedResponse } from "api/api";
+import { imageUrl, type Album, type Artist, type Track, type PaginatedResponse, type TopRanked } from "api/api";
 
 type Item = Album | Track | Artist;
+type RankedItem = TopRanked<Item>;
 
 interface Props<T extends Item> {
-    data: PaginatedResponse<T>
+    data: PaginatedResponse<TopRanked<T>>
     separators?: ConstrainBoolean
     type: "album" | "track" | "artist";
     className?: string,
@@ -15,8 +16,8 @@ export default function TopItemList<T extends Item>({ data, separators, type, cl
 
     return (
         <div className={`flex flex-col gap-1 ${className} min-w-[200px]`}>
-            {data.items.map((item, index) => {
-                const key = `${type}-${item.id}`;
+            {data.items.map((entry, index) => {
+                const key = `${type}-${entry.Item.id}-${entry.Rank}`;
                 return (
                     <div
                         key={key}
@@ -25,7 +26,7 @@ export default function TopItemList<T extends Item>({ data, separators, type, cl
                             separators && index !== data.items.length - 1 ? 'border-b border-(--color-fg-tertiary) mb-1 pb-2' : ''
                         }`}
                     >
-                        <ItemCard item={item} type={type} />
+                        <ItemCard entry={entry as RankedItem} type={type} />
                     </div>
                 );
             })}
@@ -33,7 +34,10 @@ export default function TopItemList<T extends Item>({ data, separators, type, cl
     );
 }
 
-function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artist" }) {
+function ItemCard({ entry, type }: { entry: RankedItem; type: "album" | "track" | "artist" }) {
+
+    const item = entry.Item;
+    const plays = entry.ListenCount;
 
     const itemClasses = `flex items-center gap-2 w-full`
 
@@ -57,7 +61,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
                            <ArtistLinks artists={album.artists && album.artists.length > 0 ? [album.artists[0]] : [{id: 0, name: 'Unknown Artist'}]}/>
                         </div>
                         }
-                        <div className="color-fg-secondary truncate">{album.listen_count} plays</div>
+                        <div className="color-fg-secondary truncate">{plays} plays</div>
                     </div>
                 </div>
             );
@@ -77,7 +81,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
                             <div className="truncate">
                                <ArtistLinks artists={track.artists || [{id: 0, name: 'Unknown Artist'}]}/>
                             </div>
-                        <div className="color-fg-secondary truncate">{track.listen_count} plays</div>
+                        <div className="color-fg-secondary truncate">{plays} plays</div>
                     </div>
                 </div>
             );
@@ -90,7 +94,7 @@ function ItemCard({ item, type }: { item: Item; type: "album" | "track" | "artis
                         <img loading="lazy" src={imageUrl(artist.image, "small")} alt={artist.name} className="w-12 h-12 object-cover rounded-lg shrink-0" />
                         <div className="min-w-0 flex-1">
                             <div style={{fontSize: 14}} className="truncate">{artist.name}</div>
-                            <div className="color-fg-secondary truncate">{artist.listen_count} plays</div>
+                            <div className="color-fg-secondary truncate">{plays} plays</div>
                         </div>
                     </Link>
                 </div>

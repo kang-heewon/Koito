@@ -5,7 +5,7 @@ import {
 } from "react-router"
 import { useEffect, useState } from "react"
 import { average } from "color.js"
-import { imageUrl, type PaginatedResponse } from "api/api"
+import { imageUrl, type PaginatedResponse, type TopRanked } from "api/api"
 import PeriodSelector from "~/components/PeriodSelector"
 
 function hasImage(value: unknown): value is { image: string } {
@@ -16,6 +16,16 @@ function hasImage(value: unknown): value is { image: string } {
 		return false
 	}
 	return typeof value.image === "string" && value.image.length > 0
+}
+
+function hasRankedImage(value: unknown): value is TopRanked<{ image: string }> {
+	if (typeof value !== "object" || value === null) {
+		return false
+	}
+	if (!("Item" in value)) {
+		return false
+	}
+	return hasImage(value.Item)
 }
 
 interface ChartLayoutProps<T> {
@@ -56,9 +66,15 @@ export default function ChartLayout<T>({
 		if ((data?.items?.length ?? 0) === 0) return
 
 		const firstItem = data.items[0]
-		if (!hasImage(firstItem)) return
+		if (hasImage(firstItem)) {
+			average(imageUrl(firstItem.image, "small"), { amount: 1 }).then((color) => {
+				setBgColor(`rgba(${color[0]},${color[1]},${color[2]},0.4)`)
+			})
+			return
+		}
+		if (!hasRankedImage(firstItem)) return
 
-		average(imageUrl(firstItem.image, "small"), { amount: 1 }).then((color) => {
+		average(imageUrl(firstItem.Item.image, "small"), { amount: 1 }).then((color) => {
 			setBgColor(`rgba(${color[0]},${color[1]},${color[2]},0.4)`)
 		})
 	}, [data])
