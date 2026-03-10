@@ -1,7 +1,7 @@
 import TopItemList from "~/components/TopItemList";
 import ChartLayout from "./ChartLayout";
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
-import { type Artist as ArtistItem, type PaginatedResponse } from "api/api";
+import { type Artist as ArtistItem, type PaginatedResponse, type TopRanked } from "api/api";
 
 export async function clientLoader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
@@ -15,12 +15,12 @@ export async function clientLoader({ request }: LoaderFunctionArgs) {
     throw new Response("Failed to load top artists", { status: 500 });
   }
 
-  const top_artists: PaginatedResponse<ArtistItem> = await res.json();
+  const top_artists: PaginatedResponse<TopRanked<ArtistItem>> = await res.json();
   return { top_artists };
 }
 
 export default function ArtistChart() {
-  const { top_artists: initialData } = useLoaderData<{ top_artists: PaginatedResponse<ArtistItem> }>();
+  const { top_artists: initialData } = useLoaderData<{ top_artists: PaginatedResponse<TopRanked<ArtistItem>> }>();
 
   return (
     <ChartLayout
