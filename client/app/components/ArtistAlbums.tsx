@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { getTopAlbums, imageUrl, type GetItemsArgs } from "api/api"
+import { getTopAlbums, imageUrl, type GetItemsArgs, type TopRanked, type Album } from "api/api"
 import { Link } from "react-router"
 
 interface Props {
@@ -14,7 +14,6 @@ export default function ArtistAlbums({artistId, name, period}: Props) {
         queryKey: ['top-albums', {limit: 99, period: "all_time", artist_id: artistId, page: 0}], 
         queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as GetItemsArgs),
     })
-
     if (isPending) {
         return (
             <div>
@@ -32,16 +31,20 @@ export default function ArtistAlbums({artistId, name, period}: Props) {
         )
     }
 
+    if (!data?.items) {
+        return null
+    }
+
     return (
         <div>
             <h2>Albums featuring {name}</h2>
         <div className="flex flex-wrap gap-8">
-            {data.items.map((item) => (
-                <Link to={`/album/${item.id}`}className="flex gap-2 items-start">
-                    <img src={imageUrl(item.image, "medium")} alt={item.title} style={{width: 130}} />
+            {data.items.map((entry) => (
+                <Link key={`artist-album-${entry.Item.id}`} to={`/album/${entry.Item.id}`}className="flex gap-2 items-start">
+                    <img src={imageUrl(entry.Item.image, "medium")} alt={entry.Item.title} style={{width: 130}} />
                     <div className="w-[180px] flex flex-col items-start gap-1">
-                        <p>{item.title}</p>
-                        <p className="text-sm color-fg-secondary">{item.listen_count} play{item.listen_count > 1 ? 's' : ''}</p>
+                        <p>{entry.Item.title}</p>
+                        <p className="text-sm color-fg-secondary">{entry.ListenCount} play{entry.ListenCount > 1 ? 's' : ''}</p>
                     </div>
                 </Link>
             ))}
