@@ -15,11 +15,13 @@ import (
 
 func (d *Psql) GetListensPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[*models.Listen], error) {
 	l := logger.FromContext(ctx)
+	var err error
+	opts, err = normalizePagedGetItemsOpts(opts)
+	if err != nil {
+		return nil, err
+	}
 	offset := (opts.Page - 1) * opts.Limit
 	t1, t2 := db.TimeframeToTimeRange(opts.Timeframe)
-	if opts.Limit == 0 {
-		opts.Limit = DefaultItemsPerPage
-	}
 	var listens []*models.Listen
 	var count int64
 	if opts.TrackID > 0 {

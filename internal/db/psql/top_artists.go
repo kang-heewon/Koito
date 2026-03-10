@@ -12,11 +12,13 @@ import (
 
 func (d *Psql) GetTopArtistsPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Artist]], error) {
 	l := logger.FromContext(ctx)
+	var err error
+	opts, err = normalizePagedGetItemsOpts(opts)
+	if err != nil {
+		return nil, err
+	}
 	offset := (opts.Page - 1) * opts.Limit
 	t1, t2 := db.TimeframeToTimeRange(opts.Timeframe)
-	if opts.Limit == 0 {
-		opts.Limit = DefaultItemsPerPage
-	}
 	l.Debug().Msgf("Fetching top %d artists on page %d from range %v to %v",
 		opts.Limit, opts.Page, t1.Format("Jan 02, 2006"), t2.Format("Jan 02, 2006"))
 	rows, err := d.q.GetTopArtistsPaginated(ctx, repository.GetTopArtistsPaginatedParams{

@@ -13,11 +13,13 @@ import (
 
 func (d *Psql) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) (*db.PaginatedResponse[db.RankedItem[*models.Track]], error) {
 	l := logger.FromContext(ctx)
+	var err error
+	opts, err = normalizePagedGetItemsOpts(opts)
+	if err != nil {
+		return nil, err
+	}
 	offset := (opts.Page - 1) * opts.Limit
 	t1, t2 := db.TimeframeToTimeRange(opts.Timeframe)
-	if opts.Limit == 0 {
-		opts.Limit = DefaultItemsPerPage
-	}
 	var tracks []db.RankedItem[*models.Track]
 	var count int64
 	if opts.AlbumID > 0 {
