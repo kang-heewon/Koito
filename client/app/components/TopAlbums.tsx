@@ -1,5 +1,5 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { getTopAlbums, type GetItemsArgs } from "api/api";
+import { getTopAlbums, type GetItemsArgs, type TopRanked, type Album } from "api/api";
 import { Link } from "react-router";
 import TopListSkeleton from "./skeletons/TopListSkeleton";
 import TopItemList from "./TopItemList";
@@ -24,6 +24,7 @@ export default function TopAlbums(props: Props) {
     queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as GetItemsArgs),
     placeholderData: keepPreviousData,
   });
+  const rankedData = data as typeof data & { items: TopRanked<Album>[] };
   if (isPending || isFetching) {
     return (
       <div className="w-[300px]">
@@ -40,7 +41,7 @@ export default function TopAlbums(props: Props) {
     );
   }
 
-  if (!data?.items) return null;
+  if (!rankedData?.items) return null;
 
   return (
     <div className="w-[300px]">
@@ -54,8 +55,8 @@ export default function TopAlbums(props: Props) {
         </Link>
       </h2>
       <div className="max-w-[300px]">
-        <TopItemList type="album" data={data} />
-        {data.items.length < 1 ? "No albums found for this period." : ""}
+        <TopItemList type="album" data={rankedData} />
+        {rankedData.items.length < 1 ? "No albums found for this period." : ""}
       </div>
     </div>
   );
