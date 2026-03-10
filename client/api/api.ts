@@ -67,7 +67,7 @@ async function getLastListens(
 
 async function getTopTracks(
   args: GetItemsArgs
-): Promise<PaginatedResponse<Track>> {
+): Promise<PaginatedResponse<TopRanked<Track>>> {
   const params = new URLSearchParams({
     period: args.period,
     limit: String(args.limit),
@@ -81,12 +81,12 @@ async function getTopTracks(
   }
 
   const r = await fetch(`/apis/web/v1/top-tracks?${params.toString()}`);
-  return handleJson<PaginatedResponse<Track>>(r);
+  return handleJson<PaginatedResponse<TopRanked<Track>>>(r);
 }
 
 async function getTopAlbums(
   args: GetItemsArgs
-): Promise<PaginatedResponse<Album>> {
+): Promise<PaginatedResponse<TopRanked<Album>>> {
   const params = new URLSearchParams({
     period: args.period,
     limit: String(args.limit),
@@ -97,19 +97,19 @@ async function getTopAlbums(
   }
 
   const r = await fetch(`/apis/web/v1/top-albums?${params.toString()}`);
-  return handleJson<PaginatedResponse<Album>>(r);
+  return handleJson<PaginatedResponse<TopRanked<Album>>>(r);
 }
 
 async function getTopArtists(
   args: GetItemsArgs
-): Promise<PaginatedResponse<Artist>> {
+): Promise<PaginatedResponse<TopRanked<Artist>>> {
   const params = new URLSearchParams({
     period: args.period,
     limit: String(args.limit),
     page: String(args.page),
   });
   const r = await fetch(`/apis/web/v1/top-artists?${params.toString()}`);
-  return handleJson<PaginatedResponse<Artist>>(r);
+  return handleJson<PaginatedResponse<TopRanked<Artist>>>(r);
 }
 
 async function getActivity(
@@ -470,6 +470,12 @@ type Ranked<T> = {
   listen_count: number;
   time_listened: number;
 };
+type TopRanked<T> = {
+  Item: T;
+  Rank: number;
+  ListenCount: number;
+  TimeListened: number;
+};
 type ListenActivityItem = {
   start_time: Date;
   listens: number;
@@ -565,6 +571,7 @@ export type {
   SearchResponse,
   PaginatedResponse,
   Ranked,
+  TopRanked,
   ListenActivityItem,
   User,
   Alias,
