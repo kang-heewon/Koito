@@ -145,6 +145,11 @@ func Shutdown() {
 	}
 }
 
+// GetSpotifyClient returns the initialized Spotify client
+func GetSpotifyClient() *SpotifyClient {
+	return imgsrc.spotifyC
+}
+
 func GetArtistImage(ctx context.Context, opts ArtistImageOpts) (string, error) {
 	l := logger.FromContext(ctx)
 	if imgsrc.spotifyEnabled {

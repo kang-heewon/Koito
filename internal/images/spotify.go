@@ -61,8 +61,10 @@ type spotifyArtist struct {
 }
 
 type spotifyArtistFull struct {
+	ID     string         `json:"id"`
 	Name   string         `json:"name"`
 	Images []spotifyImage `json:"images"`
+	Genres []string       `json:"genres"`
 }
 
 const (
@@ -326,4 +328,90 @@ func artistMatch(found []spotifyArtist, candidates []string) bool {
 		}
 	}
 	return false
+}
+
+// GetArtistGenres retrieves genres for an artist from Spotify
+// Note: Spotify only provides artist-level genres, not album-level
+func (c *SpotifyClient) GetArtistGenres(ctx context.Context, artistName string) ([]string, error) {
+	l := logger.FromContext(ctx)
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("GetArtistGenres: %w", err)
+	}
+
+	// Search for artist
+	query := fmt.Sprintf(`artist:"%s"`, artistName)
+	artistID, err := c.searchArtistID(ctx, token, query, artistName)
+	if err != nil {
+		return nil, fmt.Errorf("GetArtistGenres: %w", err)
+	}
+	if artistID == "" {
+		l.Debug().Str("artist", artistName).Msg("GetArtistGenres: Artist not found on Spotify")
+		return nil, nil
+	}
+
+	// Get artist details with genres
+	genres, err := c.getArtistGenresByID(ctx, token, artistID)
+	if err != nil {
+		return nil, fmt.Errorf("GetArtistGenres: %w", err)
+	}
+
+	l.Debug().Str("artist", artistName).Strs("genres", genres).Msg("GetArtistGenres: Retrieved genres from Spotify")
+	return genres, nil
+}
+
+func (c *SpotifyClient) searchArtistID(ctx context.Context, token, query, artist string) (string, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf(spotifyArtistSearchFmt, url.QueryEscape(query)), nil)
+	if err != nil {
+		return "", fmt.Errorf("searchArtistID: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	body, status, err := c.queue(ctx, req)
+	if status == http.StatusUnauthorized {
+		return "", fmt.Errorf("searchArtistID: received unauthorized status")
+	}
+	if err != nil {
+		return "", fmt.Errorf("searchArtistID: %w", err)
+	}
+
+	resp := new(spotifySearchResponse)
+	err = json.Unmarshal(body, resp)
+	if err != nil {
+		return "", fmt.Errorf("searchArtistID: %w", err)
+	}
+
+	for _, item := range resp.Artists.Items {
+		if strings.EqualFold(item.Name, artist) {
+			return item.ID, nil
+		}
+	}
+	return "", nil
+}
+
+func (c *SpotifyClient) getArtistGenresByID(ctx context.Context, token, artistID string) ([]string, error) {
+	artistURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", artistID)
+	req, err := http.NewRequest("GET", artistURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("getArtistGenresByID: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	body, status, err := c.queue(ctx, req)
+	if status == http.StatusUnauthorized {
+		return nil, fmt.Errorf("getArtistGenresByID: received unauthorized status")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getArtistGenresByID: %w", err)
+	}
+
+	var artistResp struct {
+		Genres []string `json:"genres"`
+	}
+	err = json.Unmarshal(body, &artistResp)
+	if err != nil {
+		return nil, fmt.Errorf("getArtistGenresByID: %w", err)
+	}
+
+	return artistResp.Genres, nil
 }

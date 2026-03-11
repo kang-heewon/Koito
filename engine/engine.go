@@ -19,17 +19,19 @@ import (
 	"github.com/gabehf/koito/internal/cfg"
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/db/psql"
+	"github.com/gabehf/koito/internal/discogs"
 	"github.com/gabehf/koito/internal/images"
 	"github.com/gabehf/koito/internal/importer"
+	"github.com/gabehf/koito/internal/lastfm"
 	"github.com/gabehf/koito/internal/logger"
 	mbz "github.com/gabehf/koito/internal/mbz"
 	"github.com/gabehf/koito/internal/models"
 	"github.com/gabehf/koito/internal/utils"
+
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 )
-
 func Run(
 	getenv func(string) string,
 	w io.Writer,
@@ -101,9 +103,30 @@ func Run(
 	if !cfg.MusicBrainzDisabled() {
 		mbzC = mbz.NewMusicBrainzClient()
 		l.Info().Msg("Engine: MusicBrainz client initialized")
+	l.Debug().Msg("Engine: MusicBrainz client initialized")
 	} else {
 		mbzC = &mbz.MbzErrorCaller{}
 		l.Warn().Msg("Engine: MusicBrainz client disabled")
+	}
+
+	// Initialize Discogs client
+	l.Debug().Msg("Engine: Initializing Discogs client")
+	var discogsC *discogs.DiscogsClient
+	if cfg.DiscogsEnabled() {
+		discogsC = discogs.NewDiscogsClient()
+		l.Info().Msg("Engine: Discogs client initialized")
+	} else {
+		l.Warn().Msg("Engine: Discogs client disabled")
+	}
+
+	// Initialize Last.fm client
+	l.Debug().Msg("Engine: Initializing Last.fm client")
+	var lastfmC *lastfm.LastFmClient
+	if cfg.LastFmEnabled() {
+		lastfmC = lastfm.NewLastFmClient()
+		l.Info().Msg("Engine: Last.fm client initialized")
+	} else {
+		l.Warn().Msg("Engine: Last.fm client disabled")
 	}
 
 	l.Debug().Msg("Engine: Initializing image sources")
@@ -225,11 +248,14 @@ func Run(
 		catalog.PruneOrphanedImages(logger.NewContext(l), store)
 	})
 
+	// Hybrid genre backfill - tries MusicBrainz, Discogs, Last.fm, Spotify
+	l.Info().Msg("Engine: Backfilling genres for existing data")
+	runTrackedGoroutine(func() {
+		fetcher := catalog.NewHybridGenreFetcher(mbzC, discogsC, lastfmC, images.GetSpotifyClient())
+		catalog.BackfillGenres(logger.NewContext(l), store, fetcher)
+	})
+
 	if !cfg.MusicBrainzDisabled() {
-		l.Info().Msg("Engine: Backfilling genres for existing data")
-		runTrackedGoroutine(func() {
-			catalog.BackfillGenres(logger.NewContext(l), store, mbzC)
-		})
 		l.Info().Msg("Engine: Backfilling track durations")
 		runTrackedGoroutine(func() {
 			catalog.BackfillTrackDurations(logger.NewContext(l), store, mbzC)
@@ -255,6 +281,12 @@ func Run(
 	defer cancel()
 	l.Info().Msg("Engine: Waiting for all processes to finish")
 	mbzC.Shutdown()
+	if discogsC != nil {
+		discogsC.Shutdown()
+	}
+	if lastfmC != nil {
+		lastfmC.Shutdown()
+	}
 	images.Shutdown()
 	if err := httpServer.Shutdown(ctx); err != nil {
 		l.Fatal().Err(err).Msg("Engine: Error during server shutdown")

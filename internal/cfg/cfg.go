@@ -51,6 +51,9 @@ const (
 	SPOTIFY_CLIENT_ID_ENV          = "KOITO_SPOTIFY_CLIENT_ID"
 	SPOTIFY_CLIENT_SECRET_ENV      = "KOITO_SPOTIFY_CLIENT_SECRET"
 	SECURE_COOKIES_ENV            = "KOITO_SECURE_COOKIES"
+	DISCOGS_CONSUMER_KEY_ENV    = "KOITO_DISCOGS_CONSUMER_KEY"
+	DISCOGS_CONSUMER_SECRET_ENV = "KOITO_DISCOGS_CONSUMER_SECRET"
+	LASTFM_API_KEY_ENV         = "KOITO_LASTFM_API_KEY"
 )
 
 type config struct {
@@ -92,6 +95,11 @@ type config struct {
 	spotifyClientSecret    string
 	secureCookies         bool
 	spotifyEnabled         bool
+	discogsConsumerKey    string
+	discogsConsumerSecret string
+	discogsEnabled        bool
+	lastfmApiKey          string
+	lastfmEnabled         bool
 }
 
 var (
@@ -235,6 +243,22 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 			return nil, fmt.Errorf("loadConfig: invalid configuration: both %s and %s must be set in order to use spotify image fetching", SPOTIFY_CLIENT_ID_ENV, SPOTIFY_CLIENT_SECRET_ENV)
 		}
 		cfg.spotifyEnabled = true
+	}
+
+	// Discogs configuration
+	cfg.discogsConsumerKey = getenv(DISCOGS_CONSUMER_KEY_ENV)
+	cfg.discogsConsumerSecret = getenv(DISCOGS_CONSUMER_SECRET_ENV)
+	if cfg.discogsConsumerKey != "" || cfg.discogsConsumerSecret != "" {
+		if cfg.discogsConsumerKey == "" || cfg.discogsConsumerSecret == "" {
+			return nil, fmt.Errorf("loadConfig: both %s and %s must be set for Discogs", DISCOGS_CONSUMER_KEY_ENV, DISCOGS_CONSUMER_SECRET_ENV)
+		}
+		cfg.discogsEnabled = true
+	}
+
+	// Last.fm configuration
+	cfg.lastfmApiKey = getenv(LASTFM_API_KEY_ENV)
+	if cfg.lastfmApiKey != "" {
+		cfg.lastfmEnabled = true
 	}
 
 	cfg.secureCookies = parseBool(getenv(SECURE_COOKIES_ENV))
@@ -489,4 +513,34 @@ func SecureCookiesEnabled() bool {
 	lock.RLock()
 	defer lock.RUnlock()
 	return globalConfig.secureCookies
+}
+
+func DiscogsEnabled() bool {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.discogsEnabled
+}
+
+func DiscogsConsumerKey() string {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.discogsConsumerKey
+}
+
+func DiscogsConsumerSecret() string {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.discogsConsumerSecret
+}
+
+func LastFmEnabled() bool {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.lastfmEnabled
+}
+
+func LastFmApiKey() string {
+	lock.RLock()
+	defer lock.RUnlock()
+	return globalConfig.lastfmApiKey
 }
