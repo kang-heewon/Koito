@@ -104,7 +104,7 @@ export default function Wrapped() {
 
             <div className="flex h-full flex-col gap-6">
                <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">Busiest Week</h2>
+                  <h2 className="mb-4 text-xs font-bold tracking-wider text-[var(--color-primary)]">Busiest Week</h2>
                    {data.busiest_week ? (
                       <>
                           <div className="text-4xl font-black tracking-tight text-[var(--color-fg)]">{data.busiest_week.listen_count} plays</div>
@@ -113,14 +113,14 @@ export default function Wrapped() {
                    ) : <div className="text-sm text-[var(--color-fg-secondary)]/80">No data</div>}
                </div>
                <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">Artist Concentration</h2>
+                  <h2 className="mb-4 text-xs font-bold tracking-wider text-[var(--color-primary)]">Artist Concentration</h2>
                   <div className="flex items-baseline gap-2">
                     <div className="text-4xl font-black tracking-tight text-[var(--color-primary)]">{data.artist_concentration}%</div>
                   </div>
                   <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">Top artist share of total listens</p>
                </div>
                <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-[0.3em] text-[var(--color-primary)]">Track Concentration</h2>
+                  <h2 className="mb-4 text-xs font-bold tracking-wider text-[var(--color-primary)]">Track Concentration</h2>
                   <div className="flex items-baseline gap-2">
                     <div className="text-4xl font-black tracking-tight text-[var(--color-accent)]">{data.track_concentration}%</div>
                   </div>
@@ -194,7 +194,7 @@ export default function Wrapped() {
 function StatCard({ title, value }: { title: string, value: React.ReactNode }) {
   return (
     <div className="flex h-full flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-7 md:px-8 md:py-8">
-      <div className="mb-5 text-xs font-bold uppercase tracking-[0.3em] text-[var(--color-primary)]">{title}</div>
+      <div className="mb-5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary)]">{title}</div>
       <div className="text-4xl font-black tracking-tight text-[var(--color-fg)] lg:text-5xl">{value}</div>
     </div>
   );
@@ -208,7 +208,7 @@ type TopListProps =
 function TopList(props: TopListProps) {
   return (
     <div className="rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-7 shadow-[0_24px_80px_-56px_rgba(0,0,0,0.9)] md:px-8 md:py-8">
-      <h2 className="mb-6 text-sm font-bold tracking-[0.24em] text-[var(--color-primary)]">{props.title}</h2>
+      <h2 className="mb-6 text-sm font-bold tracking-wide text-[var(--color-primary)]">{props.title}</h2>
       {props.items.length === 0 ? (
         <div className="flex h-32 items-center justify-center text-sm text-[var(--color-fg-secondary)]/80">No data</div>
       ) : (

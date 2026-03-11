@@ -58,7 +58,7 @@ export default function RewindPage() {
   const { year, month } = getRewindParams(currentParams);
 
   useEffect(() => {
-    const image = stats.top_artists[0]?.item.image;
+    const image = stats.top_artists[0]?.item?.image;
     if (!image) {
       return;
     }
