@@ -58,35 +58,3 @@ func BackfillGenresHandler(store db.DB, mbzC mbz.MusicBrainzCaller, discogsC cat
 		})
 	}
 }
-
-func CancelBackfillGenresHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		l := logger.FromContext(ctx)
-
-		if r.Method != http.MethodPost {
-			l.Warn().Msg("CancelBackfillGenresHandler: Method not allowed")
-			utils.WriteError(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		if backfillCancel == nil {
-			l.Debug().Msg("CancelBackfillGenresHandler: No active backfill to cancel")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": "no active backfill",
-			})
-			return
-		}
-
-		l.Info().Msg("CancelBackfillGenresHandler: Canceling backfill")
-		backfillCancel()
-		backfillCancel = nil
-		atomic.StoreInt32(&backfillRunning, 0)
-
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "backfill canceled",
-		})
-	}
-}
