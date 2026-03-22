@@ -1,295 +1,827 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getWrapped, imageUrl, type WrappedTrack, type WrappedArtist, type WrappedAlbum } from "api/api";
+import { motion } from "motion/react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  getWrapped,
+  imageUrl,
+  type WrappedAlbum,
+  type WrappedArtist,
+  type WrappedTrack,
+} from "api/api";
 import { Link } from "react-router";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import RecapLayout from "~/components/recap/RecapLayout";
+import AnimatedCounter from "~/components/recap/AnimatedCounter";
+import GradientBackground from "~/components/recap/GradientBackground";
+import StatReveal from "~/components/recap/StatReveal";
+import TopItemCard from "~/components/recap/TopItemCard";
+import { getWrappedGradient } from "~/components/recap/colors";
+
+type WrappedData = Awaited<ReturnType<typeof getWrapped>> & {
+  first_listen?: WrappedFirstListen | null;
+  tracks_played_every_month?: WrappedTrack[];
+};
+
+type WrappedFirstListen = {
+  time: string;
+  track: WrappedTrack;
+};
+
+type TopItem = WrappedTrack | WrappedArtist | WrappedAlbum;
+
+const sectionIds = [
+  "intro",
+  "totals",
+  "top-tracks",
+  "top-artists",
+  "top-albums",
+  "listening-hours",
+  "discovery",
+  "busiest-week",
+  "most-replayed",
+  "concentration",
+] as const;
+
+const introEasing = [0.22, 1, 0.36, 1] as const;
 
 export default function Wrapped() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-  const years = Array.from({ length: currentYear - 2021 }, (_, i) => 2022 + i);
+  const years = Array.from({ length: currentYear - 2021 }, (_, index) => currentYear - index);
 
   const { isPending, isError, data, error } = useQuery({
     queryKey: ["wrapped", year],
     queryFn: () => getWrapped(year),
   });
 
-  if (isPending) return <div className="flex justify-center mt-20 text-xl font-medium">Loading...</div>;
-  if (isError) return <div className="flex justify-center mt-20 text-red-500 font-medium">Error: {error.message}</div>;
+  if (isPending) {
+    return <WrappedState text="Loading your year in music..." tone="default" />;
+  }
 
-  const totalHours = Math.floor(data.total_seconds_listened / 3600);
-  const totalMinutes = Math.floor((data.total_seconds_listened % 3600) / 60);
+  if (isError) {
+    return <WrappedState text={`Error: ${error.message}`} tone="error" />;
+  }
 
+  const wrappedData = data as WrappedData;
+
+  const sections = [
+      {
+        id: sectionIds[0],
+        gradient: getWrappedGradient(0),
+        component: <IntroSection year={year} years={years} selectedYear={year} onSelectYear={setYear} />,
+      },
+      {
+        id: sectionIds[1],
+        gradient: getWrappedGradient(1),
+        component: <TotalsSection data={wrappedData} />,
+      },
+      {
+        id: sectionIds[2],
+        gradient: getWrappedGradient(2),
+        component: (
+          <TopItemsSection
+            eyebrow="Top Tracks"
+            title="These songs owned your year."
+            description="Your five most-played tracks, ready for another replay."
+            items={wrappedData.top_tracks}
+            type="track"
+          />
+        ),
+      },
+      {
+        id: sectionIds[3],
+        gradient: getWrappedGradient(3),
+        component: (
+          <TopItemsSection
+            eyebrow="Top Artists"
+            title="The voices that stayed closest."
+            description="The artists that kept showing up whenever you pressed play."
+            items={wrappedData.top_artists}
+            type="artist"
+          />
+        ),
+      },
+      {
+        id: sectionIds[4],
+        gradient: getWrappedGradient(4),
+        component: (
+          <TopItemsSection
+            eyebrow="Top Albums"
+            title="Front-to-back favorites."
+            description="Your heaviest rotation, from first track to last."
+            items={wrappedData.top_albums}
+            type="album"
+          />
+        ),
+      },
+      {
+        id: sectionIds[5],
+        gradient: getWrappedGradient(5),
+        component: <ListeningHoursSection hours={wrappedData.listening_hours ?? []} />,
+      },
+      {
+        id: sectionIds[6],
+        gradient: getWrappedGradient(6),
+        component: (
+          <DiscoverySection
+            topNewArtists={wrappedData.top_new_artists ?? []}
+            firstListen={wrappedData.first_listen ?? null}
+            tracksPlayedEveryMonth={wrappedData.tracks_played_every_month ?? []}
+          />
+        ),
+      },
+      {
+        id: sectionIds[7],
+        gradient: getWrappedGradient(7),
+        component: <BusiestWeekSection busiestWeek={wrappedData.busiest_week ?? null} />,
+      },
+      {
+        id: sectionIds[8],
+        gradient: getWrappedGradient(8),
+        component: <MostReplayedSection mostReplayedTrack={wrappedData.most_replayed_track ?? null} />,
+      },
+      {
+        id: sectionIds[9],
+        gradient: getWrappedGradient(9),
+        component: (
+          <ConcentrationSection
+            artistConcentration={wrappedData.artist_concentration}
+            trackConcentration={wrappedData.track_concentration}
+            artistCount={wrappedData.top_artists.length}
+            trackCount={wrappedData.top_tracks.length}
+          />
+        ),
+      },
+    ];
+
+  return <RecapLayout sections={sections} title={`${year} Wrapped`} />;
+}
+
+function WrappedState({ text, tone }: { text: string; tone: "default" | "error" }) {
   return (
-    <main className="flex min-h-screen flex-grow justify-center px-0 pb-8 pt-6 sm:pb-10 sm:pt-12">
-      <div className="flex w-full flex-1 justify-center">
-        <div className="w-19/20 sm:17/20 flex max-w-[1400px] flex-col gap-8 sm:gap-10 lg:gap-12">
-          <div className="border-b border-[var(--color-fg-tertiary)] pb-6 sm:pb-8">
-            <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-              <h1 className="text-4xl font-black tracking-tight text-[var(--color-fg)] sm:text-5xl md:text-6xl">
-                {year} Wrapped
-              </h1>
-              <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
-                {years.map((optionYear) => {
-                  const isActive = optionYear === year;
-
-                  return (
-                    <button
-                      key={optionYear}
-                      type="button"
-                      onClick={() => setYear(optionYear)}
-                      disabled={isActive}
-                      className={`min-w-[84px] flex-1 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors cursor-pointer sm:flex-none ${
-                        isActive
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-bg)]"
-                          : "border-[var(--color-accent)] bg-[var(--color-bg-secondary)] text-[var(--color-fg)] hover:bg-[var(--color-accent)]/10 hover:border-[var(--color-primary)]"
-                      }`}
-                    >
-                      {optionYear}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            <StatCard title="Total Plays" value={data.total_listens.toLocaleString()} />
-            <StatCard title="Total Listening Time" value={<>{totalHours}<span className="text-xl ml-1 mr-2 opacity-60">hrs</span>{totalMinutes}<span className="text-xl ml-1 opacity-60">min</span></>} />
-            <StatCard title="Artists" value={data.unique_artists.toLocaleString()} />
-            <StatCard title="Tracks" value={data.unique_tracks.toLocaleString()} />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-            <div className="col-span-1 lg:col-span-2 bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
-               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                  <span className="text-[var(--color-accent)]">●</span> Listening by Hour
-               </h2>
-               <div className="h-[300px]">
-                 {(data.listening_hours || []).length > 0 ? (
-                 <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={data.listening_hours}>
-                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} stroke="var(--color-fg)" />
-                     <XAxis 
-                       dataKey="hour" 
-                       tickFormatter={(val) => `${val}`} 
-                       stroke="var(--color-fg-secondary)" 
-                       tick={{fontSize: 12}}
-                       axisLine={false}
-                       tickLine={false}
-                     />
-                     <YAxis hide />
-                     <Tooltip 
-                       contentStyle={{
-                         backgroundColor: 'var(--color-bg)', 
-                         border: '1px solid var(--color-fg-tertiary)',
-                         borderRadius: '8px',
-                         color: 'var(--color-fg)'
-                       }} 
-                       itemStyle={{color: 'var(--color-fg)'}}
-                       cursor={{fill: 'var(--color-fg-tertiary)', opacity: 0.1}}
-                     />
-                     <Bar 
-                       dataKey="listen_count" 
-                       fill="var(--color-primary)" 
-                       radius={[4, 4, 0, 0]} 
-                     />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full opacity-50">No data</div>
-                  )}
-               </div>
-            </div>
-
-            <div className="flex h-full flex-col gap-6">
-               <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-wider text-[var(--color-primary)]">Busiest Week</h2>
-                   {data.busiest_week ? (
-                      <>
-                          <div className="text-4xl font-black tracking-tight text-[var(--color-fg)]">{data.busiest_week.listen_count} plays</div>
-                          <div className="mt-2 text-sm text-[var(--color-fg-secondary)]">week of {new Date(data.busiest_week.week_start).toLocaleDateString()}</div>
-                      </>
-                   ) : <div className="text-sm text-[var(--color-fg-secondary)]/80">No data</div>}
-               </div>
-               <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-wider text-[var(--color-primary)]">Artist Concentration</h2>
-                  <div className="flex items-baseline gap-2">
-                    <div className="text-4xl font-black tracking-tight text-[var(--color-primary)]">{data.artist_concentration}%</div>
-                  </div>
-                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">Top artist share of total listens</p>
-               </div>
-               <div className="flex flex-1 flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-6 md:px-7 md:py-7">
-                  <h2 className="mb-4 text-xs font-bold tracking-wider text-[var(--color-primary)]">Track Concentration</h2>
-                  <div className="flex items-baseline gap-2">
-                    <div className="text-4xl font-black tracking-tight text-[var(--color-accent)]">{data.track_concentration}%</div>
-                  </div>
-                  <p className="mt-2 text-sm text-[var(--color-fg-secondary)]">Top track share of total listens</p>
-               </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
-            <TopList title="Top Tracks" items={data.top_tracks} type="track" />
-            <TopList title="Top Artists" items={data.top_artists} type="artist" />
-            <TopList title="Top Albums" items={data.top_albums} type="album" />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
-            <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)]">
-               <h2 className="text-2xl font-bold mb-8 flex items-center gap-2">
-                  <span className="text-[var(--color-primary)]">★</span> New Artists Discovered
-               </h2>
-               {(data.top_new_artists || []).length === 0 ? (
-                 <div className="flex items-center justify-center h-32 opacity-50">No data</div>
-               ) : (
-               <div className="space-y-6">
-                  {(data.top_new_artists || []).slice(0, 5).map((artist) => (
-                   <Link to={`/artist/${artist.id}`} key={artist.id} className="flex items-center gap-4 group hover:bg-[var(--color-fg-tertiary)] p-2 rounded-lg transition-colors -mx-2">
-                     <div className="w-14 h-14 rounded-full overflow-hidden shadow-sm">
-                       <img src={imageUrl(artist.image, "small")} alt={artist.name} className="w-full h-full object-cover" />
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="font-bold truncate group-hover:text-[var(--color-primary)] transition-colors">{artist.name}</div>
-                      <div className="text-sm opacity-60">{artist.listen_count} plays</div>
-                     </div>
-                   </Link>
-                  ))}
-                </div>
-               )}
-            </div>
-
-            <div className="bg-[var(--color-bg-secondary)] p-8 rounded-lg border border-[var(--color-fg-tertiary)] flex flex-col">
-               <h2 className="text-2xl font-bold mb-8 flex items-center gap-2">
-                  <span className="text-[var(--color-accent)]">↻</span> Most Replayed Track
-               </h2>
-               {data.most_replayed_track ? (
-                 <div className="flex-1 flex flex-col items-center justify-center text-center">
-                    <div className="w-48 h-48 rounded-lg overflow-hidden mb-6 shadow-md relative group">
-                       <img src={imageUrl(data.most_replayed_track.track.image, "medium")} alt={data.most_replayed_track.track.title} className="w-full h-full object-cover" />
-                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link to={`/track/${data.most_replayed_track.track.id}`} className="px-4 py-2 bg-white text-black rounded-full font-bold text-sm">View Track</Link>
-                       </div>
-                    </div>
-                    <h3 className="text-2xl font-bold mb-1">{data.most_replayed_track.track.title}</h3>
-                    <p className="text-lg opacity-70 mb-6">{data.most_replayed_track.track.artists.map(a => a.name).join(", ")}</p>
-                    <div className="inline-block bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-6 py-3 rounded-full font-bold border border-[var(--color-primary)]/30">
-                      {data.most_replayed_track.streak_count} consecutive plays
-                    </div>
-                 </div>
-               ) : (
-                 <div className="flex-1 flex items-center justify-center opacity-50">
-                  No data
-                 </div>
-               )}
-            </div>
-          </div>
-
-        </div>
+    <main className="flex min-h-screen items-center justify-center px-6 py-16 text-center">
+      <div
+        className={`rounded-[32px] border px-8 py-10 backdrop-blur-sm ${
+          tone === "error"
+            ? "border-red-400/25 bg-red-500/10 text-red-200"
+            : "border-[var(--color-primary)]/15 bg-[var(--color-bg)]/70 text-[var(--color-fg)]"
+        }`}
+      >
+        <p className="header-font text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">{text}</p>
       </div>
     </main>
   );
 }
 
-function StatCard({ title, value }: { title: string, value: React.ReactNode }) {
+function IntroSection({
+  year,
+  years,
+  selectedYear,
+  onSelectYear,
+}: {
+  year: number;
+  years: number[];
+  selectedYear: number;
+  onSelectYear: (year: number) => void;
+}) {
   return (
-    <div className="flex h-full flex-col justify-between rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-7 md:px-8 md:py-8">
-      <div className="mb-5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary)]">{title}</div>
-      <div className="text-4xl font-black tracking-tight text-[var(--color-fg)] lg:text-5xl">{value}</div>
+    <div className="flex min-h-[70vh] flex-col justify-between gap-10 lg:min-h-[78vh]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.75, ease: introEasing }}
+          className="max-w-[640px]"
+        >
+          <div className="mb-4 inline-flex items-center rounded-full border border-white/12 bg-[var(--color-bg)]/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-fg)]/74 backdrop-blur-sm sm:px-5 sm:py-3">
+            Koito Wrapped
+          </div>
+          <p className="header-font text-7xl font-semibold leading-[0.88] tracking-[-0.06em] text-white sm:text-8xl lg:text-[11rem]">
+            {year}
+          </p>
+          <h1 className="mt-4 max-w-[12ch] text-5xl font-semibold leading-[0.9] tracking-[-0.05em] text-white sm:text-6xl lg:text-8xl">
+            Your Year in Music
+          </h1>
+          <p className="mt-6 max-w-[34ch] text-base leading-7 text-white/72 sm:text-lg">
+            A scrollable replay of every obsession, routine, and late-night repeat that defined your listening year.
+          </p>
+        </motion.div>
+
+        <YearSelector years={years} selectedYear={selectedYear} onSelectYear={onSelectYear} />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 36 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.16, ease: introEasing }}
+        className="grid gap-4 sm:grid-cols-3"
+      >
+        <IntroTag title="Replay style" value="Apple Music energy" />
+        <IntroTag title="Built for" value="375px and up" />
+        <IntroTag title="Navigation" value="Swipe, scroll, revisit" />
+      </motion.div>
     </div>
   );
 }
 
-type TopListProps =
-  | { title: string; type: "track"; items: WrappedTrack[] }
-  | { title: string; type: "artist"; items: WrappedArtist[] }
-  | { title: string; type: "album"; items: WrappedAlbum[] };
-
-function TopList(props: TopListProps) {
+function YearSelector({
+  years,
+  selectedYear,
+  onSelectYear,
+}: {
+  years: number[];
+  selectedYear: number;
+  onSelectYear: (year: number) => void;
+}) {
   return (
-    <div className="rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-bg)] px-6 py-7 shadow-[0_24px_80px_-56px_rgba(0,0,0,0.9)] md:px-8 md:py-8">
-      <h2 className="mb-6 text-sm font-bold tracking-wide text-[var(--color-primary)]">{props.title}</h2>
-      {props.items.length === 0 ? (
-        <div className="flex h-32 items-center justify-center text-sm text-[var(--color-fg-secondary)]/80">No data</div>
-      ) : (
-      <div className="space-y-3">
-        {props.type === "track" ? props.items.slice(0, 5).map((item, i) => (
-          <div key={item.id} className="group flex items-center gap-4 rounded-2xl border border-transparent bg-[var(--color-bg-secondary)]/45 px-3 py-3 transition-all duration-200 hover:border-[var(--color-primary)]/15 hover:bg-[var(--color-bg-secondary)]/80">
-            <div className={`flex h-10 w-8 flex-shrink-0 items-center justify-center text-xl font-black tracking-tight 
-                ${i === 0 ? 'text-[var(--color-accent)]' : 
-                  i === 1 ? 'text-[var(--color-fg)]/85' : 
-                  i === 2 ? 'text-[var(--color-fg)]/65' : 'text-[var(--color-fg)]/45 text-lg'}`}>
-              {i + 1}
-            </div>
-            <Link to={`/track/${item.id}`} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/8 bg-black/20 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.95)] transition-transform duration-200 group-hover:scale-[1.03]">
-              <img
-                src={imageUrl(item.image, "small")}
-                alt={item.title}
-                className="w-full h-full object-cover"
-              />
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link to={`/track/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
-                {item.title}
-              </Link>
-              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">
-                {item.artists.map((a) => a.name).join(", ")}
-                <span className="mx-1">•</span>
-                {item.listen_count} plays
-              </div>
-            </div>
-          </div>
-        )) : null}
+    <div className="w-full max-w-[420px] rounded-[28px] border border-white/12 bg-[var(--color-bg)]/28 p-4 backdrop-blur-md sm:p-5 lg:sticky lg:top-28">
+      <div className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-white/64">Choose year</div>
+      <div className="flex flex-wrap gap-2">
+        {years.map((optionYear) => {
+          const isActive = optionYear === selectedYear;
 
-        {props.type === "artist" ? props.items.slice(0, 5).map((item, i) => (
-          <div key={item.id} className="group flex items-center gap-4 rounded-2xl border border-transparent bg-[var(--color-bg-secondary)]/45 px-3 py-3 transition-all duration-200 hover:border-[var(--color-primary)]/15 hover:bg-[var(--color-bg-secondary)]/80">
-            <div className={`flex h-10 w-8 flex-shrink-0 items-center justify-center text-xl font-black tracking-tight 
-                ${i === 0 ? 'text-[var(--color-accent)]' : 
-                  i === 1 ? 'text-[var(--color-fg)]/85' : 
-                  i === 2 ? 'text-[var(--color-fg)]/65' : 'text-[var(--color-fg)]/45 text-lg'}`}>
-              {i + 1}
-            </div>
-            <Link to={`/artist/${item.id}`} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/8 bg-black/20 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.95)] transition-transform duration-200 group-hover:scale-[1.03]">
-              <img
-                src={imageUrl(item.image, "small")}
-                alt={item.name}
-                className="w-full h-full object-cover"
-              />
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link to={`/artist/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
-                {item.name}
-              </Link>
-              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count} plays</div>
-            </div>
-          </div>
-        )) : null}
-
-        {props.type === "album" ? props.items.slice(0, 5).map((item, i) => (
-          <div key={item.id} className="group flex items-center gap-4 rounded-2xl border border-transparent bg-[var(--color-bg-secondary)]/45 px-3 py-3 transition-all duration-200 hover:border-[var(--color-primary)]/15 hover:bg-[var(--color-bg-secondary)]/80">
-            <div className={`flex h-10 w-8 flex-shrink-0 items-center justify-center text-xl font-black tracking-tight 
-                ${i === 0 ? 'text-[var(--color-accent)]' : 
-                  i === 1 ? 'text-[var(--color-fg)]/85' : 
-                  i === 2 ? 'text-[var(--color-fg)]/65' : 'text-[var(--color-fg)]/45 text-lg'}`}>
-              {i + 1}
-            </div>
-            <Link to={`/album/${item.id}`} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/8 bg-black/20 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.95)] transition-transform duration-200 group-hover:scale-[1.03]">
-              <img
-                src={imageUrl(item.image, "small")}
-                alt={item.title}
-                className="w-full h-full object-cover"
-              />
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link to={`/album/${item.id}`} className="block truncate text-base font-black tracking-tight text-[var(--color-fg)] transition-colors hover:text-[var(--color-primary)] md:text-lg">
-                {item.title}
-              </Link>
-              <div className="mt-1 truncate text-sm text-[var(--color-fg-secondary)]">{item.listen_count} plays</div>
-            </div>
-          </div>
-        )) : null}
+          return (
+            <button
+              key={optionYear}
+              type="button"
+              onClick={() => onSelectYear(optionYear)}
+              disabled={isActive}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                isActive
+                  ? "border-white/20 bg-white text-[#090b14]"
+                  : "border-white/10 bg-white/6 text-white/74 hover:border-white/24 hover:bg-white/12"
+              }`}
+            >
+              {optionYear}
+            </button>
+          );
+        })}
       </div>
+    </div>
+  );
+}
+
+function IntroTag({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-[28px] border border-white/10 bg-[var(--color-bg)]/30 px-5 py-5 text-white backdrop-blur-sm sm:px-6 sm:py-6">
+      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/52">{title}</div>
+      <div className="header-font mt-3 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">{value}</div>
+    </div>
+  );
+}
+
+function TotalsSection({ data }: { data: WrappedData }) {
+  const duration = formatDuration(data.total_seconds_listened);
+
+  return (
+    <div className="space-y-8">
+      <SectionHeading
+        eyebrow="Totals"
+        title="Everything added up."
+        description="Your headline numbers, counted up as soon as this chapter comes into view."
+      />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricPanel
+          label="Total listens"
+          value={<AnimatedCounter value={data.total_listens} />}
+          detail="Tracks started, replayed, and fully obsessed over."
+        />
+        <MetricPanel
+          label="Time listened"
+          value={<AnimatedCounter value={duration.hours} suffix="h" />}
+          secondaryValue={<AnimatedCounter value={duration.minutes} suffix="m" />}
+          detail="A year measured in long drives, deskside sessions, and midnight queues."
+        />
+        <MetricPanel
+          label="Unique artists"
+          value={<AnimatedCounter value={data.unique_artists} />}
+          detail="Different artists that made it into your rotation."
+        />
+        <MetricPanel
+          label="Unique tracks"
+          value={<AnimatedCounter value={data.unique_tracks} />}
+          secondaryValue={<AnimatedCounter value={data.unique_albums} suffix=" albums" />}
+          detail="Distinct songs and albums that shaped the year."
+        />
+      </div>
+    </div>
+  );
+}
+
+function MetricPanel({
+  label,
+  value,
+  secondaryValue,
+  detail,
+}: {
+  label: string;
+  value: ReactNode;
+  secondaryValue?: ReactNode;
+  detail: string;
+}) {
+  return (
+    <div className="flex min-h-[240px] flex-col justify-between rounded-[32px] border border-white/10 bg-[var(--color-bg)]/34 px-6 py-7 text-white backdrop-blur-md sm:px-7 sm:py-8">
+      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">{label}</div>
+      <div>
+        <div className="header-font text-5xl font-semibold leading-none tracking-[-0.05em] sm:text-6xl">{value}</div>
+        {secondaryValue ? (
+          <div className="mt-3 text-lg font-medium tracking-[-0.02em] text-white/68 sm:text-xl">{secondaryValue}</div>
+        ) : null}
+      </div>
+      <p className="text-sm leading-6 text-white/64">{detail}</p>
+    </div>
+  );
+}
+
+function TopItemsSection({
+  eyebrow,
+  title,
+  description,
+  items,
+  type,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  items: TopItem[];
+  type: "track" | "artist" | "album";
+}) {
+  return (
+    <div className="space-y-8">
+      <SectionHeading eyebrow={eyebrow} title={title} description={description} />
+
+      {items.length === 0 ? (
+        <EmptyPanel text="No listening data available for this section." />
+      ) : (
+        <div className="grid gap-4">
+          {items.slice(0, 5).map((item, index) => (
+            <TopItemLinkCard key={`${type}-${item.id}`} item={item} rank={index + 1} type={type} />
+          ))}
+        </div>
       )}
     </div>
-  )
+  );
+}
+
+function TopItemLinkCard({ item, rank, type }: { item: TopItem; rank: number; type: "track" | "artist" | "album" }) {
+  const href = type === "track" ? `/track/${item.id}` : type === "artist" ? `/artist/${item.id}` : `/album/${item.id}`;
+  const imageSource = imageUrl(getItemImage(item), rank === 1 ? "medium" : "small");
+  const subtitle =
+    type === "track"
+      ? getArtistNames((item as WrappedTrack).artists)
+      : type === "album"
+        ? `${item.listen_count.toLocaleString()} plays this year`
+        : undefined;
+
+  return (
+    <Link to={href} className="block">
+      <TopItemCard
+        rank={rank}
+        name={getItemName(item, type)}
+        imageUrl={imageSource}
+        subtitle={subtitle}
+        plays={item.listen_count}
+      />
+    </Link>
+  );
+}
+
+function ListeningHoursSection({ hours }: { hours: { hour: number; listen_count: number }[] }) {
+  const bestHour = hours.reduce<{ hour: number; listen_count: number } | null>((currentBest, entry) => {
+    if (!currentBest || entry.listen_count > currentBest.listen_count) {
+      return entry;
+    }
+
+    return currentBest;
+  }, null);
+
+  return (
+    <div className="space-y-8">
+      <SectionHeading
+        eyebrow="Listening Hours"
+        title="Your day had a soundtrack."
+        description="See which hours pulled the most plays, with the same bar chart data you already had behind the scenes."
+      />
+
+      <GradientBackground colors={getWrappedGradient(5)}>
+        <div className="grid gap-6 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+          <div className="h-[320px] w-full sm:h-[380px]">
+            {hours.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={hours} margin={{ left: -20, right: 0, top: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.14} stroke="var(--color-fg)" />
+                  <XAxis
+                    dataKey="hour"
+                    tickFormatter={(value) => formatHour(value)}
+                    stroke="var(--color-fg-secondary)"
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    cursor={{ fill: "rgba(255,255,255,0.08)" }}
+                    contentStyle={{
+                      backgroundColor: "rgba(8, 10, 18, 0.92)",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                      borderRadius: "18px",
+                      color: "white",
+                    }}
+                    labelFormatter={(value) => `${formatHour(Number(value))}`}
+                    formatter={(value) => [`${Number(value).toLocaleString()} plays`, "Listens"]}
+                  />
+                  <Bar dataKey="listen_count" fill="var(--color-primary)" radius={[10, 10, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center rounded-[28px] border border-white/10 bg-black/10 text-sm text-white/64">
+                No hourly listening data yet.
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4 text-white">
+            <div className="rounded-[28px] border border-white/10 bg-black/10 px-5 py-5 backdrop-blur-sm sm:px-6 sm:py-6">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">Peak hour</div>
+              <div className="header-font mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
+                {bestHour ? formatHour(bestHour.hour) : "—"}
+              </div>
+              <div className="mt-2 text-sm text-white/68">
+                {bestHour ? `${bestHour.listen_count.toLocaleString()} plays landed in this hour.` : "No standout hour yet."}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/10 bg-black/10 px-5 py-5 backdrop-blur-sm sm:px-6 sm:py-6">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">Daily pattern</div>
+              <p className="mt-4 text-base leading-7 text-white/72">
+                Early mornings, workday loops, and late-night replays all show up here as a single glow-up of your routine.
+              </p>
+            </div>
+          </div>
+        </div>
+      </GradientBackground>
+    </div>
+  );
+}
+
+function DiscoverySection({
+  topNewArtists,
+  firstListen,
+  tracksPlayedEveryMonth,
+}: {
+  topNewArtists: WrappedArtist[];
+  firstListen: WrappedFirstListen | null;
+  tracksPlayedEveryMonth: WrappedTrack[];
+}) {
+  return (
+    <div className="space-y-8">
+      <SectionHeading
+        eyebrow="Discovery"
+        title="You still made room for surprises."
+        description="New artists, the first play of the year, and the songs that stayed with you month after month."
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+        <GradientBackground colors={getWrappedGradient(6)}>
+          <div className="px-5 py-6 sm:px-7 sm:py-8">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/56">Top new artists</div>
+                <h2 className="mt-3 text-3xl font-semibold leading-[0.95] tracking-[-0.04em] text-white sm:text-4xl">
+                  Fresh names entered the rotation.
+                </h2>
+              </div>
+              <div className="rounded-full border border-white/10 bg-black/10 px-4 py-2 text-sm font-semibold text-white/76">
+                {topNewArtists.length.toLocaleString()} discovered
+              </div>
+            </div>
+
+            {topNewArtists.length > 0 ? (
+              <div className="grid gap-3">
+                {topNewArtists.slice(0, 5).map((artist, index) => (
+                  <Link key={artist.id} to={`/artist/${artist.id}`} className="block">
+                    <TopItemCard
+                      rank={index + 1}
+                      name={artist.name}
+                      imageUrl={imageUrl(artist.image, "small")}
+                      plays={artist.listen_count}
+                    />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel text="No new artists were identified for this year." />
+            )}
+          </div>
+        </GradientBackground>
+
+        <div className="grid gap-4">
+          <InfoPanel
+            label="First listen"
+            title={firstListen?.track.title ?? "No first listen captured"}
+            description={
+              firstListen
+                ? `${formatDateTime(firstListen.time)} · ${getArtistNames(firstListen.track.artists)}`
+                : "The year’s first play will appear here when data is available."
+            }
+            imageSource={firstListen ? imageUrl(firstListen.track.image, "medium") : undefined}
+            href={firstListen ? `/track/${firstListen.track.id}` : undefined}
+          />
+
+          <div className="rounded-[32px] border border-white/10 bg-[var(--color-bg)]/34 px-5 py-6 text-white backdrop-blur-md sm:px-6 sm:py-7">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">Every month favorites</div>
+            <div className="header-font mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
+              <AnimatedCounter value={tracksPlayedEveryMonth.length} />
+            </div>
+            <p className="mt-2 text-sm leading-6 text-white/66">
+              Tracks that never fully left your rotation from January to December.
+            </p>
+
+            <div className="mt-5 grid gap-2">
+              {tracksPlayedEveryMonth.length > 0 ? (
+                tracksPlayedEveryMonth.slice(0, 4).map((track) => (
+                  <Link
+                    key={track.id}
+                    to={`/track/${track.id}`}
+                    className="flex items-center gap-3 rounded-[22px] border border-white/8 bg-black/10 px-3 py-3 transition-colors hover:bg-black/16"
+                  >
+                    <img
+                      src={imageUrl(track.image, "small")}
+                      alt={track.title}
+                      className="h-12 w-12 rounded-[14px] object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-base font-medium text-white">{track.title}</div>
+                      <div className="truncate text-sm text-white/60">{getArtistNames(track.artists)}</div>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-white/10 px-4 py-5 text-sm text-white/56">
+                  No month-spanning track streaks yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BusiestWeekSection({ busiestWeek }: { busiestWeek: { week_start: string; listen_count: number } | null }) {
+  return (
+    <div className="space-y-8">
+      <SectionHeading
+        eyebrow="Busiest Week"
+        title="One week went louder than the rest."
+        description="A single stretch where your listening activity peaked and left the strongest imprint."
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <StatReveal value={busiestWeek?.listen_count ?? 0} label="Most plays in one week" />
+
+        <GradientBackground colors={getWrappedGradient(7)}>
+          <div className="flex h-full min-h-[320px] flex-col justify-between px-6 py-7 text-white sm:px-8 sm:py-9">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">Week starting</div>
+            <div>
+              <div className="header-font text-4xl font-semibold leading-[0.92] tracking-[-0.04em] sm:text-6xl">
+                {busiestWeek ? formatWeekRange(busiestWeek.week_start) : "No weekly highlight"}
+              </div>
+              <p className="mt-4 max-w-[36ch] text-sm leading-7 text-white/72 sm:text-base">
+                {busiestWeek
+                  ? `You logged ${busiestWeek.listen_count.toLocaleString()} plays during this week, making it the busiest run of your year.`
+                  : "Once enough listening history is available, your busiest week will surface here."}
+              </p>
+            </div>
+          </div>
+        </GradientBackground>
+      </div>
+    </div>
+  );
+}
+
+function MostReplayedSection({
+  mostReplayedTrack,
+}: {
+  mostReplayedTrack: { track: WrappedTrack; streak_count: number } | null;
+}) {
+  return (
+    <div className="space-y-8">
+      <SectionHeading
+        eyebrow="Most Replayed"
+        title="This one kept coming back."
+        description="A true repeat offender, measured by the longest uninterrupted streak of plays."
+      />
+
+      {mostReplayedTrack ? (
+        <GradientBackground colors={getWrappedGradient(8)}>
+          <div className="grid gap-6 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-center">
+            <Link to={`/track/${mostReplayedTrack.track.id}`} className="mx-auto block w-full max-w-[280px] lg:mx-0">
+              <img
+                src={imageUrl(mostReplayedTrack.track.image, "large")}
+                alt={mostReplayedTrack.track.title}
+                className="aspect-square w-full rounded-[32px] border border-white/10 object-cover shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+              />
+            </Link>
+
+            <div className="text-white">
+              <div className="mb-4 inline-flex rounded-full border border-white/12 bg-black/10 px-4 py-2 text-sm font-semibold text-white/76">
+                {mostReplayedTrack.streak_count.toLocaleString()} consecutive plays
+              </div>
+              <h2 className="text-4xl font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-6xl">
+                {mostReplayedTrack.track.title}
+              </h2>
+              <p className="mt-4 text-lg text-white/70 sm:text-xl">{getArtistNames(mostReplayedTrack.track.artists)}</p>
+              <p className="mt-6 max-w-[38ch] text-sm leading-7 text-white/72 sm:text-base">
+                When one track matched the moment perfectly, you kept it running until the streak became the story.
+              </p>
+              <Link
+                to={`/track/${mostReplayedTrack.track.id}`}
+                className="mt-8 inline-flex rounded-full border border-white/10 bg-white px-5 py-3 text-sm font-semibold text-[#090b14] transition-transform hover:scale-[1.02]"
+              >
+                Open track
+              </Link>
+            </div>
+          </div>
+        </GradientBackground>
+      ) : (
+        <EmptyPanel text="No replay streak was found for this year." />
+      )}
+    </div>
+  );
+}
+
+function ConcentrationSection({
+  artistConcentration,
+  trackConcentration,
+  artistCount,
+  trackCount,
+}: {
+  artistConcentration: number;
+  trackConcentration: number;
+  artistCount: number;
+  trackCount: number;
+}) {
+  return (
+    <div className="space-y-8">
+      <SectionHeading
+        eyebrow="Concentration"
+        title="You knew exactly what you loved."
+        description="A quick read on how much of the year was concentrated around your biggest favorites."
+      />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ConcentrationPanel
+          label="Artist concentration"
+          percentage={artistConcentration}
+          sentence={`Your top ${artistCount} artists made up ${artistConcentration.toFixed(1)}% of listens.`}
+        />
+        <ConcentrationPanel
+          label="Track concentration"
+          percentage={trackConcentration}
+          sentence={`Your top ${trackCount} tracks made up ${trackConcentration.toFixed(1)}% of listens.`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ConcentrationPanel({
+  label,
+  percentage,
+  sentence,
+}: {
+  label: string;
+  percentage: number;
+  sentence: string;
+}) {
+  return (
+    <GradientBackground colors={getWrappedGradient(Math.round(percentage) || 0)}>
+      <div className="flex min-h-[320px] flex-col justify-between px-6 py-7 text-white sm:px-8 sm:py-9">
+        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">{label}</div>
+        <div>
+          <div className="header-font text-5xl font-semibold tracking-[-0.05em] sm:text-7xl">
+            <AnimatedCounter value={percentage} suffix="%" />
+          </div>
+          <p className="mt-4 max-w-[28ch] text-base leading-7 text-white/72 sm:text-lg">{sentence}</p>
+        </div>
+      </div>
+    </GradientBackground>
+  );
+}
+
+function InfoPanel({
+  label,
+  title,
+  description,
+  imageSource,
+  href,
+}: {
+  label: string;
+  title: string;
+  description: string;
+  imageSource?: string;
+  href?: string;
+}) {
+  const content = (
+    <div className="rounded-[32px] border border-white/10 bg-[var(--color-bg)]/34 px-5 py-6 text-white backdrop-blur-md sm:px-6 sm:py-7">
+      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">{label}</div>
+      <div className="mt-5 flex items-start gap-4">
+        {imageSource ? <img src={imageSource} alt={title} className="h-20 w-20 rounded-[22px] object-cover" /> : null}
+        <div className="min-w-0">
+          <div className="header-font text-2xl font-semibold tracking-[-0.03em] text-white sm:text-3xl">{title}</div>
+          <p className="mt-3 text-sm leading-6 text-white/66">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!href) {
+    return content;
+  }
+
+  return <Link to={href}>{content}</Link>;
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="max-w-[760px] text-white">
+      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/54">{eyebrow}</div>
+      <h2 className="mt-4 text-4xl font-semibold leading-[0.92] tracking-[-0.05em] text-white sm:text-6xl">{title}</h2>
+      <p className="mt-5 max-w-[34ch] text-base leading-7 text-white/72 sm:text-lg">{description}</p>
+    </div>
+  );
+}
+
+function EmptyPanel({ text }: { text: string }) {
+  return (
+    <div className="rounded-[32px] border border-dashed border-white/10 bg-[var(--color-bg)]/24 px-6 py-10 text-center text-sm text-white/58 backdrop-blur-sm sm:px-8 sm:py-12">
+      {text}
+    </div>
+  );
+}
+
+function formatDuration(totalSeconds: number) {
+  return {
+    hours: Math.floor(totalSeconds / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+  };
+}
+
+function getItemName(item: TopItem, type: "track" | "artist" | "album") {
+  if (type === "artist") {
+    return (item as WrappedArtist).name;
+  }
+
+  return (item as WrappedTrack | WrappedAlbum).title;
+}
+
+function getItemImage(item: TopItem) {
+  return item.image ?? "";
+}
+
+function getArtistNames(artists: { name: string }[]) {
+  return artists.map((artist) => artist.name).join(", ");
+}
+
+function formatHour(hour: number) {
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${normalizedHour}${suffix}`;
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatWeekRange(weekStart: string) {
+  const start = new Date(weekStart);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}–${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
