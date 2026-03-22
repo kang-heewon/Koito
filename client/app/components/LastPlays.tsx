@@ -67,14 +67,14 @@ export default function LastPlays(props: Props) {
 
   if (isPending) {
     return (
-      <div className="w-[300px] sm:w-[500px]">
+      <div className="w-full sm:w-[500px]">
         <h2>Last Played</h2>
         <p>Loading...</p>
       </div>
     );
   } else if (isError) {
     return (
-      <div className="w-[300px] sm:w-[500px]">
+      <div className="w-full sm:w-[500px]">
         <h2>Last Played</h2>
         <p className="error">Error: {error.message}</p>
       </div>
@@ -98,68 +98,70 @@ export default function LastPlays(props: Props) {
           {deleteError}
         </p>
       ) : null}
-      <table className="-ml-4">
-        <tbody>
-          {props.showNowPlaying && npData && npData.currently_playing && (
-            <tr className="group hover:bg-[--color-bg-secondary]">
-              <td className="w-[18px] pr-2 align-middle"></td>
-              <td className="color-fg-tertiary pr-2 sm:pr-4 text-sm whitespace-nowrap w-0">
-                Now Playing
-              </td>
-              <td className="text-ellipsis overflow-hidden max-w-[400px] sm:max-w-[600px]">
-                {props.hideArtists ? null : (
-                  <>
-                    <ArtistLinks artists={npData.track.artists} /> –{" "}
-                  </>
-                )}
-                <Link
-                  className="hover:text-[--color-fg-secondary]"
-                  to={`/track/${npData.track.id}`}
-                >
-                  {npData.track.title}
-                </Link>
-              </td>
-            </tr>
-          )}
-          {listens.map((item) => (
-            <tr
-              key={`last_listen_${item.time}`}
-              className="group hover:bg-[--color-bg-secondary]"
-            >
-              <td className="w-[18px] pr-2 align-middle">
-                <button
-                  type="button"
-                  onClick={() => handleDelete(item)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-(--color-fg-tertiary) hover:text-(--color-error)"
-                  aria-label="Delete"
-                  hidden={user === null || user === undefined}
-                >
-                  ×
-                </button>
-              </td>
-              <td
-                className="color-fg-tertiary pr-2 sm:pr-4 text-sm whitespace-nowrap w-0"
-                title={new Date(item.time).toString()}
+      <div className="w-full max-w-full overflow-x-auto sm:max-w-[600px]">
+        <table className="-ml-4">
+          <tbody>
+            {props.showNowPlaying && npData && npData.currently_playing && (
+              <tr className="group hover:bg-[--color-bg-secondary]">
+                <td className="w-[18px] pr-2 align-middle"></td>
+                <td className="color-fg-tertiary pr-2 sm:pr-4 text-sm whitespace-nowrap w-0">
+                  Now Playing
+                </td>
+                <td className="text-ellipsis overflow-hidden max-w-[400px] sm:max-w-[600px]">
+                  {props.hideArtists ? null : (
+                    <>
+                      <ArtistLinks artists={npData.track.artists} /> –{" "}
+                    </>
+                  )}
+                  <Link
+                    className="hover:text-[--color-fg-secondary]"
+                    to={`/track/${npData.track.id}`}
+                  >
+                    {npData.track.title}
+                  </Link>
+                </td>
+              </tr>
+            )}
+            {listens.map((item) => (
+              <tr
+                key={`last_listen_${item.time}`}
+                className="group hover:bg-[--color-bg-secondary]"
               >
-                {timeSince(new Date(item.time))}
-              </td>
-              <td className="text-ellipsis overflow-hidden max-w-[400px] sm:max-w-[600px]">
-                {props.hideArtists ? null : (
-                  <>
-                    <ArtistLinks artists={item.track.artists} /> –{" "}
-                  </>
-                )}
-                <Link
-                  className="hover:text-[--color-fg-secondary]"
-                  to={`/track/${item.track.id}`}
+                <td className="w-[18px] pr-2 align-middle">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-(--color-fg-tertiary) hover:text-(--color-error)"
+                    aria-label="Delete"
+                    hidden={user === null || user === undefined}
+                  >
+                    ×
+                  </button>
+                </td>
+                <td
+                  className="color-fg-tertiary pr-2 sm:pr-4 text-sm whitespace-nowrap w-0"
+                  title={new Date(item.time).toString()}
                 >
-                  {item.track.title}
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  {timeSince(new Date(item.time))}
+                </td>
+                <td className="text-ellipsis overflow-hidden max-w-[400px] sm:max-w-[600px]">
+                  {props.hideArtists ? null : (
+                    <>
+                      <ArtistLinks artists={item.track.artists} /> –{" "}
+                    </>
+                  )}
+                  <Link
+                    className="hover:text-[--color-fg-secondary]"
+                    to={`/track/${item.track.id}`}
+                  >
+                    {item.track.title}
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

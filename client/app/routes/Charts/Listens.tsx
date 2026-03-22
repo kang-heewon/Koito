@@ -66,42 +66,44 @@ export default function Listens() {
                 Next
             </button>
             </div>
-                <table className="-ml-4">
-                    <tbody>
-                        {data.items
-                            .filter((item) => !removedTimes.has(buildRemovalKey(page, item.time)))
-                            .map((item) => (
-                            <tr key={`last_listen_${item.time}`} className="group hover:bg-[--color-bg-secondary]">
-                                <td className="w-[17px] pr-2 align-middle">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDelete(item, page)}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-(--color-fg-tertiary) hover:text-(--color-error)"
-                                        aria-label="Delete"
-                                        hidden={user === null || user === undefined}
+                <div className="overflow-x-auto">
+                    <table className="-ml-4">
+                        <tbody>
+                            {data.items
+                                .filter((item) => !removedTimes.has(buildRemovalKey(page, item.time)))
+                                .map((item) => (
+                                <tr key={`last_listen_${item.time}`} className="group hover:bg-[--color-bg-secondary]">
+                                    <td className="w-[17px] pr-2 align-middle">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDelete(item, page)}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-(--color-fg-tertiary) hover:text-(--color-error)"
+                                            aria-label="Delete"
+                                            hidden={user === null || user === undefined}
+                                        >
+                                            ×
+                                        </button>
+                                    </td>
+                                    <td
+                                        className="color-fg-tertiary pr-2 sm:pr-4 text-sm whitespace-nowrap w-0"
+                                        title={new Date(item.time).toString()}
                                     >
-                                        ×
-                                    </button>
-                                </td>
-                                <td
-                                    className="color-fg-tertiary pr-2 sm:pr-4 text-sm whitespace-nowrap w-0"
-                                    title={new Date(item.time).toString()}
-                                >
-                                    {timeSince(new Date(item.time))}
-                                </td>
-                                <td className="text-ellipsis overflow-hidden max-w-[400px] sm:max-w-[600px]">
-                                            <ArtistLinks artists={item.track.artists} /> –{' '}
-                                    <Link
-                                        className="hover:text-[--color-fg-secondary]"
-                                        to={`/track/${item.track.id}`}
-                                    >
-                                        {item.track.title}
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                        {timeSince(new Date(item.time))}
+                                    </td>
+                                    <td className="text-ellipsis overflow-hidden max-w-[400px] sm:max-w-[600px]">
+                                                <ArtistLinks artists={item.track.artists} /> –{' '}
+                                        <Link
+                                            className="hover:text-[--color-fg-secondary]"
+                                            to={`/track/${item.track.id}`}
+                                        >
+                                            {item.track.title}
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             <div className="flex gap-15 mx-auto">
                 <button type="button" className="default" onClick={onPrev} disabled={page <= 1}>
                 Prev
