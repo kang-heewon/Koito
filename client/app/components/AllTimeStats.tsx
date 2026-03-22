@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getStats, type Stats, type ApiError } from "api/api";
+import { getStats } from "api/api";
 
 export default function AllTimeStats() {
   const { isPending, isError, data, error } = useQuery({
@@ -9,7 +9,7 @@ export default function AllTimeStats() {
 
   if (isPending) {
     return (
-      <div className="w-[200px]">
+      <div className="w-full sm:w-[200px]">
         <h2>All Time Stats</h2>
         <p>Loading...</p>
       </div>

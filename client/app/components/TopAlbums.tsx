@@ -27,14 +27,14 @@ export default function TopAlbums(props: Props) {
   const rankedData = data as typeof data & { items: TopRanked<Album>[] };
   if (isPending || isFetching) {
     return (
-      <div className="w-[300px]">
+      <div className="w-full sm:w-[300px]">
         <h2>Top Albums</h2>
         <TopListSkeleton numItems={props.limit} />
       </div>
     );
   } else if (isError) {
     return (
-      <div className="w-[300px]">
+      <div className="w-full sm:w-[300px]">
         <h2>Top Albums</h2>
         <p className="error">Error: {error.message}</p>
       </div>
@@ -44,7 +44,7 @@ export default function TopAlbums(props: Props) {
   if (!rankedData?.items) return null;
 
   return (
-    <div className="w-[300px]">
+    <div className="w-full sm:w-[300px]">
       <h2 className="hover:underline">
         <Link
           to={`/chart/top-albums?period=${props.period}${
@@ -54,7 +54,7 @@ export default function TopAlbums(props: Props) {
           Top Albums
         </Link>
       </h2>
-      <div className="max-w-[300px]">
+      <div className="max-w-full sm:max-w-[300px]">
         <TopItemList type="album" data={rankedData} />
         {rankedData.items.length < 1 ? "No albums found for this period." : ""}
       </div>

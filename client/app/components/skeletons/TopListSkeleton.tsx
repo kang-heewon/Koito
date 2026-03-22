@@ -6,7 +6,7 @@ export default function TopListSkeleton({ numItems }: Props) {
     const skeletonItems = Array.from({ length: numItems }, (_, idx) => `top-list-skeleton-${idx + 1}`)
 
     return (
-        <div className="w-[300px] animate-pulse" aria-hidden="true">
+        <div className="w-full sm:w-[300px] animate-pulse" aria-hidden="true">
             {skeletonItems.map((itemKey) => (
                 <div key={itemKey} className="flex items-center gap-2 mb-[10px]">
                     <div className="w-12 h-12 bg-(--color-bg-tertiary) rounded-lg shrink-0"></div>

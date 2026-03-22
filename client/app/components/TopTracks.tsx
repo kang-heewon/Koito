@@ -29,14 +29,14 @@ const TopTracks = (props: Props) => {
   const rankedData = data as typeof data & { items: TopRanked<Track>[] };
   if (isPending || isFetching) {
     return (
-      <div className="w-[300px]">
+      <div className="w-full sm:w-[300px]">
         <h2>Top Tracks</h2>
         <TopListSkeleton numItems={props.limit} />
       </div>
     );
   } else if (isError) {
     return (
-      <div className="w-[300px]">
+      <div className="w-full sm:w-[300px]">
         <h2>Top Tracks</h2>
         <p className="error">Error: {error.message}</p>
       </div>
@@ -49,13 +49,13 @@ const TopTracks = (props: Props) => {
   params += props.albumId ? `&album_id=${props.albumId}` : "";
 
   return (
-    <div className="w-[300px]">
+    <div className="w-full sm:w-[300px]">
       <h2 className="hover:underline">
         <Link to={`/chart/top-tracks?period=${props.period}${params}`}>
           Top Tracks
         </Link>
       </h2>
-      <div className="max-w-[300px]">
+      <div className="max-w-full sm:max-w-[300px]">
         <TopItemList type="track" data={rankedData} />
         {rankedData.items.length < 1 ? "No tracks found for this period." : ""}
       </div>
