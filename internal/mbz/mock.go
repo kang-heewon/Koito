@@ -33,6 +33,14 @@ func (m *MbzMockCaller) GetRelease(ctx context.Context, id uuid.UUID) (*MusicBra
 	return release, nil
 }
 
+func (m *MbzMockCaller) GetReleaseGroupGenres(ctx context.Context, id uuid.UUID) ([]string, error) {
+	releaseGroup, exists := m.ReleaseGroups[id]
+	if !exists {
+		return nil, fmt.Errorf("release group with ID %s not found", id)
+	}
+	return musicBrainzGenresToNames(releaseGroup.Genres), nil
+}
+
 func (m *MbzMockCaller) GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
 	release, exists := m.Releases[id]
 	if !exists {
@@ -83,11 +91,11 @@ func (m *MbzMockCaller) GetArtistGenres(ctx context.Context, id uuid.UUID) ([]st
 	if !exists {
 		return nil, fmt.Errorf("artist with ID %s not found", id)
 	}
-	genres := make([]string, len(artist.Genres))
-	for i, g := range artist.Genres {
-		genres[i] = g.Name
+	genres := musicBrainzGenresToNames(artist.Genres)
+	if len(genres) > 0 {
+		return genres, nil
 	}
-	return genres, nil
+	return musicBrainzTagsToGenres(artist.Tags), nil
 }
 
 func (m *MbzMockCaller) SearchRelease(ctx context.Context, artist, title string) (*MusicBrainzSearchResult, error) {
@@ -104,6 +112,10 @@ func (m *MbzErrorCaller) GetReleaseGroup(ctx context.Context, id uuid.UUID) (*Mu
 
 func (m *MbzErrorCaller) GetRelease(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
 	return nil, fmt.Errorf("error: GetRelease not implemented")
+}
+
+func (m *MbzErrorCaller) GetReleaseGroupGenres(ctx context.Context, id uuid.UUID) ([]string, error) {
+	return nil, fmt.Errorf("error: GetReleaseGroupGenres not implemented")
 }
 
 func (m *MbzErrorCaller) GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {

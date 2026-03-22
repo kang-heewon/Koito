@@ -43,6 +43,7 @@ type MusicBrainzCaller interface {
 	GetReleaseTitles(ctx context.Context, RGID uuid.UUID) ([]string, error)
 	GetTrack(ctx context.Context, id uuid.UUID) (*MusicBrainzTrack, error)
 	GetReleaseGroup(ctx context.Context, id uuid.UUID) (*MusicBrainzReleaseGroup, error)
+	GetReleaseGroupGenres(ctx context.Context, id uuid.UUID) ([]string, error)
 	GetRelease(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error)
 	GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error)
 	SearchRelease(ctx context.Context, artist, title string) (*MusicBrainzSearchResult, error)

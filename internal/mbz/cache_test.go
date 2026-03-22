@@ -157,3 +157,64 @@ func TestGetArtistPrimaryAliases_CacheHitSkipsSecondRequest(t *testing.T) {
 	mu.Unlock()
 	assert.Equal(t, 1, count)
 }
+
+func TestGetReleaseWithGenres_FetchesReleaseGroupGenresWhenMissing(t *testing.T) {
+	releaseID := uuid.New()
+	releaseGroupID := uuid.New()
+
+	var mu sync.Mutex
+	requestCount := make(map[string]int)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requestCount[r.URL.Path+"?"+r.URL.RawQuery]++
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+
+		switch r.URL.Path {
+		case "/ws/2/release/" + releaseID.String():
+			assert.Equal(t, "release-groups genres tags", r.URL.Query().Get("inc"))
+			_, _ = w.Write([]byte(`{"title":"release-a","id":"` + releaseID.String() + `","release-group":{"id":"` + releaseGroupID.String() + `","title":"rg-a","genres":[],"tags":[{"name":"Dream Pop"}]}}`))
+		case "/ws/2/release-group/" + releaseGroupID.String():
+			assert.Equal(t, "genres", r.URL.Query().Get("inc"))
+			_, _ = w.Write([]byte(`{"id":"` + releaseGroupID.String() + `","genres":[{"name":"shoegaze"}]}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := newMusicBrainzClientWithCache(server.URL, cache.NewDefaultStore())
+	defer client.Shutdown()
+
+	release, err := client.GetReleaseWithGenres(context.Background(), releaseID)
+	require.NoError(t, err)
+	require.NotNil(t, release)
+	require.NotNil(t, release.ReleaseGroup)
+	assert.Equal(t, []string{"shoegaze"}, ReleaseGroupToGenres(release.ReleaseGroup))
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, 1, requestCount["/ws/2/release/"+releaseID.String()+"?inc=release-groups+genres+tags"])
+	assert.Equal(t, 1, requestCount["/ws/2/release-group/"+releaseGroupID.String()+"?inc=genres"])
+}
+
+func TestGetArtistGenres_FallsBackToNormalizedTags(t *testing.T) {
+	artistID := uuid.New()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		assert.Equal(t, "/ws/2/artist/"+artistID.String(), r.URL.Path)
+		assert.Equal(t, "aliases genres tags", r.URL.Query().Get("inc"))
+		_, _ = w.Write([]byte(`{"name":"artist-a","genres":[],"tags":[{"name":" Dream Pop "},{"name":"dream pop"},{"name":""},{"name":"Shoegaze"}]}`))
+	}))
+	defer server.Close()
+
+	client := newMusicBrainzClientWithCache(server.URL, cache.NewDefaultStore())
+	defer client.Shutdown()
+
+	genres, err := client.GetArtistGenres(context.Background(), artistID)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"dream pop", "shoegaze"}, genres)
+}

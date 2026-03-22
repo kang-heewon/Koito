@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +18,10 @@ type MusicBrainzGenre struct {
 	Name string `json:"name"`
 }
 
+type MusicBrainzTag struct {
+	Name string `json:"name"`
+}
+
 type MusicBrainzReleaseGroup struct {
 	ID           string                    `json:"id"`
 	Title        string                    `json:"title"`
@@ -24,6 +29,7 @@ type MusicBrainzReleaseGroup struct {
 	ArtistCredit []MusicBrainzArtistCredit `json:"artist-credit"`
 	Releases     []MusicBrainzRelease      `json:"releases"`
 	Genres       []MusicBrainzGenre        `json:"genres"`
+	Tags         []MusicBrainzTag          `json:"tags"`
 }
 
 type MusicBrainzRelease struct {
@@ -44,8 +50,9 @@ type TextRepresentation struct {
 }
 
 const releaseGroupFmtStr = "%s/ws/2/release-group/%s?inc=releases+artists+genres"
+const releaseGroupGenresFmtStr = "%s/ws/2/release-group/%s?inc=genres"
 const releaseFmtStr = "%s/ws/2/release/%s?inc=artists"
-const releaseWithGenresFmtStr = "%s/ws/2/release/%s?inc=release-groups+genres"
+const releaseWithGenresFmtStr = "%s/ws/2/release/%s?inc=release-groups+genres+tags"
 
 func (c *MusicBrainzClient) GetReleaseGroup(ctx context.Context, id uuid.UUID) (*MusicBrainzReleaseGroup, error) {
 	mbzRG := new(MusicBrainzReleaseGroup)
@@ -65,11 +72,33 @@ func (c *MusicBrainzClient) GetRelease(ctx context.Context, id uuid.UUID) (*Musi
 	return mbzRelease, nil
 }
 
+func (c *MusicBrainzClient) GetReleaseGroupGenres(ctx context.Context, id uuid.UUID) ([]string, error) {
+	mbzReleaseGroup := new(MusicBrainzReleaseGroup)
+	err := c.getEntityCached(ctx, mbzCacheKey("release-group-genres", id), releaseGroupCacheTTL, releaseGroupGenresFmtStr, id, mbzReleaseGroup)
+	if err != nil {
+		return nil, fmt.Errorf("GetReleaseGroupGenres: %w", err)
+	}
+	return musicBrainzGenresToNames(mbzReleaseGroup.Genres), nil
+}
+
 func (c *MusicBrainzClient) GetReleaseWithGenres(ctx context.Context, id uuid.UUID) (*MusicBrainzRelease, error) {
 	mbzRelease := new(MusicBrainzRelease)
 	err := c.getEntityCached(ctx, mbzCacheKey("release-with-genres", id), releaseWithGenresCacheTTL, releaseWithGenresFmtStr, id, mbzRelease)
 	if err != nil {
 		return nil, fmt.Errorf("GetReleaseWithGenres: %w", err)
+	}
+	if mbzRelease.ReleaseGroup != nil && len(mbzRelease.ReleaseGroup.Genres) == 0 && mbzRelease.ReleaseGroup.ID != "" {
+		releaseGroupID, err := uuid.Parse(mbzRelease.ReleaseGroup.ID)
+		if err != nil {
+			zerolog.Ctx(ctx).Warn().Err(err).Str("release_group_id", mbzRelease.ReleaseGroup.ID).Msg("GetReleaseWithGenres: invalid release group id")
+			return mbzRelease, nil
+		}
+		genres, err := c.GetReleaseGroupGenres(ctx, releaseGroupID)
+		if err != nil {
+			zerolog.Ctx(ctx).Warn().Err(err).Str("release_group_id", mbzRelease.ReleaseGroup.ID).Msg("GetReleaseWithGenres: failed to fetch release group genres")
+			return mbzRelease, nil
+		}
+		mbzRelease.ReleaseGroup.Genres = musicBrainzGenres(genres)
 	}
 	return mbzRelease, nil
 }
@@ -101,11 +130,47 @@ func ReleaseGroupToTitles(rg *MusicBrainzReleaseGroup) []string {
 }
 
 func ReleaseGroupToGenres(rg *MusicBrainzReleaseGroup) []string {
-	genres := make([]string, len(rg.Genres))
-	for i, g := range rg.Genres {
-		genres[i] = g.Name
+	if rg == nil {
+		return nil
 	}
-	return genres
+	genres := musicBrainzGenresToNames(rg.Genres)
+	if len(genres) > 0 {
+		return genres
+	}
+	return musicBrainzTagsToGenres(rg.Tags)
+}
+
+func musicBrainzGenresToNames(genres []MusicBrainzGenre) []string {
+	ret := make([]string, len(genres))
+	for i, genre := range genres {
+		ret[i] = genre.Name
+	}
+	return ret
+}
+
+func musicBrainzGenres(genres []string) []MusicBrainzGenre {
+	ret := make([]MusicBrainzGenre, len(genres))
+	for i, genre := range genres {
+		ret[i] = MusicBrainzGenre{Name: genre}
+	}
+	return ret
+}
+
+func musicBrainzTagsToGenres(tags []MusicBrainzTag) []string {
+	ret := make([]string, 0, len(tags))
+	seen := make(map[string]struct{}, len(tags))
+	for _, tag := range tags {
+		name := strings.ToLower(strings.TrimSpace(tag.Name))
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		ret = append(ret, name)
+	}
+	return ret
 }
 
 // Searches for Pseudo-Releases of release groups with Latin script, and returns them as an array
@@ -192,4 +257,3 @@ func (c *MusicBrainzClient) SearchRelease(ctx context.Context, artist, title str
 
 	return mbzResult, nil
 }
-
