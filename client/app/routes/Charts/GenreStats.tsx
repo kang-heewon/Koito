@@ -83,7 +83,7 @@ export default function GenreStats() {
   return (
     <main className="flex flex-grow justify-center pb-4">
       <div className="flex-1 flex flex-col items-center gap-16 min-h-0 mt-20">
-        <h1 className="text-2xl font-bold">Genre Stats</h1>
+        <h1 className="text-2xl font-bold">장르 통계</h1>
 
         <div className="w-full max-w-7xl px-5 flex flex-col gap-10">
           <div className="flex flex-wrap flex-col md:flex-row items-center justify-between gap-4">
@@ -103,7 +103,7 @@ export default function GenreStats() {
                       : "text-(--color-fg-secondary) hover:text-(--color-fg)"
                   }`}
                 >
-                  Play Count
+                  청취 횟수
                 </Tabs.Trigger>
                 <Tabs.Trigger
                   value="time"
@@ -113,7 +113,7 @@ export default function GenreStats() {
                       : "text-(--color-fg-secondary) hover:text-(--color-fg)"
                   }`}
                 >
-                  Listening Time
+                  청취 시간
                 </Tabs.Trigger>
               </Tabs.List>
             </Tabs.Root>
@@ -130,7 +130,7 @@ export default function GenreStats() {
               </div>
             ) : chartData.length === 0 ? (
               <div className="w-full h-full flex items-center justify-center text-(--color-fg-secondary)">
-                No data available
+                데이터가 없습니다
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -207,8 +207,8 @@ const CustomTooltip = ({
 
     const formattedValue =
       metric === "time"
-        ? `${Math.floor(value / 60)}h ${value % 60}m`
-        : `${value.toLocaleString()} plays`;
+        ? `${Math.floor(value / 60)}시간 ${value % 60}분`
+        : `${value.toLocaleString()}회`;
 
     return (
       <div className="bg-(--color-bg) border border-(--color-border) p-3 rounded shadow-lg">

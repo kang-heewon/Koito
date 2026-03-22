@@ -16,7 +16,7 @@ interface Props {
 }
 
 export default function SidebarItem({ externalLink, space, keyHint, name, to, children, modal, onClick, icon }: Props) {
-    const classes = "hover:cursor-pointer hover:bg-(--color-bg-tertiary) transition duration-100 rounded-md p-2 flex items-center justify-center w-10 h-10";
+    const classes = "hover:cursor-pointer hover:bg-(--color-bg-tertiary) transition duration-100 rounded-md p-2 inline-block";
 
     const popupInner = keyHint ? (
         <div className="flex items-center gap-2">
