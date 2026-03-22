@@ -86,7 +86,7 @@ export default function GenreStats() {
         <h1 className="text-2xl font-bold">Genre Stats</h1>
 
         <div className="w-full max-w-7xl px-5 flex flex-col gap-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap flex-col md:flex-row items-center justify-between gap-4">
             <PeriodSelector current={period} setter={setPeriod} />
 
             <Tabs.Root
@@ -119,7 +119,7 @@ export default function GenreStats() {
             </Tabs.Root>
           </div>
 
-          <div className="h-[600px] w-full rounded-xl overflow-hidden">
+          <div className="h-[300px] sm:h-[450px] md:h-[600px] w-full rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="w-full h-full flex items-center justify-center">
                 Loading...

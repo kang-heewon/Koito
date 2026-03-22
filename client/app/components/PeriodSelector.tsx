@@ -33,7 +33,7 @@ export default function PeriodSelector({ setter, current, disableCache = false }
       }, [cacheScope, disableCache, setter]);
 
     return (
-        <div className="flex gap-2 grow-0 text-sm sm:text-[16px]">
+        <div className="flex flex-wrap gap-2 grow-0 text-sm sm:text-[16px]">
             <p>Showing stats for:</p>
             {PERIODS.map((p, i) => (
                 <div key={`period_setter_${p}`}>
