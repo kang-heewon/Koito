@@ -28,6 +28,7 @@ func bindRoutes(
 	discogsC catalog.DiscogsCaller,
 	lastfmC catalog.LastFmCaller,
 	spotifyC catalog.SpotifyCaller,
+	controller *handlers.BackfillController,
 ) {
 	if !(len(cfg.AllowedOrigins()) == 0) && !(cfg.AllowedOrigins()[0] == "") {
 		r.Use(cors.Handler(cors.Options{
@@ -111,7 +112,7 @@ func bindRoutes(
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.ValidateSession(db))
-			r.Post("/admin/backfill-genres", handlers.BackfillGenresHandler(db, mbz, discogsC, lastfmC, spotifyC))
+			r.Post("/admin/backfill-genres", handlers.BackfillGenresHandler(db, mbz, discogsC, lastfmC, spotifyC, controller))
 		})
 	})
 

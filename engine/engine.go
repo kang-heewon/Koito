@@ -202,7 +202,8 @@ func Run(
 	mux.Use(chimiddleware.Recoverer)
 	mux.Use(chimiddleware.RealIP)
 	mux.Use(middleware.AllowedHosts)
-	bindRoutes(mux, &ready, store, mbzC, discogsC, lastfmC, images.GetSpotifyClient())
+	backfillController := handlers.NewBackfillController(ctx)
+	bindRoutes(mux, &ready, store, mbzC, discogsC, lastfmC, images.GetSpotifyClient(), backfillController)
 
 	httpServer := &http.Server{
 		Addr:    cfg.ListenAddr(),
@@ -254,8 +255,12 @@ func Run(
 	// Hybrid genre backfill - tries MusicBrainz, Discogs, Last.fm, Spotify
 	l.Info().Msg("Engine: Backfilling genres for existing data")
 	runTrackedGoroutine(func() {
-		fetcher := catalog.NewHybridGenreFetcher(mbzC, discogsC, lastfmC, images.GetSpotifyClient())
-		catalog.BackfillGenres(logger.NewContext(l), store, fetcher)
+		backfillCtx, release, ok := backfillController.Begin()
+		if ok {
+			defer release()
+			fetcher := catalog.NewHybridGenreFetcher(mbzC, discogsC, lastfmC, images.GetSpotifyClient())
+			catalog.BackfillGenres(backfillCtx, store, fetcher)
+		}
 	})
 
 	if !cfg.MusicBrainzDisabled() {
@@ -283,7 +288,7 @@ func Run(
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	l.Info().Msg("Engine: Waiting for all processes to finish")
-	handlers.CancelBackfill()
+	backfillController.Cancel()
 	mbzC.Shutdown()
 	if discogsC != nil {
 		discogsC.Shutdown()

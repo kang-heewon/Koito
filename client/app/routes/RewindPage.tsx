@@ -4,9 +4,8 @@ import { getRewindStats, imageUrl, type RewindStats } from "api/api";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import type { LoaderFunctionArgs } from "react-router";
-import { useLoaderData, useLocation, useNavigate } from "react-router";
+import { redirect, useLoaderData, useNavigate } from "react-router";
 import Rewind from "~/components/rewind/Rewind";
-import { getRewindParams } from "~/utils/utils";
 
 const months = [
   "Full Year",
@@ -27,18 +26,68 @@ const months = [
 const fallbackAccentColor = "rgba(93, 211, 255, 0.3)";
 const fallbackAccentGlow = "rgba(93, 211, 255, 0.16)";
 
-export async function clientLoader({ request }: LoaderFunctionArgs) {
+const getRewindPath = (year: number, month: number) => {
+  if (month === 0) {
+    return `/rewind/${year}`;
+  }
+
+  return `/rewind/${year}/${month}`;
+};
+
+const getNumericValue = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (Number.isNaN(parsedValue)) {
+    return null;
+  }
+
+  return parsedValue;
+};
+
+const getLoaderRewindParams = ({ params, request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const fallbackParams = getRewindParams(url.searchParams);
-  const parsedYear = Number.parseInt(url.searchParams.get("year") || "", 10);
-  const parsedMonth = Number.parseInt(url.searchParams.get("month") || "", 10);
-  const year = Number.isNaN(parsedYear) ? fallbackParams.year : parsedYear;
-  const month = Number.isNaN(parsedMonth) ? fallbackParams.month : parsedMonth;
+  const searchYear = getNumericValue(url.searchParams.get("year"));
+  const searchMonth = getNumericValue(url.searchParams.get("month"));
+  const hasLegacySearchParams =
+    url.searchParams.has("year") || url.searchParams.has("month");
+
+  if (hasLegacySearchParams) {
+    const targetYear = searchYear ?? new Date().getFullYear();
+    const targetMonth = searchMonth ?? 0;
+
+    return {
+      month: targetMonth,
+      redirectTo: getRewindPath(targetYear, targetMonth),
+      year: targetYear,
+    };
+  }
+
+  const currentYear = new Date().getFullYear();
+  const year = getNumericValue(params.year) ?? currentYear;
+  const month = getNumericValue(params.month) ?? 0;
+
+  return {
+    month,
+    redirectTo: null,
+    year,
+  };
+};
+
+export async function clientLoader(args: LoaderFunctionArgs) {
+  const { year, month, redirectTo } = getLoaderRewindParams(args);
+
+  if (redirectTo) {
+    throw redirect(redirectTo);
+  }
 
   const stats = await getRewindStats({ year, month });
   stats.title = `Your ${month === 0 ? "" : `${months[month]} `}${year} Rewind`;
 
-  return { stats };
+  return { month, stats, year };
 }
 
 export function meta({ data }: { data?: { stats: RewindStats } }) {
@@ -100,14 +149,15 @@ function NavigationControl({
 }
 
 export default function RewindPage() {
-  const { stats } = useLoaderData() as { stats: RewindStats };
-  const location = useLocation();
+  const { month, stats, year } = useLoaderData() as {
+    month: number;
+    stats: RewindStats;
+    year: number;
+  };
   const navigate = useNavigate();
   const [accentColor, setAccentColor] = useState(fallbackAccentColor);
   const [accentGlow, setAccentGlow] = useState(fallbackAccentGlow);
 
-  const currentParams = new URLSearchParams(location.search);
-  const { year, month } = getRewindParams(currentParams);
   const monthLabel = months[month];
   const now = new Date();
 
@@ -142,21 +192,8 @@ export default function RewindPage() {
       });
   }, [stats]);
 
-  const updateParams = (params: Record<string, string | null>) => {
-    const nextParams = new URLSearchParams(location.search);
-
-    for (const key in params) {
-      const value = params[key];
-
-      if (value === null) {
-        nextParams.delete(key);
-        continue;
-      }
-
-      nextParams.set(key, value);
-    }
-
-    navigate(`/rewind?${nextParams.toString()}`, { replace: false });
+  const navigateToRewind = (nextYear: number, nextMonth: number) => {
+    navigate(getRewindPath(nextYear, nextMonth), { replace: false });
   };
 
   const scrollToTop = () => {
@@ -174,10 +211,7 @@ export default function RewindPage() {
 
     scrollToTop();
 
-    updateParams({
-      year: String(year),
-      month: String(nextMonth),
-    });
+    navigateToRewind(year, nextMonth);
   };
 
   const navigateYear = (direction: "prev" | "next") => {
@@ -185,10 +219,7 @@ export default function RewindPage() {
 
     scrollToTop();
 
-    updateParams({
-      year: String(nextYear),
-      month: String(month),
-    });
+    navigateToRewind(nextYear, month);
   };
 
   const prevMonthDisabled =
