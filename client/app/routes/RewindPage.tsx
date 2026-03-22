@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { average } from "color.js";
 import { getRewindStats, imageUrl, type RewindStats } from "api/api";
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useLocation, useNavigate } from "react-router";
 import Rewind from "~/components/rewind/Rewind";
@@ -22,6 +23,9 @@ const months = [
   "November",
   "December",
 ];
+
+const fallbackAccentColor = "rgba(93, 211, 255, 0.3)";
+const fallbackAccentGlow = "rgba(93, 211, 255, 0.16)";
 
 export async function clientLoader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
@@ -47,19 +51,71 @@ export function meta({ data }: { data?: { stats: RewindStats } }) {
   ];
 }
 
+function NavigationControl({
+  label,
+  value,
+  onPrev,
+  onNext,
+  prevDisabled,
+  nextDisabled,
+}: {
+  label: string;
+  value: string | number;
+  onPrev: () => void;
+  onNext: () => void;
+  prevDisabled: boolean;
+  nextDisabled: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[var(--color-bg)]/55 px-2 py-2 text-[var(--color-fg)] backdrop-blur-md sm:gap-3 sm:px-3">
+      <span className="px-2 text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[var(--color-fg)]/55 sm:text-[0.7rem]">
+        {label}
+      </span>
+
+      <button
+        type="button"
+        onClick={onPrev}
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
+        disabled={prevDisabled}
+        aria-label={`${label} 이전으로 이동`}
+      >
+        <ChevronLeft size={18} />
+      </button>
+
+      <span className="min-w-22 text-center text-sm font-semibold tracking-[0.08em] sm:min-w-28 sm:text-base">
+        {value}
+      </span>
+
+      <button
+        type="button"
+        onClick={onNext}
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
+        disabled={nextDisabled}
+        aria-label={`${label} 다음으로 이동`}
+      >
+        <ChevronRight size={18} />
+      </button>
+    </div>
+  );
+}
+
 export default function RewindPage() {
   const { stats } = useLoaderData() as { stats: RewindStats };
   const location = useLocation();
   const navigate = useNavigate();
-  const [showTime, setShowTime] = useState(false);
-  const [bgColor, setBgColor] = useState("var(--color-bg)");
+  const [accentColor, setAccentColor] = useState(fallbackAccentColor);
+  const [accentGlow, setAccentGlow] = useState(fallbackAccentGlow);
 
   const currentParams = new URLSearchParams(location.search);
   const { year, month } = getRewindParams(currentParams);
+  const monthLabel = months[month];
+  const now = new Date();
 
   useEffect(() => {
     const image = stats.top_artists[0]?.item?.image;
     if (!image) {
+      setAccentColor(fallbackAccentColor);
+      setAccentGlow(fallbackAccentGlow);
       return;
     }
 
@@ -72,13 +128,17 @@ export default function RewindPage() {
           typeof green !== "number" ||
           typeof blue !== "number"
         ) {
+          setAccentColor(fallbackAccentColor);
+          setAccentGlow(fallbackAccentGlow);
           return;
         }
 
-        setBgColor(`rgba(${red}, ${green}, ${blue}, 0.4)`);
+        setAccentColor(`rgba(${red}, ${green}, ${blue}, 0.36)`);
+        setAccentGlow(`rgba(${red}, ${green}, ${blue}, 0.18)`);
       })
       .catch(() => {
-        setBgColor("var(--color-bg)");
+        setAccentColor(fallbackAccentColor);
+        setAccentGlow(fallbackAccentGlow);
       });
   }, [stats]);
 
@@ -99,6 +159,10 @@ export default function RewindPage() {
     navigate(`/rewind?${nextParams.toString()}`, { replace: false });
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const navigateMonth = (direction: "prev" | "next") => {
     let nextMonth = month;
 
@@ -107,6 +171,8 @@ export default function RewindPage() {
     } else {
       nextMonth = month === 0 ? 12 : month - 1;
     }
+
+    scrollToTop();
 
     updateParams({
       year: String(year),
@@ -117,90 +183,62 @@ export default function RewindPage() {
   const navigateYear = (direction: "prev" | "next") => {
     const nextYear = direction === "next" ? year + 1 : year - 1;
 
+    scrollToTop();
+
     updateParams({
       year: String(nextYear),
       month: String(month),
     });
   };
 
+  const prevMonthDisabled =
+    new Date(year, month - 2) > now ||
+    (now.getFullYear() === year && month === 1);
+  const nextMonthDisabled = month >= now.getMonth() && year >= now.getFullYear();
+  const prevYearDisabled = new Date(year - 1, month) > now;
+  const nextYearDisabled =
+    new Date(year + 1, month - 1) > now ||
+    (month === 0 && now.getFullYear() === year + 1) ||
+    (now.getMonth() === month - 1 && now.getFullYear() === year + 1);
+
   return (
-    <main
-      className="min-h-screen w-full"
-      style={{
-        background: `linear-gradient(to bottom, ${bgColor}, var(--color-bg) 500px)`,
-        transition: "1000ms",
-      }}
-    >
-      <div className="flex flex-col items-start gap-4 sm:items-center">
-        <div className="flex w-19/20 flex-col items-start gap-10 px-5 md:px-20 lg:mt-15 lg:flex-row">
-          <div className="flex flex-col items-start gap-4">
-            <div className="flex flex-col items-start gap-4 py-8">
-              <div className="flex items-center justify-around gap-6">
-                <button
-                  type="button"
-                  onClick={() => navigateMonth("prev")}
-                  className="cursor-pointer p-2 disabled:text-(--color-fg-tertiary)"
-                  disabled={
-                    new Date(year, month - 2) > new Date() ||
-                    (new Date().getFullYear() === year && month === 1)
-                  }
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <p className="w-30 text-center text-xl font-medium">{months[month]}</p>
-                <button
-                  type="button"
-                  onClick={() => navigateMonth("next")}
-                  className="cursor-pointer p-2 disabled:text-(--color-fg-tertiary)"
-                  disabled={
-                    month >= new Date().getMonth() &&
-                    year >= new Date().getFullYear()
-                  }
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
+    <main className="relative min-h-screen w-full text-[var(--color-fg)]">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-30 px-4 pt-18 sm:px-8 sm:pt-8 lg:px-12">
+        <div className="pointer-events-auto ml-auto flex w-full max-w-max flex-col gap-3 sm:flex-row sm:items-center">
+          <NavigationControl
+            label="Month"
+            value={monthLabel}
+            onPrev={() => navigateMonth("prev")}
+            onNext={() => navigateMonth("next")}
+            prevDisabled={prevMonthDisabled}
+            nextDisabled={nextMonthDisabled}
+          />
 
-              <div className="flex items-center justify-around gap-6">
-                <button
-                  type="button"
-                  onClick={() => navigateYear("prev")}
-                  className="cursor-pointer p-2 disabled:text-(--color-fg-tertiary)"
-                  disabled={new Date(year - 1, month) > new Date()}
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <p className="w-30 text-center text-xl font-medium">{year}</p>
-                <button
-                  type="button"
-                  onClick={() => navigateYear("next")}
-                  className="cursor-pointer p-2 disabled:text-(--color-fg-tertiary)"
-                  disabled={
-                    new Date(year + 1, month - 1) > new Date() ||
-                    (month === 0 && new Date().getFullYear() === year + 1) ||
-                    (new Date().getMonth() === month - 1 &&
-                      new Date().getFullYear() === year + 1)
-                  }
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <label htmlFor="show-time-checkbox">Show time listened?</label>
-              <input
-                id="show-time-checkbox"
-                type="checkbox"
-                checked={showTime}
-                onChange={() => setShowTime((prev) => !prev)}
-              />
-            </div>
-          </div>
-
-          <Rewind stats={stats} includeTime={showTime} />
+          <NavigationControl
+            label="Year"
+            value={year}
+            onPrev={() => navigateYear("prev")}
+            onNext={() => navigateYear("next")}
+            prevDisabled={prevYearDisabled}
+            nextDisabled={nextYearDisabled}
+          />
         </div>
       </div>
+
+      <motion.div
+        key={`${year}-${month}`}
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <Rewind
+          stats={stats}
+          monthLabel={monthLabel}
+          year={year}
+          accentColor={accentColor}
+          accentGlow={accentGlow}
+        />
+      </motion.div>
     </main>
   );
 }

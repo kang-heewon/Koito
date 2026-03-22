@@ -1,62 +1,59 @@
-type Ranked<T> = {
-  item: T;
-  rank: number;
-  listen_count: number;
-  time_listened: number;
-};
+import { type Ranked } from "api/api";
+import { TopItemCard } from "../recap";
 
-type TopItemProps<T> = {
+type TopItemProps<T extends { id: string | number }> = {
+  eyebrow: string;
   title: string;
-  imageSrc: string;
+  description: string;
   items: Ranked<T>[];
-  getLabel: (item: T) => string;
-  includeTime?: boolean;
+  getName: (item: T) => string;
+  getImage: (item: T) => string | undefined;
+  getSubtitle: (entry: Ranked<T>) => string | undefined;
+  emptyState: string;
 };
 
 export default function RewindTopItem<T extends { id: string | number }>({
+  eyebrow,
   title,
-  imageSrc,
+  description,
   items,
-  getLabel,
-  includeTime,
+  getName,
+  getImage,
+  getSubtitle,
+  emptyState,
 }: TopItemProps<T>) {
-  const [top, ...rest] = items;
-
-  if (!top) {
-    return null;
-  }
-
   return (
-    <div className="flex flex-col gap-5 sm:flex-row">
-      <div className="rewind-top-item-image">
-        <img className="max-h-48 max-w-48" src={imageSrc} alt={title} />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <h4 className="-mb-1">{title}</h4>
-
-        <div className="flex items-center gap-2">
-          <div className="mb-2 flex flex-col items-start">
-            <h2>{getLabel(top.item)}</h2>
-            <span className="-mt-3 text-sm text-(--color-fg-tertiary)">
-              {`${top.listen_count} plays`}
-              {includeTime ? ` (${Math.floor(top.time_listened / 60)} minutes)` : ""}
-            </span>
-          </div>
+    <div className="space-y-8">
+      <div className="max-w-3xl">
+        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--color-primary)]/78">
+          {eyebrow}
         </div>
-
-        {rest.map((entry) => (
-          <div key={entry.item.id} className="text-sm">
-            {getLabel(entry.item)}
-            <span className="text-(--color-fg-tertiary)">
-              {` - ${entry.listen_count} plays`}
-              {includeTime
-                ? ` (${Math.floor(entry.time_listened / 60)} minutes)`
-                : ""}
-            </span>
-          </div>
-        ))}
+        <h2 className="header-font mt-4 text-4xl font-semibold tracking-[-0.04em] text-[var(--color-fg)] sm:text-5xl lg:text-6xl">
+          {title}
+        </h2>
+        <p className="mt-4 text-base leading-7 text-[var(--color-fg)]/72 sm:text-lg">
+          {description}
+        </p>
       </div>
+
+      {items.length === 0 ? (
+        <div className="flex min-h-64 items-center justify-center rounded-[32px] border border-[var(--color-primary)]/15 bg-[var(--color-bg)]/80 px-6 py-8 text-center text-base text-[var(--color-fg)]/65 backdrop-blur-sm sm:px-8">
+          {emptyState}
+        </div>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {items.slice(0, 5).map((entry) => (
+            <TopItemCard
+              key={entry.item.id}
+              rank={entry.rank}
+              name={getName(entry.item)}
+              imageUrl={getImage(entry.item)}
+              subtitle={getSubtitle(entry)}
+              plays={entry.listen_count}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
