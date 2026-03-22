@@ -67,14 +67,14 @@ export default function ActivityGrid({
 
   if (isPending) {
     return (
-      <div className="w-[500px]">
+      <div className="w-full sm:w-[500px]">
         <h2>Activity</h2>
         <p>Loading...</p>
       </div>
     );
   } else if (isError) {
     return (
-      <div className="w-[500px]">
+      <div className="w-full sm:w-[500px]">
         <h2>Activity</h2>
         <p className="error">Error: {error.message}</p>
       </div>
@@ -146,7 +146,7 @@ export default function ActivityGrid({
   }
 
   return (
-    <div className="flex flex-col items-start">
+    <div className="flex w-full flex-col items-start">
       <h2>Activity</h2>
       {configurable ? (
         <ActivityOptsSelector
@@ -162,41 +162,43 @@ export default function ActivityGrid({
           key={`${new Date(chunk[0].start_time).getTime()}-${new Date(
             chunk[chunk.length - 1].start_time
           ).getTime()}`}
-          className="w-auto grid grid-flow-col grid-rows-7 gap-[3px] md:gap-[5px] mb-4"
+          className="mb-4 w-full overflow-x-auto"
         >
-          {chunk.map((item) => (
-            <div
-              key={new Date(item.start_time).getTime()}
-              className="w-[10px] sm:w-[12px] h-[10px] sm:h-[12px]"
-            >
-              <Popup
-                position="top"
-                space={12}
-                extraClasses="left-2"
-                inner={`${new Date(item.start_time).toLocaleDateString()} ${
-                  item.listens
-                } plays`}
+          <div className="grid w-auto grid-flow-col grid-rows-7 gap-[3px] md:gap-[5px]">
+            {chunk.map((item) => (
+              <div
+                key={new Date(item.start_time).getTime()}
+                className="h-[10px] w-[10px] sm:h-[12px] sm:w-[12px]"
               >
-                <div
-                  style={{
-                    display: "inline-block",
-                    background:
+                <Popup
+                  position="top"
+                  space={12}
+                  extraClasses="left-2"
+                  inner={`${new Date(item.start_time).toLocaleDateString()} ${
+                    item.listens
+                  } plays`}
+                >
+                  <div
+                    style={{
+                      display: "inline-block",
+                      background:
+                        item.listens > 0
+                          ? LightenDarkenColor(
+                              color,
+                              getDarkenAmount(item.listens, 100)
+                            )
+                          : "var(--color-bg-secondary)",
+                    }}
+                    className={`h-[10px] w-[10px] rounded-[2px] sm:h-[12px] sm:w-[12px] md:rounded-[3px] ${
                       item.listens > 0
-                        ? LightenDarkenColor(
-                            color,
-                            getDarkenAmount(item.listens, 100)
-                          )
-                        : "var(--color-bg-secondary)",
-                  }}
-                  className={`w-[10px] sm:w-[12px] h-[10px] sm:h-[12px] rounded-[2px] md:rounded-[3px] ${
-                    item.listens > 0
-                      ? ""
-                      : "border-[0.5px] border-(--color-bg-tertiary)"
-                  }`}
-                ></div>
-              </Popup>
-            </div>
-          ))}
+                        ? ""
+                        : "border-[0.5px] border-(--color-bg-tertiary)"
+                    }`}
+                  ></div>
+                </Popup>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>

@@ -72,7 +72,7 @@ export default function MediaLayout(props: Props) {
             <div className="w-19/20 mx-auto pt-12">
                 <div className="flex gap-8 flex-wrap md:flex-nowrap relative">
                     <div className="flex flex-col justify-around">
-                        <img style={{zIndex: 5}} src={imageUrl(props.img, "large")} alt={props.title} className="md:min-w-[385px] w-[220px] h-auto shadow-(--color-shadow) shadow-lg" />
+                        <img style={{zIndex: 5}} src={imageUrl(props.img, "large")} alt={props.title} className="w-full sm:w-[220px] md:min-w-[385px] h-auto shadow-(--color-shadow) shadow-lg" />
                     </div>
                     <div className="flex flex-col items-start">
                         <h3>{props.type}</h3>
