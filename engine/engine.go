@@ -32,6 +32,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 )
+
 func Run(
 	getenv func(string) string,
 	w io.Writer,
@@ -103,7 +104,7 @@ func Run(
 	if !cfg.MusicBrainzDisabled() {
 		mbzC = mbz.NewMusicBrainzClient()
 		l.Info().Msg("Engine: MusicBrainz client initialized")
-	l.Debug().Msg("Engine: MusicBrainz client initialized")
+		l.Debug().Msg("Engine: MusicBrainz client initialized")
 	} else {
 		mbzC = &mbz.MbzErrorCaller{}
 		l.Warn().Msg("Engine: MusicBrainz client disabled")
@@ -199,7 +200,7 @@ func Run(
 	mux.Use(chimiddleware.Recoverer)
 	mux.Use(chimiddleware.RealIP)
 	mux.Use(middleware.AllowedHosts)
-	bindRoutes(mux, &ready, store, mbzC)
+	bindRoutes(mux, &ready, store, mbzC, discogsC, lastfmC, images.GetSpotifyClient())
 
 	httpServer := &http.Server{
 		Addr:    cfg.ListenAddr(),

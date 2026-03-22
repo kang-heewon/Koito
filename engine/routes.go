@@ -10,6 +10,7 @@ import (
 
 	"github.com/gabehf/koito/engine/handlers"
 	"github.com/gabehf/koito/engine/middleware"
+	"github.com/gabehf/koito/internal/catalog"
 	"github.com/gabehf/koito/internal/cfg"
 	"github.com/gabehf/koito/internal/db"
 	mbz "github.com/gabehf/koito/internal/mbz"
@@ -24,6 +25,9 @@ func bindRoutes(
 	ready *atomic.Bool,
 	db db.DB,
 	mbz mbz.MusicBrainzCaller,
+	discogsC catalog.DiscogsCaller,
+	lastfmC catalog.LastFmCaller,
+	spotifyC catalog.SpotifyCaller,
 ) {
 	if !(len(cfg.AllowedOrigins()) == 0) && !(cfg.AllowedOrigins()[0] == "") {
 		r.Use(cors.Handler(cors.Options{
@@ -103,6 +107,11 @@ func bindRoutes(
 			r.Delete("/user/apikeys", handlers.DeleteApiKeyHandler(db))
 			r.Get("/user/me", handlers.MeHandler(db))
 			r.Patch("/user", handlers.UpdateUserHandler(db))
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.ValidateSession(db))
+			r.Post("/admin/backfill-genres", handlers.BackfillGenresHandler(db, mbz, discogsC, lastfmC, spotifyC))
 		})
 	})
 

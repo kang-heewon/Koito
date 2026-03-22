@@ -42,7 +42,6 @@ type SpotifyCaller interface {
 	GetArtistGenres(ctx context.Context, artistName string) ([]string, error)
 }
 
-
 // NewHybridGenreFetcher creates a new hybrid genre fetcher
 func NewHybridGenreFetcher(mbzc mbz.MusicBrainzCaller, discogsC DiscogsCaller, lastfmC LastFmCaller, spotifyC SpotifyCaller) *HybridGenreFetcher {
 	return &HybridGenreFetcher{
@@ -63,26 +62,35 @@ func (h *HybridGenreFetcher) FetchAlbumGenres(ctx context.Context, store db.DB, 
 		if err == nil && release.ReleaseGroup != nil {
 			genres := mbz.ReleaseGroupToGenres(release.ReleaseGroup)
 			if len(genres) > 0 {
-				l.Debug().Str("source", "musicbrainz").Msgf("FetchAlbumGenres: Found %d genres for album %d", len(genres), album.ID)
+				l.Info().Str("source", "musicbrainz").Msgf("FetchAlbumGenres: Found %d genres for album %d (%s)", len(genres), album.ID, album.Title)
 				return genres, nil
 			}
+			l.Debug().Str("source", "musicbrainz").Msgf("FetchAlbumGenres: No genres found in release group for album %d", album.ID)
+		} else {
+			l.Debug().Str("source", "musicbrainz").Err(err).Msgf("FetchAlbumGenres: Failed to fetch release for album %d", album.ID)
 		}
+	} else if h.mbz == nil {
+		l.Warn().Msg("FetchAlbumGenres: MusicBrainz client not configured, skipping")
 	}
 
 	// 2. Try Discogs (release-level genres)
 	if h.discogs != nil {
-		// Get artist name from album
 		artistName := h.getAlbumArtistName(ctx, store, album)
 		if artistName != "" {
 			result, err := h.discogs.SearchRelease(ctx, artistName, album.Title)
 			if err == nil && result != nil && len(result.Results) > 0 {
 				genres, err := h.discogs.GetReleaseGenres(ctx, result.Results[0].ID)
 				if err == nil && len(genres) > 0 {
-					l.Debug().Str("source", "discogs").Msgf("FetchAlbumGenres: Found %d genres for album %d", len(genres), album.ID)
+					l.Info().Str("source", "discogs").Msgf("FetchAlbumGenres: Found %d genres for album %d (%s)", len(genres), album.ID, album.Title)
 					return genres, nil
 				}
+				l.Debug().Str("source", "discogs").Err(err).Msgf("FetchAlbumGenres: No genres found for album %d", album.ID)
+			} else {
+				l.Debug().Str("source", "discogs").Err(err).Msgf("FetchAlbumGenres: Failed to search release for album %d", album.ID)
 			}
 		}
+	} else {
+		l.Warn().Msg("FetchAlbumGenres: Discogs client not configured, skipping fallback")
 	}
 
 	// 3. Try Last.fm (album tags)
@@ -93,11 +101,16 @@ func (h *HybridGenreFetcher) FetchAlbumGenres(ctx context.Context, store db.DB, 
 			if err == nil && len(tags) > 0 {
 				genres := h.tagsToGenres(tags)
 				if len(genres) > 0 {
-					l.Debug().Str("source", "lastfm").Msgf("FetchAlbumGenres: Found %d genres for album %d", len(genres), album.ID)
+					l.Info().Str("source", "lastfm").Msgf("FetchAlbumGenres: Found %d genres for album %d (%s)", len(genres), album.ID, album.Title)
 					return genres, nil
 				}
+				l.Debug().Str("source", "lastfm").Msgf("FetchAlbumGenres: No tags found for album %d", album.ID)
+			} else {
+				l.Debug().Str("source", "lastfm").Err(err).Msgf("FetchAlbumGenres: Failed to fetch tags for album %d", album.ID)
 			}
 		}
+	} else {
+		l.Warn().Msg("FetchAlbumGenres: Last.fm client not configured, skipping fallback")
 	}
 
 	return nil, nil
@@ -111,9 +124,12 @@ func (h *HybridGenreFetcher) FetchArtistGenres(ctx context.Context, store db.DB,
 	if h.mbz != nil && artist.MbzID != nil {
 		genres, err := h.mbz.GetArtistGenres(ctx, *artist.MbzID)
 		if err == nil && len(genres) > 0 {
-			l.Debug().Str("source", "musicbrainz").Msgf("FetchArtistGenres: Found %d genres for artist %d", len(genres), artist.ID)
+			l.Info().Str("source", "musicbrainz").Msgf("FetchArtistGenres: Found %d genres for artist %d (%s)", len(genres), artist.ID, artist.Name)
 			return genres, nil
 		}
+		l.Debug().Str("source", "musicbrainz").Err(err).Msgf("FetchArtistGenres: Failed to fetch genres for artist %d", artist.ID)
+	} else if h.mbz == nil {
+		l.Warn().Msg("FetchArtistGenres: MusicBrainz client not configured, skipping")
 	}
 
 	// 2. Try Last.fm
@@ -124,11 +140,16 @@ func (h *HybridGenreFetcher) FetchArtistGenres(ctx context.Context, store db.DB,
 			if err == nil && len(tags) > 0 {
 				genres := h.tagsToGenres(tags)
 				if len(genres) > 0 {
-					l.Debug().Str("source", "lastfm").Msgf("FetchArtistGenres: Found %d genres for artist %d", len(genres), artist.ID)
+					l.Info().Str("source", "lastfm").Msgf("FetchArtistGenres: Found %d genres for artist %d (%s)", len(genres), artist.ID, artist.Name)
 					return genres, nil
 				}
+				l.Debug().Str("source", "lastfm").Msgf("FetchArtistGenres: No tags found for artist %d", artist.ID)
+			} else {
+				l.Debug().Str("source", "lastfm").Err(err).Msgf("FetchArtistGenres: Failed to fetch tags for artist %d", artist.ID)
 			}
 		}
+	} else {
+		l.Warn().Msg("FetchArtistGenres: Last.fm client not configured, skipping fallback")
 	}
 
 	// 3. Try Spotify (artist-level genres only)
@@ -137,10 +158,13 @@ func (h *HybridGenreFetcher) FetchArtistGenres(ctx context.Context, store db.DB,
 		if artistName != "" {
 			genres, err := h.spotify.GetArtistGenres(ctx, artistName)
 			if err == nil && len(genres) > 0 {
-				l.Debug().Str("source", "spotify").Msgf("FetchArtistGenres: Found %d genres for artist %d", len(genres), artist.ID)
+				l.Info().Str("source", "spotify").Msgf("FetchArtistGenres: Found %d genres for artist %d (%s)", len(genres), artist.ID, artist.Name)
 				return genres, nil
 			}
+			l.Debug().Str("source", "spotify").Err(err).Msgf("FetchArtistGenres: No genres found for artist %d", artist.ID)
 		}
+	} else {
+		l.Warn().Msg("FetchArtistGenres: Spotify client not configured, skipping fallback")
 	}
 
 	return nil, nil
@@ -159,8 +183,6 @@ func (h *HybridGenreFetcher) getAlbumArtistName(ctx context.Context, store db.DB
 	return artists[0].Name
 }
 
-
-
 func (h *HybridGenreFetcher) tagsToGenres(tags []lastfm.LastFmTag) []string {
 	genres := make([]string, 0, len(tags))
 	for _, tag := range tags {
@@ -172,7 +194,7 @@ func (h *HybridGenreFetcher) tagsToGenres(tags []lastfm.LastFmTag) []string {
 }
 
 // BackfillAlbumGenres backfills genres for albums without genres
-func BackfillAlbumGenres(ctx context.Context, store db.DB, fetcher *HybridGenreFetcher) error {
+func BackfillAlbumGenres(ctx context.Context, store db.DB, fetcher *HybridGenreFetcher) (int, error) {
 	l := logger.FromContext(ctx)
 	l.Info().Msg("BackfillAlbumGenres: Starting album genre backfill")
 
@@ -182,14 +204,14 @@ func BackfillAlbumGenres(ctx context.Context, store db.DB, fetcher *HybridGenreF
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return totalProcessed, ctx.Err()
 		default:
 		}
 
 		albumIDs, err := store.AlbumsWithoutGenres(ctx, lastID)
 		if err != nil {
 			l.Err(err).Msg("BackfillAlbumGenres: Failed to get albums without genres")
-			return err
+			return totalProcessed, err
 		}
 
 		if len(albumIDs) == 0 {
@@ -228,11 +250,11 @@ func BackfillAlbumGenres(ctx context.Context, store db.DB, fetcher *HybridGenreF
 	}
 
 	l.Info().Msgf("BackfillAlbumGenres: Completed. Updated %d albums with genres", totalProcessed)
-	return nil
+	return totalProcessed, nil
 }
 
 // BackfillArtistGenres backfills genres for artists without genres
-func BackfillArtistGenres(ctx context.Context, store db.DB, fetcher *HybridGenreFetcher) error {
+func BackfillArtistGenres(ctx context.Context, store db.DB, fetcher *HybridGenreFetcher) (int, error) {
 	l := logger.FromContext(ctx)
 	l.Info().Msg("BackfillArtistGenres: Starting artist genre backfill")
 
@@ -242,14 +264,14 @@ func BackfillArtistGenres(ctx context.Context, store db.DB, fetcher *HybridGenre
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return totalProcessed, ctx.Err()
 		default:
 		}
 
 		artistIDs, err := store.ArtistsWithoutGenres(ctx, lastID)
 		if err != nil {
 			l.Err(err).Msg("BackfillArtistGenres: Failed to get artists without genres")
-			return err
+			return totalProcessed, err
 		}
 
 		if len(artistIDs) == 0 {
@@ -288,18 +310,38 @@ func BackfillArtistGenres(ctx context.Context, store db.DB, fetcher *HybridGenre
 	}
 
 	l.Info().Msgf("BackfillArtistGenres: Completed. Updated %d artists with genres", totalProcessed)
-	return nil
+	return totalProcessed, nil
 }
 
 // BackfillGenres runs both album and artist genre backfill
 func BackfillGenres(ctx context.Context, store db.DB, fetcher *HybridGenreFetcher) {
 	l := logger.FromContext(ctx)
+	l.Info().Msg("BackfillGenres: Starting genre backfill")
 
-	if err := BackfillAlbumGenres(ctx, store, fetcher); err != nil {
+	var albumsUpdated, artistsUpdated int
+
+	albumCount, err := BackfillAlbumGenres(ctx, store, fetcher)
+	if err != nil {
 		l.Err(err).Msg("BackfillGenres: Album genre backfill failed")
+	} else {
+		albumsUpdated = albumCount
 	}
 
-	if err := BackfillArtistGenres(ctx, store, fetcher); err != nil {
+	artistCount, err := BackfillArtistGenres(ctx, store, fetcher)
+	if err != nil {
 		l.Err(err).Msg("BackfillGenres: Artist genre backfill failed")
+	} else {
+		artistsUpdated = artistCount
 	}
+
+	totalGenres := countTotalGenres(ctx, store)
+	l.Info().Msgf("BackfillGenres: Completed. Backfilled %d albums, %d artists, total %d genres", albumsUpdated, artistsUpdated, totalGenres)
+}
+
+func countTotalGenres(ctx context.Context, store db.DB) int {
+	stats, err := store.GetGenreStatsByListenCount(ctx, db.PeriodToTimeframe(db.PeriodAllTime))
+	if err != nil {
+		return 0
+	}
+	return len(stats)
 }

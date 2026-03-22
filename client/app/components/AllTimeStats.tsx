@@ -17,7 +17,7 @@ export default function AllTimeStats() {
   } else if (isError) {
     return (
       <>
-        <div>
+        <div className="w-full sm:w-[200px]">
           <h2>All Time Stats</h2>
           <p className="error">Error: {error.message}</p>
         </div>
@@ -28,7 +28,7 @@ export default function AllTimeStats() {
   const numberClasses = "header-font font-bold text-xl";
 
   return (
-    <div>
+    <div className="w-full sm:w-[200px]">
       <h2>All Time Stats</h2>
       <div>
         <span
