@@ -58,3 +58,9 @@ func BackfillGenresHandler(store db.DB, mbzC mbz.MusicBrainzCaller, discogsC cat
 		})
 	}
 }
+
+func CancelBackfill() {
+	if backfillCancel != nil {
+		backfillCancel()
+	}
+}

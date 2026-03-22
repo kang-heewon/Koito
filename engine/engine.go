@@ -31,6 +31,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
+
+	"github.com/gabehf/koito/engine/handlers"
 )
 
 func Run(
@@ -281,6 +283,7 @@ func Run(
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	l.Info().Msg("Engine: Waiting for all processes to finish")
+	handlers.CancelBackfill()
 	mbzC.Shutdown()
 	if discogsC != nil {
 		discogsC.Shutdown()
