@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getStats } from "api/api";
+import { getStats, type Stats, type ApiError } from "api/api";
 
 export default function AllTimeStats() {
   const { isPending, isError, data, error } = useQuery({
@@ -7,18 +7,20 @@ export default function AllTimeStats() {
     queryFn: ({ queryKey }) => getStats(queryKey[1]),
   });
 
+  const header = "All time stats";
+
   if (isPending) {
     return (
-      <div className="w-full sm:w-[200px]">
-        <h2>All Time Stats</h2>
+      <div>
+        <h3>{header}</h3>
         <p>Loading...</p>
       </div>
     );
   } else if (isError) {
     return (
       <>
-        <div className="w-full sm:w-[200px]">
-          <h2>All Time Stats</h2>
+        <div>
+          <h3>{header}</h3>
           <p className="error">Error: {error.message}</p>
         </div>
       </>
@@ -28,8 +30,8 @@ export default function AllTimeStats() {
   const numberClasses = "header-font font-bold text-xl";
 
   return (
-    <div className="w-full sm:w-[200px]">
-      <h2>All Time Stats</h2>
+    <div>
+      <h3>{header}</h3>
       <div>
         <span
           className={numberClasses}

@@ -100,7 +100,7 @@ type LastFmCaller interface {
 // NewLastFmClient creates a new Last.fm client
 func NewLastFmClient() *LastFmClient {
 	ret := new(LastFmClient)
-	ret.apiKey = cfg.LastFmApiKey()
+	ret.apiKey = cfg.LastFMApiKey()
 	ret.userAgent = cfg.UserAgent()
 	ret.requestQueue = queue.NewRequestQueue(1, 1) // Last.fm rate limit: ~1 req/sec
 	ret.cacheStore = cache.NewDefaultStore()

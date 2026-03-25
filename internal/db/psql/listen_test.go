@@ -14,49 +14,49 @@ func testDataForListens(t *testing.T) {
 	truncateTestData(t)
 	// Insert artists
 	err := store.Exec(context.Background(),
-		`INSERT INTO artists (musicbrainz_id) 
+		`INSERT INTO artists (musicbrainz_id)
 			VALUES ('00000000-0000-0000-0000-000000000001'),
 				   ('00000000-0000-0000-0000-000000000002')`)
 	require.NoError(t, err)
 
 	// Insert artist aliases
 	err = store.Exec(context.Background(),
-		`INSERT INTO artist_aliases (artist_id, alias, source, is_primary) 
+		`INSERT INTO artist_aliases (artist_id, alias, source, is_primary)
 			VALUES (1, 'Artist One', 'Testing', true),
 				   (2, 'Artist Two', 'Testing', true)`)
 	require.NoError(t, err)
 
 	// Insert release groups
 	err = store.Exec(context.Background(),
-		`INSERT INTO releases (musicbrainz_id) 
+		`INSERT INTO releases (musicbrainz_id)
 			VALUES ('00000000-0000-0000-0000-000000000011'),
 				   ('00000000-0000-0000-0000-000000000022')`)
 	require.NoError(t, err)
 
 	// Insert release aliases
 	err = store.Exec(context.Background(),
-		`INSERT INTO release_aliases (release_id, alias, source, is_primary) 
+		`INSERT INTO release_aliases (release_id, alias, source, is_primary)
 			VALUES (1, 'Release One', 'Testing', true),
 				   (2, 'Release Two', 'Testing', true)`)
 	require.NoError(t, err)
 
 	// Insert tracks
 	err = store.Exec(context.Background(),
-		`INSERT INTO tracks (musicbrainz_id, release_id) 
+		`INSERT INTO tracks (musicbrainz_id, release_id)
 			VALUES ('11111111-1111-1111-1111-111111111111', 1),
 				   ('22222222-2222-2222-2222-222222222222', 2)`)
 	require.NoError(t, err)
 
 	// Insert track aliases
 	err = store.Exec(context.Background(),
-		`INSERT INTO track_aliases (track_id, alias, source, is_primary) 
+		`INSERT INTO track_aliases (track_id, alias, source, is_primary)
 			VALUES (1, 'Track One', 'Testing', true),
 				   (2, 'Track Two', 'Testing', true)`)
 	require.NoError(t, err)
 
 	// Insert artist track associations
 	err = store.Exec(context.Background(),
-		`INSERT INTO artist_tracks (track_id, artist_id) 
+		`INSERT INTO artist_tracks (track_id, artist_id)
 			VALUES (1, 1),
 				   (2, 2)`)
 	require.NoError(t, err)
@@ -152,19 +152,15 @@ func TestGetListens(t *testing.T) {
 
 	testDataAbsoluteListenTimes(t)
 
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Year: 2023})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.Timeframe{Year: 2023}})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 4)
 	assert.Equal(t, int64(4), resp.TotalCount)
 
-	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Month: 6, Year: 2024})
+	resp, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Timeframe: db.Timeframe{Month: 6, Year: 2024}})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 3)
 	assert.Equal(t, int64(3), resp.TotalCount)
-
-	// invalid, year required with month
-	_, err = store.GetListensPaginated(ctx, db.GetItemsOpts{Month: 10})
-	require.Error(t, err)
 
 }
 

@@ -13,6 +13,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countNewArtists = `-- name: CountNewArtists :one
+SELECT COUNT(*) AS total_count
+FROM (
+  SELECT at.artist_id
+  FROM listens l
+  JOIN tracks t ON l.track_id = t.id
+  JOIN artist_tracks at ON t.id = at.track_id
+  GROUP BY at.artist_id
+  HAVING MIN(l.listened_at) BETWEEN $1 AND $2
+) first_appearances
+`
+
+type CountNewArtistsParams struct {
+	ListenedAt   time.Time
+	ListenedAt_2 time.Time
+}
+
+func (q *Queries) CountNewArtists(ctx context.Context, arg CountNewArtistsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countNewArtists, arg.ListenedAt, arg.ListenedAt_2)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
+}
+
 const countTopArtists = `-- name: CountTopArtists :one
 SELECT COUNT(DISTINCT at.artist_id) AS total_count
 FROM listens l
@@ -78,7 +102,7 @@ func (q *Queries) DeleteConflictingArtistTracks(ctx context.Context, arg DeleteC
 }
 
 const getArtist = `-- name: GetArtist :one
-SELECT 
+SELECT
   a.id, a.musicbrainz_id, a.image, a.image_source, a.name,
   array_agg(aa.alias)::text[] AS aliases
 FROM artists_with_name a
@@ -110,6 +134,39 @@ func (q *Queries) GetArtist(ctx context.Context, id int32) (GetArtistRow, error)
 	return i, err
 }
 
+const getArtistAllTimeRank = `-- name: GetArtistAllTimeRank :one
+SELECT
+    artist_id,
+    rank
+FROM (
+    SELECT
+        x.artist_id,
+        RANK() OVER (ORDER BY x.listen_count DESC) AS rank
+    FROM (
+        SELECT
+            at.artist_id,
+            COUNT(*) AS listen_count
+        FROM listens l
+        JOIN tracks t ON l.track_id = t.id
+        JOIN artist_tracks at ON t.id = at.track_id
+        GROUP BY at.artist_id
+        ) x
+    )
+WHERE artist_id = $1
+`
+
+type GetArtistAllTimeRankRow struct {
+	ArtistID int32
+	Rank     int64
+}
+
+func (q *Queries) GetArtistAllTimeRank(ctx context.Context, artistID int32) (GetArtistAllTimeRankRow, error) {
+	row := q.db.QueryRow(ctx, getArtistAllTimeRank, artistID)
+	var i GetArtistAllTimeRankRow
+	err := row.Scan(&i.ArtistID, &i.Rank)
+	return i, err
+}
+
 const getArtistByImage = `-- name: GetArtistByImage :one
 SELECT id, musicbrainz_id, image, image_source FROM artists WHERE image = $1 LIMIT 1
 `
@@ -127,7 +184,7 @@ func (q *Queries) GetArtistByImage(ctx context.Context, image *uuid.UUID) (Artis
 }
 
 const getArtistByMbzID = `-- name: GetArtistByMbzID :one
-SELECT 
+SELECT
   a.id, a.musicbrainz_id, a.image, a.image_source, a.name,
   array_agg(aa.alias)::text[] AS aliases
 FROM artists_with_name a
@@ -161,7 +218,7 @@ func (q *Queries) GetArtistByMbzID(ctx context.Context, musicbrainzID *uuid.UUID
 
 const getArtistByName = `-- name: GetArtistByName :one
 WITH artist_with_aliases AS (
-  SELECT 
+  SELECT
     a.id, a.musicbrainz_id, a.image, a.image_source, a.name,
     COALESCE(array_agg(aa.alias), '{}')::text[] AS aliases
   FROM artists_with_name a
@@ -197,8 +254,49 @@ func (q *Queries) GetArtistByName(ctx context.Context, alias string) (GetArtistB
 	return i, err
 }
 
+const getArtistsWithoutImages = `-- name: GetArtistsWithoutImages :many
+SELECT
+    id, musicbrainz_id, image, image_source, name
+FROM artists_with_name
+WHERE image IS NULL
+  AND id > $2
+ORDER BY id ASC
+LIMIT $1
+`
+
+type GetArtistsWithoutImagesParams struct {
+	Limit int32
+	ID    int32
+}
+
+func (q *Queries) GetArtistsWithoutImages(ctx context.Context, arg GetArtistsWithoutImagesParams) ([]ArtistsWithName, error) {
+	rows, err := q.db.Query(ctx, getArtistsWithoutImages, arg.Limit, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ArtistsWithName
+	for rows.Next() {
+		var i ArtistsWithName
+		if err := rows.Scan(
+			&i.ID,
+			&i.MusicBrainzID,
+			&i.Image,
+			&i.ImageSource,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getReleaseArtists = `-- name: GetReleaseArtists :many
-SELECT 
+SELECT
   a.id, a.musicbrainz_id, a.image, a.image_source, a.name,
   ar.is_primary as is_primary
 FROM artists_with_name a
@@ -245,18 +343,27 @@ func (q *Queries) GetReleaseArtists(ctx context.Context, releaseID int32) ([]Get
 
 const getTopArtistsPaginated = `-- name: GetTopArtistsPaginated :many
 SELECT
+  x.id,
+  x.name,
+  x.musicbrainz_id,
+  x.image,
+  x.listen_count,
+  RANK() OVER (ORDER BY x.listen_count DESC) AS rank
+FROM (
+  SELECT
     a.id,
     a.name,
     a.musicbrainz_id,
     a.image,
     COUNT(*) AS listen_count
-FROM listens l
-JOIN tracks t ON l.track_id = t.id
-JOIN artist_tracks at ON at.track_id = t.id
-JOIN artists_with_name a ON a.id = at.artist_id
-WHERE l.listened_at BETWEEN $1 AND $2
-GROUP BY a.id, a.name, a.musicbrainz_id, a.image, a.image_source, a.name
-ORDER BY listen_count DESC, a.id
+  FROM listens l
+  JOIN tracks t ON l.track_id = t.id
+  JOIN artist_tracks at ON at.track_id = t.id
+  JOIN artists_with_name a ON a.id = at.artist_id
+  WHERE l.listened_at BETWEEN $1 AND $2
+  GROUP BY a.id, a.name, a.musicbrainz_id, a.image
+) x
+ORDER BY x.listen_count DESC, x.id
 LIMIT $3 OFFSET $4
 `
 
@@ -273,6 +380,7 @@ type GetTopArtistsPaginatedRow struct {
 	MusicBrainzID *uuid.UUID
 	Image         *uuid.UUID
 	ListenCount   int64
+	Rank          int64
 }
 
 func (q *Queries) GetTopArtistsPaginated(ctx context.Context, arg GetTopArtistsPaginatedParams) ([]GetTopArtistsPaginatedRow, error) {
@@ -295,6 +403,7 @@ func (q *Queries) GetTopArtistsPaginated(ctx context.Context, arg GetTopArtistsP
 			&i.MusicBrainzID,
 			&i.Image,
 			&i.ListenCount,
+			&i.Rank,
 		); err != nil {
 			return nil, err
 		}
@@ -307,7 +416,7 @@ func (q *Queries) GetTopArtistsPaginated(ctx context.Context, arg GetTopArtistsP
 }
 
 const getTrackArtists = `-- name: GetTrackArtists :many
-SELECT 
+SELECT
   a.id, a.musicbrainz_id, a.image, a.image_source, a.name,
   at.is_primary as is_primary
 FROM artists_with_name a

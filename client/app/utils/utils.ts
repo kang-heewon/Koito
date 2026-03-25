@@ -15,6 +15,27 @@ const timeframeToInterval = (timeframe: Timeframe): string => {
   }
 };
 
+const getRewindYear = (searchParams?: URLSearchParams): number => {
+  const year = Number.parseInt(searchParams?.get("year") || "", 10);
+
+  if (!Number.isNaN(year)) {
+    return year;
+  }
+
+  return new Date().getFullYear();
+};
+
+const getRewindParams = (
+  searchParams?: URLSearchParams
+): { month: number; year: number } => {
+  const month = Number.parseInt(searchParams?.get("month") || "", 10);
+
+  return {
+    month: Number.isNaN(month) ? 0 : month,
+    year: getRewindYear(searchParams),
+  };
+};
+
 function timeSince(date: Date) {
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -39,8 +60,6 @@ function timeSince(date: Date) {
   return "just now";
 }
 
-export { timeSince };
-
 type hsl = {
   h: number;
   s: number;
@@ -48,9 +67,9 @@ type hsl = {
 };
 
 const hexToHSL = (hex: string): hsl => {
-  let r = 0,
-    g = 0,
-    b = 0;
+  let r = 0;
+  let g = 0;
+  let b = 0;
   hex = hex.replace("#", "");
 
   if (hex.length === 3) {
@@ -67,11 +86,11 @@ const hexToHSL = (hex: string): hsl => {
   g /= 255;
   b /= 255;
 
-  const max = Math.max(r, g, b),
-    min = Math.min(r, g, b);
-  let h = 0,
-    s = 0,
-    l = (max + min) / 2;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  let l = (max + min) / 2;
 
   if (max !== min) {
     const d = max - min;
@@ -100,30 +119,9 @@ const hexToHSL = (hex: string): hsl => {
 const timeListenedString = (seconds: number) => {
   if (!seconds) return "";
 
-  let minutes = Math.floor(seconds / 60);
+  const minutes = Math.floor(seconds / 60);
   return `${minutes} minutes listened`;
 };
 
-const getRewindYear = (searchParams?: URLSearchParams): number => {
-  const year = Number.parseInt(searchParams?.get("year") || "", 10);
-
-  if (!Number.isNaN(year)) {
-    return year;
-  }
-
-  return new Date().getFullYear();
-};
-
-const getRewindParams = (
-  searchParams?: URLSearchParams
-): { month: number; year: number } => {
-  const month = Number.parseInt(searchParams?.get("month") || "", 10);
-
-  return {
-    month: Number.isNaN(month) ? 0 : month,
-    year: getRewindYear(searchParams),
-  };
-};
-
-export { hexToHSL, timeListenedString, getRewindYear, getRewindParams };
+export { hexToHSL, timeListenedString, getRewindYear, getRewindParams, timeSince, timeframeToInterval };
 export type { hsl };

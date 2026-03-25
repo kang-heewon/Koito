@@ -16,55 +16,55 @@ func testDataForTracks(t *testing.T) {
 
 	// Insert artists
 	err := store.Exec(context.Background(),
-		`INSERT INTO artists (musicbrainz_id) 
+		`INSERT INTO artists (musicbrainz_id)
 			VALUES ('00000000-0000-0000-0000-000000000001'),
 				   ('00000000-0000-0000-0000-000000000002')`)
 	require.NoError(t, err)
 
 	// Insert artist aliases
 	err = store.Exec(context.Background(),
-		`INSERT INTO artist_aliases (artist_id, alias, source, is_primary) 
+		`INSERT INTO artist_aliases (artist_id, alias, source, is_primary)
 			VALUES (1, 'Artist One', 'Testing', true),
 				   (2, 'Artist Two', 'Testing', true)`)
 	require.NoError(t, err)
 
 	// Insert release groups
 	err = store.Exec(context.Background(),
-		`INSERT INTO releases (musicbrainz_id) 
+		`INSERT INTO releases (musicbrainz_id)
 			VALUES ('00000000-0000-0000-0000-000000000011'),
 				   ('00000000-0000-0000-0000-000000000022')`)
 	require.NoError(t, err)
 
 	// Insert release aliases
 	err = store.Exec(context.Background(),
-		`INSERT INTO release_aliases (release_id, alias, source, is_primary) 
+		`INSERT INTO release_aliases (release_id, alias, source, is_primary)
 			VALUES (1, 'Release Group One', 'Testing', true),
 				   (2, 'Release Group Two', 'Testing', true)`)
 	require.NoError(t, err)
 
 	// Insert tracks
 	err = store.Exec(context.Background(),
-		`INSERT INTO tracks (musicbrainz_id, release_id, duration) 
+		`INSERT INTO tracks (musicbrainz_id, release_id, duration)
 			VALUES ('11111111-1111-1111-1111-111111111111', 1, 100),
 				   ('22222222-2222-2222-2222-222222222222', 2, 100)`)
 	require.NoError(t, err)
 
 	// Insert track aliases
 	err = store.Exec(context.Background(),
-		`INSERT INTO track_aliases (track_id, alias, source, is_primary) 
+		`INSERT INTO track_aliases (track_id, alias, source, is_primary)
 			VALUES (1, 'Track One', 'Testing', true),
 				   (2, 'Track Two', 'Testing', true)`)
 	require.NoError(t, err)
 
 	// Associate tracks with artists
 	err = store.Exec(context.Background(),
-		`INSERT INTO artist_tracks (artist_id, track_id) 
+		`INSERT INTO artist_tracks (artist_id, track_id)
 			VALUES (1, 1), (2, 2)`)
 	require.NoError(t, err)
 
-	// Associate tracks with artists
+	// Insert listens
 	err = store.Exec(context.Background(),
-		`INSERT INTO listens (user_id, track_id, listened_at) 
+		`INSERT INTO listens (user_id, track_id, listened_at)
 			VALUES (1, 1, NOW()), (1, 2, NOW())`)
 	require.NoError(t, err)
 }
@@ -88,9 +88,10 @@ func TestGetTrack(t *testing.T) {
 	assert.Equal(t, "Track Two", track.Title)
 	assert.EqualValues(t, 100, track.TimeListened)
 
-	// Test GetTrack by Title and ArtistIDs
+	// Test GetTrack by Title, Release and ArtistIDs
 	track, err = store.GetTrack(ctx, db.GetTrackOpts{
 		Title:     "Track One",
+		ReleaseID: 1,
 		ArtistIDs: []int32{1},
 	})
 	require.NoError(t, err)
@@ -99,7 +100,7 @@ func TestGetTrack(t *testing.T) {
 	assert.EqualValues(t, 100, track.TimeListened)
 
 	// Test GetTrack with insufficient information
-	_, err = store.GetTrack(ctx, db.GetTrackOpts{})
+	_, err = store.GetTrack(ctx, db.GetTrackOpts{Title: "Track One"})
 	assert.Error(t, err)
 }
 func TestSaveTrack(t *testing.T) {
@@ -226,4 +227,28 @@ func TestDeleteTrack(t *testing.T) {
 
 	_, err = store.Count(ctx, `SELECT * FROM tracks WHERE id = 2`)
 	require.ErrorIs(t, err, pgx.ErrNoRows) // no rows error
+}
+
+func TestReleaseAssociations(t *testing.T) {
+	testDataForTracks(t)
+	ctx := context.Background()
+
+	track, err := store.SaveTrack(ctx, db.SaveTrackOpts{
+		Title:     "Track Three",
+		AlbumID:   2,
+		ArtistIDs: []int32{2, 1}, // Artist Two feat. Artist One
+		Duration:  100,
+	})
+	require.NoError(t, err)
+	count, err := store.Count(ctx, `SELECT COUNT(*) FROM artist_releases WHERE release_id = 2`)
+	require.NoError(t, err)
+	require.Equal(t, 2, count, "expected release to be associated with artist from inserted track")
+
+	err = store.DeleteTrack(ctx, track.ID)
+	require.NoError(t, err)
+
+	count, err = store.Count(ctx, `SELECT COUNT(*) FROM artist_releases WHERE release_id = 2`)
+	require.NoError(t, err)
+	require.Equal(t, 1, count, "expected artist no longer on release to be disassociated from release")
+
 }

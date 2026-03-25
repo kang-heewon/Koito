@@ -7,6 +7,7 @@ import PeriodSelector from "~/components/PeriodSelector";
 import MediaLayout from "./MediaLayout";
 import ActivityGrid from "~/components/ActivityGrid";
 import { timeListenedString } from "~/utils/utils";
+import InterestGraph from "~/components/InterestGraph";
 
 export async function clientLoader({ params }: LoaderFunctionArgs) {
   const res = await fetch(`/apis/web/v1/album?id=${params.id}`);
@@ -27,6 +28,7 @@ export default function AlbumPage() {
       title={album.title}
       img={album.image}
       id={album.id}
+      rank={album.all_time_rank}
       musicbrainzId={album.musicbrainz_id}
       imgItemId={album.id}
       mergeFunc={mergeAlbums}
@@ -39,22 +41,22 @@ export default function AlbumPage() {
       }}
       subContent={
         <div className="flex flex-col gap-2 items-start">
-          {album.listen_count && (
+          {album.listen_count !== 0 && (
             <p>
               {album.listen_count} play{album.listen_count > 1 ? "s" : ""}
             </p>
           )}
-          {
+          {album.time_listened !== 0 && (
             <p title={Math.floor(album.time_listened / 60 / 60) + " hours"}>
               {timeListenedString(album.time_listened)}
             </p>
-          }
-          {
+          )}
+          {album.first_listen > 0 && (
             <p title={new Date(album.first_listen * 1000).toLocaleString()}>
               Listening since{" "}
               {new Date(album.first_listen * 1000).toLocaleDateString()}
             </p>
-          }
+          )}
         </div>
       }
     >
@@ -64,7 +66,10 @@ export default function AlbumPage() {
       <div className="flex flex-wrap gap-20 mt-10">
         <LastPlays limit={30} albumId={album.id} />
         <TopTracks limit={12} period={period} albumId={album.id} />
-        <ActivityGrid configurable albumId={album.id} />
+        <div className="flex flex-col items-start gap-4">
+          <ActivityGrid configurable albumId={album.id} />
+          <InterestGraph albumId={album.id} />
+        </div>
       </div>
     </MediaLayout>
   );

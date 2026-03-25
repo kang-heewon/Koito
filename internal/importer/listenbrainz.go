@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"path"
 	"strings"
 	"time"
@@ -34,15 +33,16 @@ func ImportListenBrainzExport(ctx context.Context, store db.DB, mbzc mbz.MusicBr
 	for _, f := range r.File {
 
 		if f.FileInfo().IsDir() {
+			l.Debug().Msgf("File %s is dir, skipping...", f.Name)
 			continue
 		}
 
 		if strings.HasPrefix(f.Name, "listens/") && strings.HasSuffix(f.Name, ".jsonl") {
-			fmt.Println("Found:", f.Name)
+			l.Info().Msgf("Found: %s\n", f.Name)
 
 			rc, err := f.Open()
 			if err != nil {
-				log.Printf("Failed to open %s: %v\n", f.Name, err)
+				l.Err(err).Msgf("Failed to open %s\n", f.Name)
 				continue
 			}
 
@@ -75,7 +75,7 @@ func ImportListenBrainzFile(ctx context.Context, store db.DB, mbzc mbz.MusicBrai
 		payload := new(handlers.LbzSubmitListenPayload)
 		err := json.Unmarshal(line, payload)
 		if err != nil {
-			fmt.Println("Error unmarshaling JSON:", err)
+			l.Err(err).Msg("Error unmarshaling JSON")
 			continue
 		}
 		ts := time.Unix(payload.ListenedAt, 0)
@@ -85,7 +85,14 @@ func ImportListenBrainzFile(ctx context.Context, store db.DB, mbzc mbz.MusicBrai
 		}
 		artistMbzIDs, err := utils.ParseUUIDSlice(payload.TrackMeta.AdditionalInfo.ArtistMBIDs)
 		if err != nil {
-			l.Debug().Err(err).Msg("Failed to parse one or more uuids")
+			l.Debug().AnErr("error", err).Msg("ImportListenBrainzFile: Failed to parse one or more UUIDs")
+		}
+		if len(artistMbzIDs) < 1 {
+			l.Debug().AnErr("error", err).Msg("ImportListenBrainzFile: Attempting to parse artist UUIDs from mbid_mapping")
+			utils.ParseUUIDSlice(payload.TrackMeta.MBIDMapping.ArtistMBIDs)
+			if err != nil {
+				l.Debug().AnErr("error", err).Msg("ImportListenBrainzFile: Failed to parse one or more UUIDs")
+			}
 		}
 		rgMbzID, err := uuid.Parse(payload.TrackMeta.AdditionalInfo.ReleaseGroupMBID)
 		if err != nil {
@@ -93,11 +100,17 @@ func ImportListenBrainzFile(ctx context.Context, store db.DB, mbzc mbz.MusicBrai
 		}
 		releaseMbzID, err := uuid.Parse(payload.TrackMeta.AdditionalInfo.ReleaseMBID)
 		if err != nil {
-			releaseMbzID = uuid.Nil
+			releaseMbzID, err = uuid.Parse(payload.TrackMeta.MBIDMapping.ReleaseMBID)
+			if err != nil {
+				releaseMbzID = uuid.Nil
+			}
 		}
 		recordingMbzID, err := uuid.Parse(payload.TrackMeta.AdditionalInfo.RecordingMBID)
 		if err != nil {
-			recordingMbzID = uuid.Nil
+			recordingMbzID, err = uuid.Parse(payload.TrackMeta.MBIDMapping.RecordingMBID)
+			if err != nil {
+				recordingMbzID = uuid.Nil
+			}
 		}
 
 		var client string

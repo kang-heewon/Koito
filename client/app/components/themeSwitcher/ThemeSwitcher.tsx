@@ -44,12 +44,12 @@ export function ThemeSwitcher() {
     <div className="flex flex-col gap-10">
       <div>
         <div className="flex items-center gap-3">
-          <h2>Select Theme</h2>
+          <h3>Select Theme</h3>
           <div className="mb-3">
             <AsyncButton onClick={resetTheme}>Reset</AsyncButton>
           </div>
         </div>
-        <div className="grid grid-cols-2 items-center gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-2">
           {Object.entries(themes).map(([name, themeData]) => (
             <ThemeOption
               setTheme={setTheme}
@@ -61,7 +61,7 @@ export function ThemeSwitcher() {
         </div>
       </div>
       <div>
-        <h2>Use Custom Theme</h2>
+        <h3>Use Custom Theme</h3>
         <div className="flex flex-col items-center gap-3 bg-secondary p-5 rounded-lg">
           <textarea
             name="custom-theme"

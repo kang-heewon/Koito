@@ -9,7 +9,8 @@ import (
 	"github.com/gabehf/koito/internal/repository"
 )
 
-func (d *Psql) SaveAlbumGenres(ctx context.Context, id int32, genres []string) error {
+func (d *Psql) SaveAlbumGenres(ctx context.Context, albumID int32, genres []string) error {
+	id := albumID
 	l := logger.FromContext(ctx)
 	if id == 0 {
 		return fmt.Errorf("SaveAlbumGenres: album id not specified")
@@ -50,7 +51,8 @@ func (d *Psql) SaveAlbumGenres(ctx context.Context, id int32, genres []string) e
 	return nil
 }
 
-func (d *Psql) SaveArtistGenres(ctx context.Context, id int32, genres []string) error {
+func (d *Psql) SaveArtistGenres(ctx context.Context, artistID int32, genres []string) error {
+	id := artistID
 	l := logger.FromContext(ctx)
 	if id == 0 {
 		return fmt.Errorf("SaveArtistGenres: artist id not specified")

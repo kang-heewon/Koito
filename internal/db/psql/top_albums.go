@@ -57,8 +57,8 @@ func (d *Psql) GetTopAlbumsPaginated(ctx context.Context, opts db.GetItemsOpts) 
 					VariousArtists: v.VariousArtists,
 					ListenCount:    v.ListenCount,
 				},
-				Rank:        offset + i + 1,
-				ListenCount: v.ListenCount,
+				Rank:         v.Rank,
+				ListenCount:  v.ListenCount,
 			}
 		}
 		count, err = d.q.CountReleasesFromArtist(ctx, int32(opts.ArtistID))
@@ -96,8 +96,8 @@ func (d *Psql) GetTopAlbumsPaginated(ctx context.Context, opts db.GetItemsOpts) 
 					VariousArtists: row.VariousArtists,
 					ListenCount:    row.ListenCount,
 				},
-				Rank:        offset + i + 1,
-				ListenCount: row.ListenCount,
+				Rank:         row.Rank,
+				ListenCount:  row.ListenCount,
 			}
 		}
 		count, err = d.q.CountTopReleases(ctx, repository.CountTopReleasesParams{

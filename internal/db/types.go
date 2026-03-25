@@ -30,7 +30,7 @@ type PaginatedResponse[T any] struct {
 
 type RankedItem[T any] struct {
 	Item         T
-	Rank         int
+	Rank         int64
 	ListenCount  int64
 	TimeListened int64
 }
@@ -54,7 +54,7 @@ type ExportItem struct {
 
 type GenreStat struct {
 	Name  string
-	Value int64 // listen_count or seconds_listened
+	Value int64
 }
 
 type WrappedStats struct {
@@ -105,7 +105,8 @@ type GetRecommendationsOpts struct {
 	Limit           int
 }
 
-type TrackWithMbzID struct {
-	ID    int32
-	MbzID uuid.UUID
+type InterestBucket struct {
+	BucketStart time.Time `json:"bucket_start"`
+	BucketEnd   time.Time `json:"bucket_end"`
+	ListenCount int64     `json:"listen_count"`
 }

@@ -23,40 +23,20 @@ func (d *Psql) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Albu
 	var err error
 	var ret = new(models.Album)
 
-	if opts.ID != 0 {
-		l.Debug().Msgf("Fetching album from DB with id %d", opts.ID)
-		row, err := d.q.GetRelease(ctx, opts.ID)
-		if err != nil {
-			return nil, fmt.Errorf("GetAlbum: %w", err)
-		}
-		ret.ID = row.ID
-		ret.MbzID = row.MusicBrainzID
-		ret.Title = row.Title
-		ret.Image = row.Image
-		ret.VariousArtists = row.VariousArtists
-		err = json.Unmarshal(row.Artists, &ret.Artists)
-		if err != nil {
-			return nil, fmt.Errorf("GetAlbum: json.Unmarshal: %w", err)
-		}
-	} else if opts.MusicBrainzID != uuid.Nil {
+	if opts.MusicBrainzID != uuid.Nil {
 		l.Debug().Msgf("Fetching album from DB with MusicBrainz Release ID %s", opts.MusicBrainzID)
 		row, err := d.q.GetReleaseByMbzID(ctx, &opts.MusicBrainzID)
 		if err != nil {
 			return nil, fmt.Errorf("GetAlbum: %w", err)
 		}
-		ret.ID = row.ID
-		ret.MbzID = row.MusicBrainzID
-		ret.Title = row.Title
-		ret.Image = row.Image
-		ret.VariousArtists = row.VariousArtists
+		opts.ID = row.ID
 	} else if opts.Image != uuid.Nil {
 		l.Debug().Msgf("Fetching album from DB with image id %s", opts.Image)
 		row, err := d.q.GetReleaseByImageID(ctx, &opts.Image)
 		if err != nil {
 			return nil, fmt.Errorf("GetAlbum: %w", err)
 		}
-		// reuse ID path to populate full details and artists
-		return d.GetAlbum(ctx, db.GetAlbumOpts{ID: row.ID})
+		opts.ID = row.ID
 	} else if opts.ArtistID != 0 && opts.Title != "" {
 		l.Debug().Msgf("Fetching album from DB with artist_id %d and title %s", opts.ArtistID, opts.Title)
 		row, err := d.q.GetReleaseByArtistAndTitle(ctx, repository.GetReleaseByArtistAndTitleParams{
@@ -66,16 +46,78 @@ func (d *Psql) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Albu
 		if err != nil {
 			return nil, fmt.Errorf("GetAlbum: %w", err)
 		}
-		ret.ID = row.ID
-		ret.MbzID = row.MusicBrainzID
-		ret.Title = row.Title
-		ret.Image = row.Image
-		ret.VariousArtists = row.VariousArtists
+		opts.ID = row.ID
 	} else if opts.ArtistID != 0 && len(opts.Titles) > 0 {
 		l.Debug().Msgf("Fetching release group from DB with artist_id %d and titles %v", opts.ArtistID, opts.Titles)
 		row, err := d.q.GetReleaseByArtistAndTitles(ctx, repository.GetReleaseByArtistAndTitlesParams{
 			ArtistID: opts.ArtistID,
 			Column1:  opts.Titles,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("GetAlbum: %w", err)
+		}
+		opts.ID = row.ID
+	}
+
+	l.Debug().Msgf("Fetching album from DB with id %d", opts.ID)
+	row, err := d.q.GetRelease(ctx, opts.ID)
+	if err != nil {
+		return nil, fmt.Errorf("GetAlbum: %w", err)
+	}
+
+	count, err := d.q.CountListensFromRelease(ctx, repository.CountListensFromReleaseParams{
+		ListenedAt:   time.Unix(0, 0),
+		ListenedAt_2: time.Now(),
+		ReleaseID:    opts.ID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetAlbum: CountListensFromRelease: %w", err)
+	}
+
+	seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
+		Timeframe: db.PeriodToTimeframe(db.PeriodAllTime),
+		AlbumID:   opts.ID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetAlbum: CountTimeListenedToItem: %w", err)
+	}
+
+	firstListen, err := d.q.GetFirstListenFromRelease(ctx, opts.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("GetAlbum: GetFirstListenFromRelease: %w", err)
+	}
+
+	rank, err := d.q.GetReleaseAllTimeRank(ctx, opts.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("GetAlbum: GetReleaseAllTimeRank: %w", err)
+	}
+
+	ret.ID = row.ID
+	ret.MbzID = row.MusicBrainzID
+	ret.Title = row.Title
+	ret.Image = row.Image
+	ret.VariousArtists = row.VariousArtists
+	err = json.Unmarshal(row.Artists, &ret.Artists)
+	if err != nil {
+		return nil, fmt.Errorf("GetAlbum: json.Unmarshal: %w", err)
+	}
+	ret.AllTimeRank = rank.Rank
+	ret.ListenCount = count
+	ret.TimeListened = seconds
+	ret.FirstListen = firstListen.ListenedAt.Unix()
+
+	return ret, nil
+}
+
+func (d *Psql) GetAlbumWithNoMbzIDByTitles(ctx context.Context, artistId int32, titles []string) (*models.Album, error) {
+	l := logger.FromContext(ctx)
+	ret := new(models.Album)
+
+	if artistId != 0 && len(titles) > 0 {
+		l.Debug().Msgf("GetAlbumWithNoMbzIDByTitles: Fetching release group from DB with artist_id %d and titles %v and no associated MusicBrainz ID", artistId, titles)
+		row, err := d.q.GetReleaseByArtistAndTitlesNoMbzID(ctx, repository.GetReleaseByArtistAndTitlesNoMbzIDParams{
+			ArtistID: artistId,
+			Column1:  titles,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("GetAlbum: %w", err)
@@ -86,16 +128,15 @@ func (d *Psql) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Albu
 		ret.Image = row.Image
 		ret.VariousArtists = row.VariousArtists
 	} else {
-		return nil, errors.New("GetAlbum: insufficient information to get album")
+		return nil, errors.New("GetAlbumWithNoMbzIDByTitles: insufficient information to get album")
 	}
-
 	count, err := d.q.CountListensFromRelease(ctx, repository.CountListensFromReleaseParams{
 		ListenedAt:   time.Unix(0, 0),
 		ListenedAt_2: time.Now(),
 		ReleaseID:    ret.ID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("GetAlbum: CountListensFromRelease: %w", err)
+		return nil, fmt.Errorf("GetAlbumWithNoMbzIDByTitles: CountListensFromRelease: %w", err)
 	}
 
 	seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
@@ -103,12 +144,12 @@ func (d *Psql) GetAlbum(ctx context.Context, opts db.GetAlbumOpts) (*models.Albu
 		AlbumID:   ret.ID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("GetAlbum: CountTimeListenedToItem: %w", err)
+		return nil, fmt.Errorf("GetAlbumWithNoMbzIDByTitles: CountTimeListenedToItem: %w", err)
 	}
 
 	firstListen, err := d.q.GetFirstListenFromRelease(ctx, ret.ID)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("GetAlbum: GetFirstListenFromRelease: %w", err)
+		return nil, fmt.Errorf("GetAlbumWithNoMbzIDByTitles: GetFirstListenFromRelease: %w", err)
 	}
 
 	ret.ListenCount = count
@@ -257,6 +298,9 @@ func (d *Psql) UpdateAlbum(ctx context.Context, opts db.UpdateAlbumOpts) error {
 		}
 	}
 	if opts.Image != uuid.Nil {
+		if opts.ImageSrc == "" {
+			return fmt.Errorf("UpdateAlbum: image source must be provided when updating an image")
+		}
 		l.Debug().Msgf("Updating release with ID %d with image %s", opts.ID, opts.Image)
 		err := qtx.UpdateReleaseImage(ctx, repository.UpdateReleaseImageParams{
 			ID:          opts.ID,

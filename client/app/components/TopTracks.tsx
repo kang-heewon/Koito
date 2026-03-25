@@ -1,5 +1,5 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { getTopTracks, type GetItemsArgs, type TopRanked, type Track } from "api/api";
+import { getTopTracks, type GetItemsArgs, type Track } from "api/api";
 import { Link } from "react-router";
 import TopListSkeleton from "./skeletons/TopListSkeleton";
 import TopItemList from "./TopItemList";
@@ -26,7 +26,9 @@ const TopTracks = (props: Props) => {
     queryFn: ({ queryKey }) => getTopTracks(queryKey[1] as GetItemsArgs),
     placeholderData: keepPreviousData,
   });
-  const rankedData = data as typeof data & { items: TopRanked<Track>[] };
+
+  const header = "Top tracks";
+
   if (isPending || isFetching) {
     return (
       <div className="w-full sm:w-[300px]">
@@ -34,7 +36,9 @@ const TopTracks = (props: Props) => {
         <TopListSkeleton numItems={props.limit} />
       </div>
     );
-  } else if (isError) {
+  }
+
+  if (isError) {
     return (
       <div className="w-full sm:w-[300px]">
         <h2>Top Tracks</h2>
@@ -42,7 +46,10 @@ const TopTracks = (props: Props) => {
       </div>
     );
   }
-  if (!rankedData?.items) return null;
+
+  if (!data?.items) {
+    return null;
+  }
 
   let params = "";
   params += props.artistId ? `&artist_id=${props.artistId}` : "";
@@ -51,13 +58,11 @@ const TopTracks = (props: Props) => {
   return (
     <div className="w-full sm:w-[300px]">
       <h2 className="hover:underline">
-        <Link to={`/chart/top-tracks?period=${props.period}${params}`}>
-          Top Tracks
-        </Link>
+        <Link to={`/chart/top-tracks?period=${props.period}${params}`}>{header}</Link>
       </h2>
       <div className="max-w-full sm:max-w-[300px]">
-        <TopItemList type="track" data={rankedData} />
-        {rankedData.items.length < 1 ? "No tracks found for this period." : ""}
+        <TopItemList type="track" data={data} />
+        {data.items.length < 1 ? "No tracks found for this period." : ""}
       </div>
     </div>
   );

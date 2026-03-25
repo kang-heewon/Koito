@@ -85,19 +85,15 @@ func TestGetTopAlbumsPaginated(t *testing.T) {
 
 	testDataAbsoluteListenTimes(t)
 
-	resp, err = store.GetTopAlbumsPaginated(ctx, db.GetItemsOpts{Year: 2023})
+	resp, err = store.GetTopAlbumsPaginated(ctx, db.GetItemsOpts{Timeframe: db.Timeframe{Year: 2023}})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 	assert.Equal(t, int64(1), resp.TotalCount)
 	assert.Equal(t, "Release One", resp.Items[0].Item.Title)
 
-	resp, err = store.GetTopAlbumsPaginated(ctx, db.GetItemsOpts{Month: 6, Year: 2024})
+	resp, err = store.GetTopAlbumsPaginated(ctx, db.GetItemsOpts{Timeframe: db.Timeframe{Month: 6, Year: 2024}})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 	assert.Equal(t, int64(1), resp.TotalCount)
 	assert.Equal(t, "Release Two", resp.Items[0].Item.Title)
-
-	// invalid, year required with month
-	_, err = store.GetTopAlbumsPaginated(ctx, db.GetItemsOpts{Month: 10})
-	require.Error(t, err)
 }

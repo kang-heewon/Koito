@@ -91,14 +91,8 @@ func createOrUpdateAlbumWithMbzReleaseID(ctx context.Context, d db.DB, opts Asso
 	titles := []string{release.Title, opts.ReleaseName}
 	utils.Unique(&titles)
 
-	if len(opts.Artists) == 0 {
-		return nil, errors.New("createOrUpdateAlbumWithMbzReleaseID: at least one artist is required")
-	}
-	l.Debug().Msgf("Searching for albums '%v' from artist id %d in DB", titles, opts.Artists[0].ID)
-	album, err = d.GetAlbum(ctx, db.GetAlbumOpts{
-		ArtistID: opts.Artists[0].ID,
-		Titles:   titles,
-	})
+	l.Debug().Msgf("Searching for albums '%v' from artist id %d and no associated MusicBrainz ID in DB", titles, opts.Artists[0].ID)
+	album, err = d.GetAlbumWithNoMbzIDByTitles(ctx, opts.Artists[0].ID, titles)
 	if err == nil {
 		l.Debug().Msgf("Found album %s, updating with MusicBrainz Release ID...", album.Title)
 		err := d.UpdateAlbum(ctx, db.UpdateAlbumOpts{

@@ -22,6 +22,9 @@ func (d *Psql) GetListensPaginated(ctx context.Context, opts db.GetItemsOpts) (*
 	}
 	offset := (opts.Page - 1) * opts.Limit
 	t1, t2 := db.TimeframeToTimeRange(opts.Timeframe)
+	if opts.Limit == 0 {
+		opts.Limit = DefaultItemsPerPage
+	}
 	var listens []*models.Listen
 	var count int64
 	if opts.TrackID > 0 {

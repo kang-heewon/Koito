@@ -6,6 +6,7 @@ import PeriodSelector from "~/components/PeriodSelector";
 import MediaLayout from "./MediaLayout";
 import ActivityGrid from "~/components/ActivityGrid";
 import { timeListenedString } from "~/utils/utils";
+import InterestGraph from "~/components/InterestGraph";
 
 export async function clientLoader({ params }: LoaderFunctionArgs) {
   let res = await fetch(`/apis/web/v1/track?id=${params.id}`);
@@ -33,7 +34,8 @@ export default function TrackPage() {
       title={track.title}
       img={track.image}
       id={track.id}
-      musicbrainzId={album.musicbrainz_id}
+      rank={track.all_time_rank}
+      musicbrainzId={track.musicbrainz_id}
       imgItemId={track.album_id}
       mergeFunc={mergeTracks}
       mergeCleanerFunc={(r, id) => {
@@ -45,23 +47,28 @@ export default function TrackPage() {
       }}
       subContent={
         <div className="flex flex-col gap-2 items-start">
-          <Link to={`/album/${track.album_id}`}>appears on {album.title}</Link>
-          {track.listen_count && (
+          <p>
+            Appears on{" "}
+            <Link className="hover:underline" to={`/album/${track.album_id}`}>
+              {album.title}
+            </Link>
+          </p>
+          {track.listen_count !== 0 && (
             <p>
               {track.listen_count} play{track.listen_count > 1 ? "s" : ""}
             </p>
           )}
-          {
+          {track.time_listened !== 0 && (
             <p title={Math.floor(track.time_listened / 60 / 60) + " hours"}>
               {timeListenedString(track.time_listened)}
             </p>
-          }
-          {
+          )}
+          {track.first_listen > 0 && (
             <p title={new Date(track.first_listen * 1000).toLocaleString()}>
               Listening since{" "}
               {new Date(track.first_listen * 1000).toLocaleDateString()}
             </p>
-          }
+          )}
         </div>
       }
     >
@@ -70,7 +77,10 @@ export default function TrackPage() {
       </div>
       <div className="flex flex-wrap gap-20 mt-10">
         <LastPlays limit={20} trackId={track.id} />
-        <ActivityGrid trackId={track.id} configurable />
+        <div className="flex flex-col items-start gap-4">
+          <ActivityGrid configurable trackId={track.id} />
+          <InterestGraph trackId={track.id} />
+        </div>
       </div>
     </MediaLayout>
   );

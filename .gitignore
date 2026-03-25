@@ -1,3 +1,4 @@
 test_config_dir
 .claude/settings.local.json
 koito
+.env

@@ -64,6 +64,8 @@ If the environment variable is defined without **and** with the suffix at the sa
 ##### KOITO_CONFIG_DIR
 - Default: `/etc/koito`
 - Description: The location where import folders and image caches are stored.
+##### KOITO_FORCE_TZ
+- Description: A canonical IANA database time zone name (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) that Koito will use to serve all clients. Overrides any timezones requested via a `tz` cookie or `tz` query parameter. Koito will fail to start if this value is invalid.
 ##### KOITO_DISABLE_DEEZER
 - Default: `false`
 - Description: Disables Deezer as a source for finding artist and album images.
@@ -78,6 +80,13 @@ If the environment variable is defined without **and** with the suffix at the sa
 ##### KOITO_SUBSONIC_PARAMS
 - Required: `true` if KOITO_SUBSONIC_URL is set
 - Description: The `u`, `t`, and `s` authentication parameters to use for authenticated requests to your subsonic server, in the format `u=XXX&t=XXX&s=XXX`. An easy way to find them is to open the network tab in the developer tools of your browser of choice and copy them from a request.
+:::caution
+If Koito is unable to validate your Subsonic configuration, it will fail to start. If you notice your container isn't running after
+changing these parameters, check the logs!
+:::
+##### KOITO_LASTFM_API_KEY
+- Required: `false`
+- Description: Your LastFM API key, which will be used for fetching images if provided. You can get an API key [here](https://www.last.fm/api/authentication),
 ##### KOITO_SKIP_IMPORT
 - Default: `false`
 - Description: Skips running the importer on startup.

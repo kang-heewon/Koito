@@ -43,9 +43,7 @@ func bindRoutes(
 		r.Get("/config", handlers.GetCfgHandler())
 
 		r.Group(func(r chi.Router) {
-			if cfg.LoginGate() {
-				r.Use(middleware.ValidateSession(db))
-			}
+			r.Use(middleware.Authenticate(db, middleware.AuthModeLoginGate))
 			r.Get("/artist", handlers.GetArtistHandler(db))
 			r.Get("/artists", handlers.GetArtistsForItemHandler(db))
 			r.Get("/album", handlers.GetAlbumHandler(db))
@@ -57,12 +55,12 @@ func bindRoutes(
 			r.Get("/listen-activity", handlers.GetListenActivityHandler(db))
 			r.Get("/now-playing", handlers.NowPlayingHandler(db))
 			r.Get("/stats", handlers.StatsHandler(db))
-			r.Get("/summary", handlers.SummaryHandler(db))
 			r.Get("/wrapped", handlers.WrappedHandler(db))
-			r.Get("/genre-stats", handlers.GenreStatsHandler(db))
 			r.Get("/search", handlers.SearchHandler(db))
 			r.Get("/aliases", handlers.GetAliasesHandler(db))
 			r.Get("/recommendations", handlers.RecommendationsHandler(db))
+			r.Get("/summary", handlers.SummaryHandler(db))
+			r.Get("/interest", handlers.GetInterestHandler(db))
 		})
 		r.Post("/logout", handlers.LogoutHandler(db))
 		if !cfg.RateLimitDisabled() {
@@ -86,7 +84,7 @@ func bindRoutes(
 		})
 
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.ValidateSession(db))
+			r.Use(middleware.Authenticate(db, middleware.AuthModeSessionOrAPIKey))
 			r.Get("/export", handlers.ExportHandler(db))
 			r.Post("/replace-image", handlers.ReplaceImageHandler(db))
 			r.Patch("/album", handlers.UpdateAlbumHandler(db))
@@ -102,6 +100,7 @@ func bindRoutes(
 			r.Post("/aliases", handlers.CreateAliasHandler(db))
 			r.Post("/aliases/delete", handlers.DeleteAliasHandler(db))
 			r.Post("/aliases/primary", handlers.SetPrimaryAliasHandler(db))
+			r.Patch("/mbzid", handlers.UpdateMbzIdHandler(db))
 			r.Get("/user/apikeys", handlers.GetApiKeysHandler(db))
 			r.Post("/user/apikeys", handlers.GenerateApiKeyHandler(db))
 			r.Patch("/user/apikeys", handlers.UpdateApiKeyLabelHandler(db))
@@ -111,7 +110,7 @@ func bindRoutes(
 		})
 
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.ValidateSession(db))
+			r.Use(middleware.Authenticate(db, middleware.AuthModeSessionCookie))
 			r.Post("/admin/backfill-genres", handlers.BackfillGenresHandler(db, mbz, discogsC, lastfmC, spotifyC, controller))
 		})
 	})
@@ -122,8 +121,10 @@ func bindRoutes(
 			AllowedHeaders: []string{"Content-Type", "Authorization"},
 		}))
 
-		r.With(middleware.ValidateApiKey(db)).Post("/submit-listens", handlers.LbzSubmitListenHandler(db, mbz))
-		r.With(middleware.ValidateApiKey(db)).Get("/validate-token", handlers.LbzValidateTokenHandler(db))
+		r.With(middleware.Authenticate(db, middleware.AuthModeAPIKey)).
+			Post("/submit-listens", handlers.LbzSubmitListenHandler(db, mbz))
+		r.With(middleware.Authenticate(db, middleware.AuthModeAPIKey)).
+			Get("/validate-token", handlers.LbzValidateTokenHandler(db))
 	})
 
 	// serve react client

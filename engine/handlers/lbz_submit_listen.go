@@ -100,6 +100,9 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 		}
 
 		decoder := json.NewDecoder(bytes.NewBuffer(requestBytes))
+		if cfg.LbzRelayEnabled() {
+			go doLbzRelay(requestBytes, l)
+		}
 
 		if err := decoder.Decode(&req); err != nil {
 			l.Err(err).Msg("LbzSubmitListenHandler: Failed to decode request")
@@ -114,7 +117,7 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 			return
 		}
 
-		l.Debug().Any("request_body", req).Msg("LbzSubmitListenHandler: Parsed request body")
+		l.Info().Any("request_body", req).Msg("LbzSubmitListenHandler: Parsed request body")
 
 		if len(req.Payload) < 1 {
 			l.Debug().Msg("LbzSubmitListenHandler: Payload is empty")
@@ -248,10 +251,6 @@ func LbzSubmitListenHandler(store db.DB, mbzc mbz.MusicBrainzCaller) func(w http
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("{\"status\": \"ok\"}"))
-
-		if cfg.LbzRelayEnabled() {
-			go doLbzRelay(requestBytes, l)
-		}
 	}
 }
 

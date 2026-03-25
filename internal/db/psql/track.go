@@ -21,61 +21,36 @@ func (d *Psql) GetTrack(ctx context.Context, opts db.GetTrackOpts) (*models.Trac
 	l := logger.FromContext(ctx)
 	var track models.Track
 
-	if opts.ID != 0 {
-		l.Debug().Msgf("Fetching track from DB with id %d", opts.ID)
-		t, err := d.q.GetTrack(ctx, opts.ID)
-		if err != nil {
-			return nil, fmt.Errorf("GetTrack: GetTrack By ID: %w", err)
-		}
-		track = models.Track{
-			ID:       t.ID,
-			MbzID:    t.MusicBrainzID,
-			Title:    t.Title,
-			AlbumID:  t.ReleaseID,
-			Image:    t.Image,
-			Duration: t.Duration,
-		}
-		err = json.Unmarshal(t.Artists, &track.Artists)
-		if err != nil {
-			return nil, fmt.Errorf("GetTrack: json.Unmarshal: %w", err)
-		}
-	} else if opts.MusicBrainzID != uuid.Nil {
+	if opts.MusicBrainzID != uuid.Nil {
 		l.Debug().Msgf("Fetching track from DB with MusicBrainz ID %s", opts.MusicBrainzID)
 		t, err := d.q.GetTrackByMbzID(ctx, &opts.MusicBrainzID)
 		if err != nil {
 			return nil, fmt.Errorf("GetTrack: GetTrackByMbzID: %w", err)
 		}
-		track = models.Track{
-			ID:       t.ID,
-			MbzID:    t.MusicBrainzID,
-			Title:    t.Title,
-			AlbumID:  t.ReleaseID,
-			Duration: t.Duration,
-		}
-	} else if len(opts.ArtistIDs) > 0 {
-		l.Debug().Msgf("Fetching track from DB with title '%s' and artist id(s) '%v'", opts.Title, opts.ArtistIDs)
-		t, err := d.q.GetTrackByTitleAndArtists(ctx, repository.GetTrackByTitleAndArtistsParams{
-			Title:   opts.Title,
-			Column2: opts.ArtistIDs,
+		opts.ID = t.ID
+	} else if len(opts.ArtistIDs) > 0 && opts.ReleaseID != 0 {
+		l.Debug().Msgf("Fetching track from DB from release id %d with title '%s' and artist id(s) '%v'", opts.ReleaseID, opts.Title, opts.ArtistIDs)
+		t, err := d.q.GetTrackByTrackInfo(ctx, repository.GetTrackByTrackInfoParams{
+			Title:     opts.Title,
+			ReleaseID: opts.ReleaseID,
+			Column3:   opts.ArtistIDs,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("GetTrack: GetTrackByTitleAndArtists: %w", err)
+			return nil, fmt.Errorf("GetTrack: GetTrackByTrackInfo: %w", err)
 		}
-		track = models.Track{
-			ID:       t.ID,
-			MbzID:    t.MusicBrainzID,
-			Title:    t.Title,
-			AlbumID:  t.ReleaseID,
-			Duration: t.Duration,
-		}
-	} else {
-		return nil, errors.New("GetTrack: insufficient information to get track")
+		opts.ID = t.ID
+	}
+
+	l.Debug().Msgf("Fetching track from DB with id %d", opts.ID)
+	t, err := d.q.GetTrack(ctx, opts.ID)
+	if err != nil {
+		return nil, fmt.Errorf("GetTrack: GetTrack By ID: %w", err)
 	}
 
 	count, err := d.q.CountListensFromTrack(ctx, repository.CountListensFromTrackParams{
 		ListenedAt:   time.Unix(0, 0),
 		ListenedAt_2: time.Now(),
-		TrackID:      track.ID,
+		TrackID:      opts.ID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("GetTrack: CountListensFromTrack: %w", err)
@@ -83,20 +58,37 @@ func (d *Psql) GetTrack(ctx context.Context, opts db.GetTrackOpts) (*models.Trac
 
 	seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
 		Timeframe: db.PeriodToTimeframe(db.PeriodAllTime),
-		TrackID:   track.ID,
+		TrackID:   opts.ID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("GetTrack: CountTimeListenedToItem: %w", err)
 	}
 
-	firstListen, err := d.q.GetFirstListenFromTrack(ctx, track.ID)
+	firstListen, err := d.q.GetFirstListenFromTrack(ctx, opts.ID)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("GetAlbum: GetFirstListenFromRelease: %w", err)
 	}
+	rank, err := d.q.GetTrackAllTimeRank(ctx, opts.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("GetAlbum: GetTrackAllTimeRank: %w", err)
+	}
 
-	track.ListenCount = count
-	track.TimeListened = seconds
-	track.FirstListen = firstListen.ListenedAt.Unix()
+	track = models.Track{
+		ID:           t.ID,
+		MbzID:        t.MusicBrainzID,
+		Title:        t.Title,
+		AlbumID:      t.ReleaseID,
+		Image:        t.Image,
+		Duration:     t.Duration,
+		AllTimeRank:  rank.Rank,
+		ListenCount:  count,
+		TimeListened: seconds,
+		FirstListen:  firstListen.ListenedAt.Unix(),
+	}
+	err = json.Unmarshal(t.Artists, &track.Artists)
+	if err != nil {
+		return nil, fmt.Errorf("GetTrack: json.Unmarshal: %w", err)
+	}
 
 	return &track, nil
 }
@@ -142,6 +134,13 @@ func (d *Psql) SaveTrack(ctx context.Context, opts db.SaveTrackOpts) (*models.Tr
 			ArtistID:  aid,
 			TrackID:   trackRow.ID,
 			IsPrimary: opts.ArtistIDs[0] == aid,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("SaveTrack: AssociateArtistToTrack: %w", err)
+		}
+		err = qtx.AssociateArtistToRelease(ctx, repository.AssociateArtistToReleaseParams{
+			ArtistID:  aid,
+			ReleaseID: trackRow.ReleaseID,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("SaveTrack: AssociateArtistToTrack: %w", err)
@@ -251,7 +250,28 @@ func (d *Psql) SaveTrackAliases(ctx context.Context, id int32, aliases []string,
 }
 
 func (d *Psql) DeleteTrack(ctx context.Context, id int32) error {
-	return d.q.DeleteTrack(ctx, id)
+	l := logger.FromContext(ctx)
+	tx, err := d.conn.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		l.Err(err).Msg("Failed to begin transaction")
+		return fmt.Errorf("DeleteTrack: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	qtx := d.q.WithTx(tx)
+
+	err = qtx.DeleteTrack(ctx, id)
+	if err != nil {
+		return fmt.Errorf("DeleteTrack: DeleteTrack: %w", err)
+	}
+
+	// also clean orphaned entries to ensure artists are disassociated with releases where
+	// they no longer have any tracks on the release
+	err = qtx.CleanOrphanedEntries(ctx)
+	if err != nil {
+		return fmt.Errorf("DeleteTrack: CleanOrphanedEntries: %w", err)
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (d *Psql) DeleteTrackAlias(ctx context.Context, id int32, alias string) error {
@@ -383,4 +403,30 @@ func (d *Psql) SetPrimaryTrackArtist(ctx context.Context, id int32, artistId int
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+// returns nil, nil when no results
+func (d *Psql) GetTracksWithNoDurationButHaveMbzID(ctx context.Context, from int32) ([]*models.Track, error) {
+	results, err := d.q.GetTracksWithNoDurationButHaveMbzID(ctx, repository.GetTracksWithNoDurationButHaveMbzIDParams{
+		Limit: 20,
+		ID:    from,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("GetTracksWithNoDurationButHaveMbzID: %w", err)
+	}
+
+	ret := make([]*models.Track, 0)
+
+	for _, v := range results {
+		ret = append(ret, &models.Track{
+			ID:       v.ID,
+			Duration: v.Duration,
+			MbzID:    v.MusicBrainzID,
+			Title:    v.Title,
+		})
+	}
+
+	return ret, nil
 }

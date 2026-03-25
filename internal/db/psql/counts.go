@@ -4,42 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/repository"
-)
-
-const (
-	countNewTracksQuery = `
-		SELECT COUNT(*)
-		FROM (
-			SELECT l.track_id
-			FROM listens l
-			GROUP BY l.track_id
-			HAVING MIN(l.listened_at) BETWEEN $1 AND $2
-		) new_tracks;
-	`
-	countNewAlbumsQuery = `
-		SELECT COUNT(*)
-		FROM (
-			SELECT t.release_id
-			FROM listens l
-			JOIN tracks t ON t.id = l.track_id
-			GROUP BY t.release_id
-			HAVING MIN(l.listened_at) BETWEEN $1 AND $2
-		) new_albums;
-	`
-	countNewArtistsQuery = `
-		SELECT COUNT(*)
-		FROM (
-			SELECT at.artist_id
-			FROM listens l
-			JOIN artist_tracks at ON at.track_id = l.track_id
-			GROUP BY at.artist_id
-			HAVING MIN(l.listened_at) BETWEEN $1 AND $2
-		) new_artists;
-	`
 )
 
 func (p *Psql) CountListens(ctx context.Context, timeframe db.Timeframe) (int64, error) {
@@ -90,6 +57,7 @@ func (p *Psql) CountArtists(ctx context.Context, timeframe db.Timeframe) (int64,
 	return count, nil
 }
 
+// in seconds
 func (p *Psql) CountTimeListened(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	t1, t2 := db.TimeframeToTimeRange(timeframe)
 	count, err := p.q.CountTimeListened(ctx, repository.CountTimeListenedParams{
@@ -102,6 +70,7 @@ func (p *Psql) CountTimeListened(ctx context.Context, timeframe db.Timeframe) (i
 	return count, nil
 }
 
+// in seconds
 func (p *Psql) CountTimeListenedToItem(ctx context.Context, opts db.TimeListenedOpts) (int64, error) {
 	t1, t2 := db.TimeframeToTimeRange(opts.Timeframe)
 
@@ -178,7 +147,10 @@ func (p *Psql) CountListensToItem(ctx context.Context, opts db.TimeListenedOpts)
 
 func (p *Psql) CountNewTracks(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	t1, t2 := db.TimeframeToTimeRange(timeframe)
-	count, err := p.countWithTimeRange(ctx, countNewTracksQuery, t1, t2)
+	count, err := p.q.CountNewTracks(ctx, repository.CountNewTracksParams{
+		ListenedAt:   t1,
+		ListenedAt_2: t2,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("CountNewTracks: %w", err)
 	}
@@ -187,7 +159,10 @@ func (p *Psql) CountNewTracks(ctx context.Context, timeframe db.Timeframe) (int6
 
 func (p *Psql) CountNewAlbums(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	t1, t2 := db.TimeframeToTimeRange(timeframe)
-	count, err := p.countWithTimeRange(ctx, countNewAlbumsQuery, t1, t2)
+	count, err := p.q.CountNewReleases(ctx, repository.CountNewReleasesParams{
+		ListenedAt:   t1,
+		ListenedAt_2: t2,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("CountNewAlbums: %w", err)
 	}
@@ -196,23 +171,12 @@ func (p *Psql) CountNewAlbums(ctx context.Context, timeframe db.Timeframe) (int6
 
 func (p *Psql) CountNewArtists(ctx context.Context, timeframe db.Timeframe) (int64, error) {
 	t1, t2 := db.TimeframeToTimeRange(timeframe)
-	count, err := p.countWithTimeRange(ctx, countNewArtistsQuery, t1, t2)
+	count, err := p.q.CountNewArtists(ctx, repository.CountNewArtistsParams{
+		ListenedAt:   t1,
+		ListenedAt_2: t2,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("CountNewArtists: %w", err)
-	}
-	return count, nil
-}
-
-func (p *Psql) countWithTimeRange(ctx context.Context, query string, t1 time.Time, t2 time.Time) (int64, error) {
-	var count int64
-	if p.tx != nil {
-		if err := p.tx.QueryRow(ctx, query, t1, t2).Scan(&count); err != nil {
-			return 0, err
-		}
-		return count, nil
-	}
-	if err := p.conn.QueryRow(ctx, query, t1, t2).Scan(&count); err != nil {
-		return 0, err
 	}
 	return count, nil
 }

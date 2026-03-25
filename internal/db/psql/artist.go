@@ -150,6 +150,45 @@ func (d *Psql) GetArtist(ctx context.Context, opts db.GetArtistOpts) (*models.Ar
 	} else {
 		return nil, errors.New("insufficient information to get artist")
 	}
+	l.Debug().Msgf("Fetching artist from DB with id %d", opts.ID)
+	row, err := d.q.GetArtist(ctx, opts.ID)
+	if err != nil {
+		return nil, fmt.Errorf("GetArtist: GetArtist by ID: %w", err)
+	}
+	count, err := d.q.CountListensFromArtist(ctx, repository.CountListensFromArtistParams{
+		ListenedAt:   time.Unix(0, 0),
+		ListenedAt_2: time.Now(),
+		ArtistID:     row.ID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetArtist: CountListensFromArtist: %w", err)
+	}
+	seconds, err := d.CountTimeListenedToItem(ctx, db.TimeListenedOpts{
+		Timeframe: db.PeriodToTimeframe(db.PeriodAllTime),
+		ArtistID:  row.ID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetArtist: CountTimeListenedToItem: %w", err)
+	}
+	firstListen, err := d.q.GetFirstListenFromArtist(ctx, row.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("GetAlbum: GetFirstListenFromArtist: %w", err)
+	}
+	rank, err := d.q.GetArtistAllTimeRank(ctx, opts.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("GetArtist: GetArtistAllTimeRank: %w", err)
+	}
+	return &models.Artist{
+		ID:           row.ID,
+		MbzID:        row.MusicBrainzID,
+		Name:         row.Name,
+		Aliases:      row.Aliases,
+		Image:        row.Image,
+		ListenCount:  count,
+		TimeListened: seconds,
+		AllTimeRank:  rank.Rank,
+		FirstListen:  firstListen.ListenedAt.Unix(),
+	}, nil
 }
 
 // Inserts all unique aliases into the DB with specified source
@@ -297,6 +336,9 @@ func (d *Psql) UpdateArtist(ctx context.Context, opts db.UpdateArtistOpts) error
 		}
 	}
 	if opts.Image != uuid.Nil {
+		if opts.ImageSrc == "" {
+			return fmt.Errorf("UpdateAlbum: image source must be provided when updating an image")
+		}
 		l.Debug().Msgf("Updating artist with id %d with image %s", opts.ID, opts.Image)
 		err = qtx.UpdateArtistImage(ctx, repository.UpdateArtistImageParams{
 			ID:          opts.ID,

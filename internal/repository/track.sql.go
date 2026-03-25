@@ -29,6 +29,28 @@ func (q *Queries) AssociateArtistToTrack(ctx context.Context, arg AssociateArtis
 	return err
 }
 
+const countNewTracks = `-- name: CountNewTracks :one
+SELECT COUNT(*) AS total_count
+FROM (
+  SELECT track_id
+  FROM listens
+  GROUP BY track_id
+  HAVING MIN(listened_at) BETWEEN $1 AND $2
+) first_appearances
+`
+
+type CountNewTracksParams struct {
+	ListenedAt   time.Time
+	ListenedAt_2 time.Time
+}
+
+func (q *Queries) CountNewTracks(ctx context.Context, arg CountNewTracksParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countNewTracks, arg.ListenedAt, arg.ListenedAt_2)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
+}
+
 const countTopTracks = `-- name: CountTopTracks :one
 SELECT COUNT(DISTINCT l.track_id) AS total_count
 FROM listens l
@@ -133,22 +155,30 @@ func (q *Queries) GetAllTracksFromArtist(ctx context.Context, artistID int32) ([
 
 const getTopTracksByArtistPaginated = `-- name: GetTopTracksByArtistPaginated :many
 SELECT
-    t.id,
+    x.track_id AS id,
     t.title,
     t.musicbrainz_id,
     t.release_id,
     r.image,
-    COUNT(*) AS listen_count,
-    get_artists_for_track(t.id) AS artists
-FROM listens l
-JOIN tracks_with_title t ON l.track_id = t.id
+    x.listen_count,
+    get_artists_for_track(x.track_id) AS artists,
+    x.rank
+FROM (
+    SELECT
+        l.track_id,
+        COUNT(*) AS listen_count,
+        RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+    FROM listens l
+    JOIN artist_tracks at ON l.track_id = at.track_id
+    WHERE l.listened_at BETWEEN $1 AND $2
+        AND at.artist_id = $5
+    GROUP BY l.track_id
+    ORDER BY listen_count DESC
+    LIMIT $3 OFFSET $4
+) x
+JOIN tracks_with_title t ON x.track_id = t.id
 JOIN releases r ON t.release_id = r.id
-JOIN artist_tracks at ON at.track_id = t.id
-WHERE l.listened_at BETWEEN $1 AND $2
-  AND at.artist_id = $5
-GROUP BY t.id, t.title, t.musicbrainz_id, t.release_id, r.image
-ORDER BY listen_count DESC, t.id
-LIMIT $3 OFFSET $4
+ORDER BY x.listen_count DESC, x.track_id
 `
 
 type GetTopTracksByArtistPaginatedParams struct {
@@ -167,6 +197,7 @@ type GetTopTracksByArtistPaginatedRow struct {
 	Image         *uuid.UUID
 	ListenCount   int64
 	Artists       []byte
+	Rank          int64
 }
 
 func (q *Queries) GetTopTracksByArtistPaginated(ctx context.Context, arg GetTopTracksByArtistPaginatedParams) ([]GetTopTracksByArtistPaginatedRow, error) {
@@ -192,6 +223,7 @@ func (q *Queries) GetTopTracksByArtistPaginated(ctx context.Context, arg GetTopT
 			&i.Image,
 			&i.ListenCount,
 			&i.Artists,
+			&i.Rank,
 		); err != nil {
 			return nil, err
 		}
@@ -205,21 +237,30 @@ func (q *Queries) GetTopTracksByArtistPaginated(ctx context.Context, arg GetTopT
 
 const getTopTracksInReleasePaginated = `-- name: GetTopTracksInReleasePaginated :many
 SELECT
-    t.id,
+    x.track_id AS id,
     t.title,
     t.musicbrainz_id,
     t.release_id,
     r.image,
-    COUNT(*) AS listen_count,
-    get_artists_for_track(t.id) AS artists
-FROM listens l
-JOIN tracks_with_title t ON l.track_id = t.id
+    x.listen_count,
+    get_artists_for_track(x.track_id) AS artists,
+    x.rank
+FROM (
+    SELECT
+        l.track_id,
+        COUNT(*) AS listen_count,
+        RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+    FROM listens l
+    JOIN tracks t ON l.track_id = t.id
+    WHERE l.listened_at BETWEEN $1 AND $2
+        AND t.release_id = $5
+    GROUP BY l.track_id
+    ORDER BY listen_count DESC
+    LIMIT $3 OFFSET $4
+) x
+JOIN tracks_with_title t ON x.track_id = t.id
 JOIN releases r ON t.release_id = r.id
-WHERE l.listened_at BETWEEN $1 AND $2
-  AND t.release_id = $5
-GROUP BY t.id, t.title, t.musicbrainz_id, t.release_id, r.image
-ORDER BY listen_count DESC, t.id
-LIMIT $3 OFFSET $4
+ORDER BY x.listen_count DESC, x.track_id
 `
 
 type GetTopTracksInReleasePaginatedParams struct {
@@ -238,6 +279,7 @@ type GetTopTracksInReleasePaginatedRow struct {
 	Image         *uuid.UUID
 	ListenCount   int64
 	Artists       []byte
+	Rank          int64
 }
 
 func (q *Queries) GetTopTracksInReleasePaginated(ctx context.Context, arg GetTopTracksInReleasePaginatedParams) ([]GetTopTracksInReleasePaginatedRow, error) {
@@ -263,6 +305,7 @@ func (q *Queries) GetTopTracksInReleasePaginated(ctx context.Context, arg GetTop
 			&i.Image,
 			&i.ListenCount,
 			&i.Artists,
+			&i.Rank,
 		); err != nil {
 			return nil, err
 		}
@@ -276,20 +319,28 @@ func (q *Queries) GetTopTracksInReleasePaginated(ctx context.Context, arg GetTop
 
 const getTopTracksPaginated = `-- name: GetTopTracksPaginated :many
 SELECT
-    t.id,
+    x.track_id AS id,
     t.title,
     t.musicbrainz_id,
     t.release_id,
     r.image,
-    COUNT(*) AS listen_count,
-    get_artists_for_track(t.id) AS artists
-FROM listens l
-JOIN tracks_with_title t ON l.track_id = t.id
+    x.listen_count,
+    get_artists_for_track(x.track_id) AS artists,
+    x.rank
+FROM (
+    SELECT
+        track_id,
+        COUNT(*) AS listen_count,
+        RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+    FROM listens
+    WHERE listened_at BETWEEN $1 AND $2
+    GROUP BY track_id
+    ORDER BY listen_count DESC
+    LIMIT $3 OFFSET $4
+) x
+JOIN tracks_with_title t ON x.track_id = t.id
 JOIN releases r ON t.release_id = r.id
-WHERE l.listened_at BETWEEN $1 AND $2
-GROUP BY t.id, t.title, t.musicbrainz_id, t.release_id, r.image
-ORDER BY listen_count DESC, t.id
-LIMIT $3 OFFSET $4
+ORDER BY x.listen_count DESC, x.track_id
 `
 
 type GetTopTracksPaginatedParams struct {
@@ -307,6 +358,7 @@ type GetTopTracksPaginatedRow struct {
 	Image         *uuid.UUID
 	ListenCount   int64
 	Artists       []byte
+	Rank          int64
 }
 
 func (q *Queries) GetTopTracksPaginated(ctx context.Context, arg GetTopTracksPaginatedParams) ([]GetTopTracksPaginatedRow, error) {
@@ -331,6 +383,7 @@ func (q *Queries) GetTopTracksPaginated(ctx context.Context, arg GetTopTracksPag
 			&i.Image,
 			&i.ListenCount,
 			&i.Artists,
+			&i.Rank,
 		); err != nil {
 			return nil, err
 		}
@@ -343,7 +396,7 @@ func (q *Queries) GetTopTracksPaginated(ctx context.Context, arg GetTopTracksPag
 }
 
 const getTrack = `-- name: GetTrack :one
-SELECT 
+SELECT
   t.id, t.musicbrainz_id, t.duration, t.release_id, t.title,
   get_artists_for_track(t.id) AS artists,
   r.image
@@ -377,6 +430,37 @@ func (q *Queries) GetTrack(ctx context.Context, id int32) (GetTrackRow, error) {
 	return i, err
 }
 
+const getTrackAllTimeRank = `-- name: GetTrackAllTimeRank :one
+SELECT
+    id,
+    rank
+FROM (
+    SELECT
+        x.id,
+        RANK() OVER (ORDER BY x.listen_count DESC) AS rank
+    FROM (
+        SELECT
+            t.id,
+            COUNT(*) AS listen_count
+        FROM listens l
+        JOIN tracks_with_title t ON l.track_id = t.id
+        GROUP BY t.id) x
+    ) y
+WHERE id = $1
+`
+
+type GetTrackAllTimeRankRow struct {
+	ID   int32
+	Rank int64
+}
+
+func (q *Queries) GetTrackAllTimeRank(ctx context.Context, id int32) (GetTrackAllTimeRankRow, error) {
+	row := q.db.QueryRow(ctx, getTrackAllTimeRank, id)
+	var i GetTrackAllTimeRankRow
+	err := row.Scan(&i.ID, &i.Rank)
+	return i, err
+}
+
 const getTrackByMbzID = `-- name: GetTrackByMbzID :one
 SELECT id, musicbrainz_id, duration, release_id, title FROM tracks_with_title
 WHERE musicbrainz_id = $1 LIMIT 1
@@ -395,23 +479,25 @@ func (q *Queries) GetTrackByMbzID(ctx context.Context, musicbrainzID *uuid.UUID)
 	return i, err
 }
 
-const getTrackByTitleAndArtists = `-- name: GetTrackByTitleAndArtists :one
+const getTrackByTrackInfo = `-- name: GetTrackByTrackInfo :one
 SELECT t.id, t.musicbrainz_id, t.duration, t.release_id, t.title
 FROM tracks_with_title t
 JOIN artist_tracks at ON at.track_id = t.id
 WHERE t.title = $1
-  AND at.artist_id = ANY($2::int[])
+  AND at.artist_id = ANY($3::int[])
+  AND t.release_id = $2
 GROUP BY t.id, t.title, t.musicbrainz_id, t.duration, t.release_id
-HAVING COUNT(DISTINCT at.artist_id) = cardinality($2::int[])
+HAVING COUNT(DISTINCT at.artist_id) = cardinality($3::int[])
 `
 
-type GetTrackByTitleAndArtistsParams struct {
-	Title   string
-	Column2 []int32
+type GetTrackByTrackInfoParams struct {
+	Title     string
+	ReleaseID int32
+	Column3   []int32
 }
 
-func (q *Queries) GetTrackByTitleAndArtists(ctx context.Context, arg GetTrackByTitleAndArtistsParams) (TracksWithTitle, error) {
-	row := q.db.QueryRow(ctx, getTrackByTitleAndArtists, arg.Title, arg.Column2)
+func (q *Queries) GetTrackByTrackInfo(ctx context.Context, arg GetTrackByTrackInfoParams) (TracksWithTitle, error) {
+	row := q.db.QueryRow(ctx, getTrackByTrackInfo, arg.Title, arg.ReleaseID, arg.Column3)
 	var i TracksWithTitle
 	err := row.Scan(
 		&i.ID,
@@ -421,6 +507,48 @@ func (q *Queries) GetTrackByTitleAndArtists(ctx context.Context, arg GetTrackByT
 		&i.Title,
 	)
 	return i, err
+}
+
+const getTracksWithNoDurationButHaveMbzID = `-- name: GetTracksWithNoDurationButHaveMbzID :many
+SELECT
+    id, musicbrainz_id, duration, release_id, title
+FROM tracks_with_title
+WHERE duration = 0
+  AND musicbrainz_id IS NOT NULL
+  AND id > $2
+ORDER BY id ASC
+LIMIT $1
+`
+
+type GetTracksWithNoDurationButHaveMbzIDParams struct {
+	Limit int32
+	ID    int32
+}
+
+func (q *Queries) GetTracksWithNoDurationButHaveMbzID(ctx context.Context, arg GetTracksWithNoDurationButHaveMbzIDParams) ([]TracksWithTitle, error) {
+	rows, err := q.db.Query(ctx, getTracksWithNoDurationButHaveMbzID, arg.Limit, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TracksWithTitle
+	for rows.Next() {
+		var i TracksWithTitle
+		if err := rows.Scan(
+			&i.ID,
+			&i.MusicBrainzID,
+			&i.Duration,
+			&i.ReleaseID,
+			&i.Title,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertTrack = `-- name: InsertTrack :one

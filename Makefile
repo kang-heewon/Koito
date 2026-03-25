@@ -1,3 +1,8 @@
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
 .PHONY: all test clean client
 
 postgres.schemadump:
@@ -10,10 +15,10 @@ postgres.schemadump:
 	-v --dbname="koitodb" -f "/tmp/dump/schema.sql"
 
 postgres.run:
-	docker run --name koito-db -p 5432:5432 -e POSTGRES_PASSWORD=secret -d ghcr.io/kang-heewon/postgresql-local:18 postgres -c shared_preload_libraries=pg_bigm
+	docker run --name koito-db -p 5432:5432 -v koito_dev_db:/var/lib/postgresql -e POSTGRES_PASSWORD=secret -d ghcr.io/kang-heewon/postgresql-local:18 postgres -c shared_preload_libraries=pg_bigm
 
 postgres.run-scratch:
-	docker run --name koito-scratch -p 5433:5432 -e POSTGRES_PASSWORD=secret -d ghcr.io/kang-heewon/postgresql-local:18 postgres -c shared_preload_libraries=pg_bigm
+	docker run --name koito-scratch -p 5433:5432 -v koito_scratch_db:/var/lib/postgresql -e POSTGRES_PASSWORD=secret -d ghcr.io/kang-heewon/postgresql-local:18 postgres -c shared_preload_libraries=pg_bigm
 
 postgres.start:
 	docker start koito-db
@@ -27,11 +32,11 @@ postgres.remove:
 postgres.remove-scratch:
 	docker stop koito-scratch && docker rm koito-scratch
 
-api.debug:
-	KOITO_ALLOWED_HOSTS=* KOITO_LOG_LEVEL=debug KOITO_CONFIG_DIR=test_config_dir KOITO_DATABASE_URL=postgres://postgres:secret@localhost:5432?sslmode=disable go run cmd/api/main.go
+api.debug: postgres.start
+	go run cmd/api/main.go
 
-api.scratch:
-	KOITO_ALLOWED_HOSTS=* KOITO_LOG_LEVEL=debug KOITO_CONFIG_DIR=test_config_dir/scratch KOITO_DATABASE_URL=postgres://postgres:secret@localhost:5433?sslmode=disable go run cmd/api/main.go
+api.scratch: postgres.run-scratch
+	KOITO_DATABASE_URL=postgres://postgres:secret@localhost:5433?sslmode=disable go run cmd/api/main.go
 
 api.test:
 	go test ./... -timeout 60s
@@ -45,7 +50,7 @@ client.dev:
 docs.dev:
 	cd docs && yarn dev
 
-client.deps: 
+client.deps:
 	cd client && yarn install
 
 client.build: client.deps

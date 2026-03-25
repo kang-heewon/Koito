@@ -61,7 +61,9 @@ func TestImportSpotify(t *testing.T) {
 
 	a, err := store.GetArtist(context.Background(), db.GetArtistOpts{Name: "The Story So Far"})
 	require.NoError(t, err)
-	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{Title: "Clairvoyant", ArtistIDs: []int32{a.ID}})
+	r, err := store.GetAlbum(context.Background(), db.GetAlbumOpts{ArtistID: a.ID, Title: "The Story So Far / Stick To Your Guns Split"})
+	require.NoError(t, err)
+	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{Title: "Clairvoyant", ReleaseID: r.ID, ArtistIDs: []int32{a.ID}})
 	require.NoError(t, err)
 	t.Log(track)
 	assert.Equal(t, "Clairvoyant", track.Title)
@@ -107,15 +109,15 @@ func TestImportLastFM(t *testing.T) {
 	artist, err := store.GetArtist(context.Background(), db.GetArtistOpts{MusicBrainzID: uuid.MustParse("4b00640f-3be6-43f8-9b34-ff81bd89320a")})
 	require.NoError(t, err)
 	assert.Equal(t, "OurR", artist.Name)
-	artist, err = store.GetArtist(context.Background(), db.GetArtistOpts{Name: "CHUU"})
+	artist, err = store.GetArtist(context.Background(), db.GetArtistOpts{Name: "Necry Talkie"})
 	require.NoError(t, err)
-	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{Title: "because I'm stupid?", ArtistIDs: []int32{artist.ID}})
+	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{Title: "放課後の記憶", ReleaseID: album.ID, ArtistIDs: []int32{artist.ID}})
 	require.NoError(t, err)
 	t.Log(track)
-	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.PeriodToTimeframe(db.PeriodAllTime)})
+	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.Timeframe{Period: db.PeriodAllTime}})
 	require.NoError(t, err)
 	require.Len(t, listens.Items, 1)
-	assert.WithinDuration(t, time.Unix(1749776100, 0), listens.Items[0].Time, 1*time.Second)
+	assert.WithinDuration(t, time.Unix(1749774900, 0), listens.Items[0].Time, 1*time.Second)
 
 	truncateTestData(t)
 }
@@ -141,15 +143,15 @@ func TestImportLastFM_MbzDisabled(t *testing.T) {
 	artist, err := store.GetArtist(context.Background(), db.GetArtistOpts{MusicBrainzID: uuid.MustParse("4b00640f-3be6-43f8-9b34-ff81bd89320a")})
 	require.NoError(t, err)
 	assert.Equal(t, "OurR", artist.Name)
-	artist, err = store.GetArtist(context.Background(), db.GetArtistOpts{Name: "CHUU"})
+	artist, err = store.GetArtist(context.Background(), db.GetArtistOpts{Name: "Necry Talkie"})
 	require.NoError(t, err)
-	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{Title: "because I'm stupid?", ArtistIDs: []int32{artist.ID}})
+	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{Title: "放課後の記憶", ReleaseID: album.ID, ArtistIDs: []int32{artist.ID}})
 	require.NoError(t, err)
 	t.Log(track)
-	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.PeriodToTimeframe(db.PeriodAllTime)})
+	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.Timeframe{Period: db.PeriodAllTime}})
 	require.NoError(t, err)
 	require.Len(t, listens.Items, 1)
-	assert.WithinDuration(t, time.Unix(1749776100, 0), listens.Items[0].Time, 1*time.Second)
+	assert.WithinDuration(t, time.Unix(1749774900, 0), listens.Items[0].Time, 1*time.Second)
 
 	truncateTestData(t)
 }
@@ -216,7 +218,7 @@ func TestImportListenBrainz(t *testing.T) {
 	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{MusicBrainzID: uuid.MustParse("08e8f55b-f1a4-46b8-b2d1-fab4c592165c")})
 	require.NoError(t, err)
 	assert.Equal(t, "Desert", track.Title)
-	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.PeriodToTimeframe(db.PeriodAllTime)})
+	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.Timeframe{Period: db.PeriodAllTime}})
 	require.NoError(t, err)
 	assert.Len(t, listens.Items, 1)
 	assert.WithinDuration(t, time.Unix(1749780612, 0), listens.Items[0].Time, 1*time.Second)
@@ -254,10 +256,38 @@ func TestImportListenBrainz_MbzDisabled(t *testing.T) {
 	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{MusicBrainzID: uuid.MustParse("08e8f55b-f1a4-46b8-b2d1-fab4c592165c")})
 	require.NoError(t, err)
 	assert.Equal(t, "Desert", track.Title)
-	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.PeriodToTimeframe(db.PeriodAllTime)})
+	listens, err := store.GetListensPaginated(context.Background(), db.GetItemsOpts{TrackID: int(track.ID), Timeframe: db.Timeframe{Period: db.PeriodAllTime}})
 	require.NoError(t, err)
 	assert.Len(t, listens.Items, 1)
 	assert.WithinDuration(t, time.Unix(1749780612, 0), listens.Items[0].Time, 1*time.Second)
+
+	truncateTestData(t)
+}
+
+func TestImportListenBrainz_MBIDMapping(t *testing.T) {
+
+	src := path.Join("..", "test_assets", "listenbrainz_shoko1_123456789.zip")
+	destDir := filepath.Join(cfg.ConfigDir(), "import")
+	dest := filepath.Join(destDir, "listenbrainz_shoko1_123456789.zip")
+
+	// not going to make the dest dir because engine should make it already
+
+	input, err := os.ReadFile(src)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(dest, input, os.ModePerm))
+
+	engine.RunImporter(logger.Get(), store, &mbz.MbzErrorCaller{})
+
+	album, err := store.GetAlbum(context.Background(), db.GetAlbumOpts{MusicBrainzID: uuid.MustParse("177ebc28-0115-3897-8eb3-ebf74ce23790")})
+	require.NoError(t, err)
+	assert.Equal(t, "Zombie", album.Title)
+	artist, err := store.GetArtist(context.Background(), db.GetArtistOpts{MusicBrainzID: uuid.MustParse("c98d40fd-f6cf-4b26-883e-eaa515ee2851")})
+	require.NoError(t, err)
+	assert.Equal(t, "The Cranberries", artist.Name)
+	track, err := store.GetTrack(context.Background(), db.GetTrackOpts{MusicBrainzID: uuid.MustParse("3bbeb4e3-ab6d-460d-bfc5-de49e4251061")})
+	require.NoError(t, err)
+	assert.Equal(t, "Zombie", track.Title)
 
 	truncateTestData(t)
 }
@@ -274,6 +304,7 @@ func TestImportKoito(t *testing.T) {
 	giriReleaseMBID := uuid.MustParse("ac1f8da0-21d7-426e-83b0-befff06f0871")
 	suzukiMBID := uuid.MustParse("30f851bb-dba3-4e9b-811c-5f27f595c86a")
 	nijinoTrackMBID := uuid.MustParse("a4f26836-3894-46c1-acac-227808308687")
+	lp3MBID := uuid.MustParse("d0ec30bd-7cdc-417c-979d-5a0631b8a161")
 
 	input, err := os.ReadFile(src)
 	require.NoError(t, err)
@@ -284,11 +315,11 @@ func TestImportKoito(t *testing.T) {
 
 	// ensure all artists are saved
 	_, err = store.GetArtist(ctx, db.GetArtistOpts{Name: "American Football"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = store.GetArtist(ctx, db.GetArtistOpts{Name: "Rachel Goswell"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = store.GetArtist(ctx, db.GetArtistOpts{Name: "Elizabeth Powell"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	// ensure artist aliases are saved
 	artist, err := store.GetArtist(ctx, db.GetArtistOpts{MusicBrainzID: suzukiMBID})
@@ -310,6 +341,12 @@ func TestImportKoito(t *testing.T) {
 	aliases, err := store.GetAllAlbumAliases(ctx, album.ID)
 	require.NoError(t, err)
 	assert.Contains(t, utils.FlattenAliases(aliases), "Nijinoiroyo Azayakadeare (NELKE ver.)")
+	// ensure album associations are saved
+	album, err = store.GetAlbum(ctx, db.GetAlbumOpts{MusicBrainzID: lp3MBID})
+	require.NoError(t, err)
+	assert.Contains(t, utils.FlattenSimpleArtistNames(album.Artists), "Elizabeth Powell")
+	assert.Contains(t, utils.FlattenSimpleArtistNames(album.Artists), "Rachel Goswell")
+	assert.Contains(t, utils.FlattenSimpleArtistNames(album.Artists), "American Football")
 
 	// ensure all tracks are saved
 	track, err := store.GetTrack(ctx, db.GetTrackOpts{MusicBrainzID: nijinoTrackMBID})
@@ -323,16 +360,18 @@ func TestImportKoito(t *testing.T) {
 
 	artist, err = store.GetArtist(ctx, db.GetArtistOpts{MusicBrainzID: suzukiMBID})
 	require.NoError(t, err)
-	_, err = store.GetTrack(ctx, db.GetTrackOpts{Title: "GIRI GIRI", ArtistIDs: []int32{artist.ID}})
+	album, err = store.GetAlbum(ctx, db.GetAlbumOpts{ArtistID: artist.ID, Title: "GIRI GIRI"})
+	require.NoError(t, err)
+	_, err = store.GetTrack(ctx, db.GetTrackOpts{Title: "GIRI GIRI", ReleaseID: album.ID, ArtistIDs: []int32{artist.ID}})
 	require.NoError(t, err)
 
-	count, err := store.CountTracks(ctx, db.PeriodToTimeframe(db.PeriodAllTime))
+	count, err := store.CountTracks(ctx, db.Timeframe{Period: db.PeriodAllTime})
 	require.NoError(t, err)
 	assert.EqualValues(t, 4, count)
-	count, err = store.CountAlbums(ctx, db.PeriodToTimeframe(db.PeriodAllTime))
+	count, err = store.CountAlbums(ctx, db.Timeframe{Period: db.PeriodAllTime})
 	require.NoError(t, err)
 	assert.EqualValues(t, 3, count)
-	count, err = store.CountArtists(ctx, db.PeriodToTimeframe(db.PeriodAllTime))
+	count, err = store.CountArtists(ctx, db.Timeframe{Period: db.PeriodAllTime})
 	require.NoError(t, err)
 	assert.EqualValues(t, 6, count)
 

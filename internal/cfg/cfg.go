@@ -11,13 +11,11 @@ import (
 )
 
 const (
-	// defaultBaseUrl        = "http://127.0.0.1"
 	defaultListenPort     = 4110
 	defaultMusicBrainzUrl = "https://musicbrainz.org"
 )
 
 const (
-	// BASE_URL_ENV                  = "KOITO_BASE_URL"
 	DATABASE_URL_ENV               = "KOITO_DATABASE_URL"
 	BIND_ADDR_ENV                  = "KOITO_BIND_ADDR"
 	LISTEN_PORT_ENV                = "KOITO_LISTEN_PORT"
@@ -38,6 +36,7 @@ const (
 	DISABLE_MUSICBRAINZ_ENV        = "KOITO_DISABLE_MUSICBRAINZ"
 	SUBSONIC_URL_ENV               = "KOITO_SUBSONIC_URL"
 	SUBSONIC_PARAMS_ENV            = "KOITO_SUBSONIC_PARAMS"
+	LASTFM_API_KEY_ENV             = "KOITO_LASTFM_API_KEY"
 	SKIP_IMPORT_ENV                = "KOITO_SKIP_IMPORT"
 	ALLOWED_HOSTS_ENV              = "KOITO_ALLOWED_HOSTS"
 	CORS_ORIGINS_ENV               = "KOITO_CORS_ALLOWED_ORIGINS"
@@ -50,56 +49,56 @@ const (
 	LOGIN_GATE_ENV                 = "KOITO_LOGIN_GATE"
 	SPOTIFY_CLIENT_ID_ENV          = "KOITO_SPOTIFY_CLIENT_ID"
 	SPOTIFY_CLIENT_SECRET_ENV      = "KOITO_SPOTIFY_CLIENT_SECRET"
-	SECURE_COOKIES_ENV            = "KOITO_SECURE_COOKIES"
-	DISCOGS_CONSUMER_KEY_ENV    = "KOITO_DISCOGS_CONSUMER_KEY"
-	DISCOGS_CONSUMER_SECRET_ENV = "KOITO_DISCOGS_CONSUMER_SECRET"
-	LASTFM_API_KEY_ENV         = "KOITO_LASTFM_API_KEY"
+	SECURE_COOKIES_ENV             = "KOITO_SECURE_COOKIES"
+	DISCOGS_CONSUMER_KEY_ENV       = "KOITO_DISCOGS_CONSUMER_KEY"
+	DISCOGS_CONSUMER_SECRET_ENV    = "KOITO_DISCOGS_CONSUMER_SECRET"
+	FORCE_TZ                       = "KOITO_FORCE_TZ"
 )
 
 type config struct {
-	bindAddr   string
-	listenPort int
-	configDir  string
-	// baseUrl              string
-	databaseUrl            string
-	musicBrainzUrl         string
-	musicBrainzRateLimit   int
-	logLevel               int
-	structuredLogging      bool
-	enableFullImageCache   bool
-	lbzRelayEnabled        bool
-	lbzRelayUrl            string
-	lbzRelayToken          string
-	defaultPw              string
-	defaultUsername        string
-	defaultTheme           string
-	disableDeezer          bool
-	disableCAA             bool
-	disableMusicBrainz     bool
-	subsonicUrl            string
-	subsonicParams         string
-	subsonicEnabled        bool
-	skipImport             bool
+	bindAddr              string
+	listenPort            int
+	configDir             string
+	databaseUrl           string
+	musicBrainzUrl        string
+	musicBrainzRateLimit  int
+	logLevel              int
+	structuredLogging     bool
+	enableFullImageCache  bool
+	lbzRelayEnabled       bool
+	lbzRelayUrl           string
+	lbzRelayToken         string
+	defaultPw             string
+	defaultUsername       string
+	defaultTheme          string
+	disableDeezer         bool
+	disableCAA            bool
+	disableMusicBrainz    bool
+	subsonicUrl           string
+	subsonicParams        string
+	lastfmApiKey          string
+	subsonicEnabled       bool
+	skipImport            bool
 	fetchImageDuringImport bool
-	allowedHosts           []string
-	allowAllHosts          bool
-	allowedOrigins         []string
-	disableRateLimit       bool
-	importThrottleMs       int
-	userAgent              string
-	importBefore           time.Time
-	importAfter            time.Time
-	artistSeparators       []*regexp.Regexp
-	loginGate              bool
-	spotifyClientID        string
-	spotifyClientSecret    string
+	allowedHosts          []string
+	allowAllHosts         bool
+	allowedOrigins        []string
+	disableRateLimit      bool
+	importThrottleMs      int
+	userAgent             string
+	importBefore          time.Time
+	importAfter           time.Time
+	artistSeparators      []*regexp.Regexp
+	loginGate             bool
+	spotifyClientID       string
+	spotifyClientSecret   string
 	secureCookies         bool
-	spotifyEnabled         bool
+	spotifyEnabled        bool
 	discogsConsumerKey    string
 	discogsConsumerSecret string
 	discogsEnabled        bool
-	lastfmApiKey          string
 	lastfmEnabled         bool
+	forceTZ               *time.Location
 }
 
 var (
@@ -108,7 +107,6 @@ var (
 	lock         sync.RWMutex
 )
 
-// Initialize initializes the global configuration using the provided getenv function.
 func Load(getenv func(string) string, version string) error {
 	var err error
 	once.Do(func() {
@@ -120,7 +118,6 @@ func Load(getenv func(string) string, version string) error {
 	return nil
 }
 
-// loadConfig loads the configuration from environment variables.
 func loadConfig(getenv func(string) string, version string) (*config, error) {
 	cfg := new(config)
 
@@ -128,16 +125,19 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 	if cfg.databaseUrl == "" {
 		return nil, errors.New("loadConfig: required parameter " + DATABASE_URL_ENV + " not provided")
 	}
+
 	cfg.bindAddr = getenv(BIND_ADDR_ENV)
 	var err error
 	cfg.listenPort, err = strconv.Atoi(getenv(LISTEN_PORT_ENV))
 	if err != nil {
 		cfg.listenPort = defaultListenPort
 	}
+
 	cfg.musicBrainzRateLimit, err = strconv.Atoi(getenv(MUSICBRAINZ_RATE_LIMIT_ENV))
 	if err != nil {
 		cfg.musicBrainzRateLimit = 1
 	}
+
 	cfg.musicBrainzUrl = getenv(MUSICBRAINZ_URL_ENV)
 	if cfg.musicBrainzUrl == "" {
 		cfg.musicBrainzUrl = defaultMusicBrainzUrl
@@ -155,7 +155,6 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 
 	beforeutx, _ := strconv.ParseInt(getenv(IMPORT_BEFORE_UNIX_ENV), 10, 64)
 	afterutx, _ := strconv.ParseInt(getenv(IMPORT_AFTER_UNIX_ENV), 10, 64)
-
 	if beforeutx > 0 {
 		cfg.importBefore = time.Unix(beforeutx, 0)
 	}
@@ -172,10 +171,8 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 	}
 
 	cfg.disableRateLimit = parseBool(getenv(DISABLE_RATE_LIMIT_ENV))
-
 	cfg.structuredLogging = parseBool(getenv(ENABLE_STRUCTURED_LOGGING_ENV))
 	cfg.fetchImageDuringImport = parseBool(getenv(FETCH_IMAGES_DURING_IMPORT_ENV))
-
 	cfg.enableFullImageCache = parseBool(getenv(ENABLE_FULL_IMAGE_CACHE_ENV))
 	cfg.disableDeezer = parseBool(getenv(DISABLE_DEEZER_ENV))
 	cfg.disableCAA = parseBool(getenv(DISABLE_COVER_ART_ARCHIVE_ENV))
@@ -186,8 +183,8 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 		return nil, fmt.Errorf("loadConfig: invalid configuration: both %s and %s must be set in order to use subsonic image fetching", SUBSONIC_URL_ENV, SUBSONIC_PARAMS_ENV)
 	}
 	cfg.subsonicEnabled = cfg.subsonicUrl != "" && cfg.subsonicParams != ""
+	cfg.lastfmApiKey = getenv(LASTFM_API_KEY_ENV)
 	cfg.skipImport = parseBool(getenv(SKIP_IMPORT_ENV))
-
 	cfg.userAgent = fmt.Sprintf("Koito %s (contact@koito.io)", version)
 
 	if getenv(DEFAULT_USERNAME_ENV) == "" {
@@ -202,7 +199,6 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 	}
 
 	cfg.defaultTheme = getenv(DEFAULT_THEME_ENV)
-
 	cfg.configDir = getenv(CONFIG_DIR_ENV)
 	if cfg.configDir == "" {
 		cfg.configDir = "/etc/koito"
@@ -245,7 +241,6 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 		cfg.spotifyEnabled = true
 	}
 
-	// Discogs configuration
 	cfg.discogsConsumerKey = getenv(DISCOGS_CONSUMER_KEY_ENV)
 	cfg.discogsConsumerSecret = getenv(DISCOGS_CONSUMER_SECRET_ENV)
 	if cfg.discogsConsumerKey != "" || cfg.discogsConsumerSecret != "" {
@@ -255,13 +250,18 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 		cfg.discogsEnabled = true
 	}
 
-	// Last.fm configuration
-	cfg.lastfmApiKey = getenv(LASTFM_API_KEY_ENV)
 	if cfg.lastfmApiKey != "" {
 		cfg.lastfmEnabled = true
 	}
 
 	cfg.secureCookies = parseBool(getenv(SECURE_COOKIES_ENV))
+
+	if getenv(FORCE_TZ) != "" {
+		cfg.forceTZ, err = time.LoadLocation(getenv(FORCE_TZ))
+		if err != nil {
+			return nil, fmt.Errorf("forced timezone '%s' is not a valid timezone", getenv(FORCE_TZ))
+		}
+	}
 
 	switch strings.ToLower(getenv(LOG_LEVEL_ENV)) {
 	case "debug":
@@ -275,21 +275,17 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
 	default:
 		cfg.logLevel = 1
 	}
+
 	return cfg, nil
 }
 
 func parseBool(s string) bool {
-	if strings.ToLower(s) == "true" {
-		return true
-	} else {
-		return false
-	}
+	return strings.ToLower(s) == "true"
 }
 
 func parseCSVList(s string) []string {
 	parts := strings.Split(s, ",")
 	result := make([]string, 0, len(parts))
-
 	for _, part := range parts {
 		value := strings.TrimSpace(part)
 		if value == "" {
@@ -297,197 +293,7 @@ func parseCSVList(s string) []string {
 		}
 		result = append(result, value)
 	}
-
 	return result
-}
-
-// Global accessors for configuration values
-
-func UserAgent() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.userAgent
-}
-
-func ListenAddr() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return fmt.Sprintf("%s:%d", globalConfig.bindAddr, globalConfig.listenPort)
-}
-
-func ConfigDir() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.configDir
-}
-
-func DatabaseUrl() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.databaseUrl
-}
-
-func MusicBrainzUrl() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.musicBrainzUrl
-}
-
-func MusicBrainzRateLimit() int {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.musicBrainzRateLimit
-}
-
-func LogLevel() int {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.logLevel
-}
-
-func StructuredLogging() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.structuredLogging
-}
-
-func LbzRelayEnabled() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.lbzRelayEnabled
-}
-
-func LbzRelayUrl() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.lbzRelayUrl
-}
-
-func LbzRelayToken() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.lbzRelayToken
-}
-
-func DefaultPassword() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.defaultPw
-}
-
-func DefaultUsername() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.defaultUsername
-}
-
-func DefaultTheme() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.defaultTheme
-}
-
-func FullImageCacheEnabled() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.enableFullImageCache
-}
-
-func DeezerDisabled() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.disableDeezer
-}
-
-func CoverArtArchiveDisabled() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.disableCAA
-}
-
-func MusicBrainzDisabled() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.disableMusicBrainz
-}
-
-func SubsonicEnabled() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.subsonicEnabled
-}
-
-func SubsonicUrl() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.subsonicUrl
-}
-
-func SubsonicParams() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.subsonicParams
-}
-
-func SkipImport() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.skipImport
-}
-
-func AllowedHosts() []string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.allowedHosts
-}
-
-func AllowAllHosts() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.allowAllHosts
-}
-
-func AllowedOrigins() []string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.allowedOrigins
-}
-
-func RateLimitDisabled() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.disableRateLimit
-}
-
-func ThrottleImportMs() int {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.importThrottleMs
-}
-
-// returns the before, after times, in that order
-func ImportWindow() (time.Time, time.Time) {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.importBefore, globalConfig.importAfter
-}
-
-func FetchImagesDuringImport() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.fetchImageDuringImport
-}
-
-func ArtistSeparators() []*regexp.Regexp {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.artistSeparators
-}
-
-func LoginGate() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.loginGate
 }
 
 func SpotifyEnabled() bool {
@@ -507,7 +313,6 @@ func SpotifyClientSecret() string {
 	defer lock.RUnlock()
 	return globalConfig.spotifyClientSecret
 }
-
 
 func SecureCookiesEnabled() bool {
 	lock.RLock()
@@ -537,10 +342,4 @@ func LastFmEnabled() bool {
 	lock.RLock()
 	defer lock.RUnlock()
 	return globalConfig.lastfmEnabled
-}
-
-func LastFmApiKey() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return globalConfig.lastfmApiKey
 }

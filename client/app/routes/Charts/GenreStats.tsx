@@ -68,7 +68,7 @@ export default function GenreStats() {
   });
 
   const chartData =
-    data?.stats.map((stat, index) => ({
+    data?.stats.map((stat: { name: string; value: number }, index: number) => ({
       ...stat,
       fill: getColor(index),
     })) || [];

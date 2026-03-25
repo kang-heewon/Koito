@@ -4,6 +4,7 @@ import {
   deleteAlias,
   getAliases,
   setPrimaryAlias,
+  updateMbzId,
   type Alias,
 } from "api/api";
 import { Modal } from "../Modal";
@@ -12,12 +13,13 @@ import { useEffect, useState } from "react";
 import { Trash } from "lucide-react";
 import SetVariousArtists from "./SetVariousArtist";
 import SetPrimaryArtist from "./SetPrimaryArtist";
+import UpdateMbzID from "./UpdateMbzID";
 
 interface Props {
   type: string;
   id: number;
   open: boolean;
-  setOpen: (open: boolean) => void;
+  setOpen: Function;
 }
 
 export default function EditModal({ open, setOpen, type, id }: Props) {
@@ -53,95 +55,50 @@ export default function EditModal({ open, setOpen, type, id }: Props) {
     return <p>Loading...</p>;
   }
 
-  const parseResponseError = async (r: Response): Promise<string> => {
-    const fallback = `request failed (${r.status})`;
-    try {
-      const body = (await r.json()) as { error?: string };
-      if (body && typeof body.error === "string" && body.error.length > 0) {
-        return body.error;
-      }
-    } catch {
-      return fallback;
-    }
-    return fallback;
-  };
-
-  const handleSetPrimary = async (alias: string) => {
-    if (loading) {
-      return;
-    }
-
+  const handleSetPrimary = (alias: string) => {
     setError(undefined);
     setLoading(true);
-
-    try {
-      const r = await setPrimaryAlias(type, id, alias);
+    setPrimaryAlias(type, id, alias).then((r) => {
       if (r.ok) {
-        setDisplayData((prev) =>
-          prev.map((item) => ({ ...item, is_primary: item.alias === alias }))
-        );
+        window.location.reload();
       } else {
-        setError(await parseResponseError(r));
+        r.json().then((r) => setError(r.error));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to set primary alias");
-    } finally {
-      setLoading(false);
-    }
+    });
+    setLoading(false);
   };
 
-  const handleNewAlias = async () => {
-    if (loading) {
-      return;
-    }
-
+  const handleNewAlias = () => {
     setError(undefined);
-    const normalizedInput = input.trim();
-    if (normalizedInput === "") {
-      setError("alias must be provided");
+    if (input === "") {
+      setError("no input");
       return;
     }
-
     setLoading(true);
-
-    try {
-      const r = await createAlias(type, id, normalizedInput);
+    createAlias(type, id, input).then((r) => {
       if (r.ok) {
-        setDisplayData((prev) => [
-          ...prev,
-          { alias: normalizedInput, source: "Manual", is_primary: false, id: id },
+        setDisplayData([
+          ...displayData,
+          { alias: input, source: "Manual", is_primary: false, id: id },
         ]);
-        setInput("");
       } else {
-        setError(await parseResponseError(r));
+        r.json().then((r) => setError(r.error));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create alias");
-    } finally {
-      setLoading(false);
-    }
+    });
+    setLoading(false);
   };
 
-  const handleDeleteAlias = async (alias: string) => {
-    if (loading) {
-      return;
-    }
-
+  const handleDeleteAlias = (alias: string) => {
     setError(undefined);
     setLoading(true);
-
-    try {
-      const r = await deleteAlias(type, id, alias);
+    deleteAlias(type, id, alias).then((r) => {
       if (r.ok) {
-        setDisplayData((prev) => prev.filter((v) => v.alias !== alias));
+        setDisplayData(displayData.filter((v) => v.alias != alias));
       } else {
-        setError(await parseResponseError(r));
+        r.json().then((r) => setError(r.error));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete alias");
-    } finally {
-      setLoading(false);
-    }
+    });
+    setLoading(false);
   };
 
   const handleClose = () => {
@@ -153,27 +110,23 @@ export default function EditModal({ open, setOpen, type, id }: Props) {
     <Modal maxW={1000} isOpen={open} onClose={handleClose}>
       <div className="flex flex-col items-start gap-6 w-full">
         <div className="w-full">
-            <h2>Alias Manager</h2>
-            <div className="flex flex-col gap-4">
-              {displayData.map((v) => (
-              <div className="flex gap-2" key={v.alias}>
-                <div className="bg p-3 rounded-md flex-grow">
+          <h3>Alias Manager</h3>
+          <div className="flex flex-col gap-4">
+            {displayData.map((v) => (
+              <div className="flex gap-2">
+                <div className="bg p-3 rounded-md flex-grow" key={v.alias}>
                   {v.alias} (source: {v.source})
                 </div>
                 <AsyncButton
                   loading={loading}
-                  onClick={() => {
-                    void handleSetPrimary(v.alias);
-                  }}
+                  onClick={() => handleSetPrimary(v.alias)}
                   disabled={v.is_primary}
                 >
                   Set Primary
                 </AsyncButton>
                 <AsyncButton
                   loading={loading}
-                  onClick={() => {
-                    void handleDeleteAlias(v.alias);
-                  }}
+                  onClick={() => handleDeleteAlias(v.alias)}
                   confirm
                   disabled={v.is_primary}
                 >
@@ -189,12 +142,7 @@ export default function EditModal({ open, setOpen, type, id }: Props) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
               />
-              <AsyncButton
-                loading={loading}
-                onClick={() => {
-                  void handleNewAlias();
-                }}
-              >
+              <AsyncButton loading={loading} onClick={handleNewAlias}>
                 Submit
               </AsyncButton>
             </div>
@@ -210,6 +158,7 @@ export default function EditModal({ open, setOpen, type, id }: Props) {
         {type.toLowerCase() === "track" && (
           <SetPrimaryArtist id={id} type="track" />
         )}
+        <UpdateMbzID type={type} id={id} />
       </div>
     </Modal>
   );

@@ -53,9 +53,9 @@ func (d *Psql) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) 
 				Artists:     artists,
 			}
 			tracks[i] = db.RankedItem[*models.Track]{
-				Item:        t,
-				Rank:        offset + i + 1,
-				ListenCount: row.ListenCount,
+				Item:         t,
+				Rank:         row.Rank,
+				ListenCount:  row.ListenCount,
 			}
 		}
 		count, err = d.q.CountTopTracksByRelease(ctx, repository.CountTopTracksByReleaseParams{
@@ -97,9 +97,9 @@ func (d *Psql) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) 
 				Artists:     artists,
 			}
 			tracks[i] = db.RankedItem[*models.Track]{
-				Item:        t,
-				Rank:        offset + i + 1,
-				ListenCount: row.ListenCount,
+				Item:         t,
+				Rank:         row.Rank,
+				ListenCount:  row.ListenCount,
 			}
 		}
 		count, err = d.q.CountTopTracksByArtist(ctx, repository.CountTopTracksByArtistParams{
@@ -140,9 +140,9 @@ func (d *Psql) GetTopTracksPaginated(ctx context.Context, opts db.GetItemsOpts) 
 				Artists:     artists,
 			}
 			tracks[i] = db.RankedItem[*models.Track]{
-				Item:        t,
-				Rank:        offset + i + 1,
-				ListenCount: row.ListenCount,
+				Item:         t,
+				Rank:         row.Rank,
+				ListenCount:  row.ListenCount,
 			}
 		}
 		count, err = d.q.CountTopTracks(ctx, repository.CountTopTracksParams{

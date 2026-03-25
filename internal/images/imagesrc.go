@@ -1,4 +1,3 @@
-// package imagesrc defines interfaces for album and artist image providers
 package images
 
 import (
@@ -6,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,15 +19,19 @@ type ImageSource struct {
 	deezerC         *DeezerClient
 	subsonicEnabled bool
 	subsonicC       *SubsonicClient
+	lastfmEnabled   bool
+	lastfmC         *LastFMClient
 	spotifyEnabled  bool
 	spotifyC        *SpotifyClient
 	caaEnabled      bool
 }
+
 type ImageSourceOpts struct {
 	UserAgent      string
 	EnableCAA      bool
 	EnableDeezer   bool
 	EnableSubsonic bool
+	EnableLastFM   bool
 	EnableSpotify  bool
 }
 
@@ -36,6 +40,7 @@ var imgsrc ImageSource
 
 type ArtistImageOpts struct {
 	Aliases []string
+	MBID    *uuid.UUID
 }
 
 type AlbumImageOpts struct {
@@ -112,7 +117,6 @@ func caaFrontImage(url string) (string, string, error) {
 	return "", resp.Status, nil
 }
 
-// all functions are no-op if no providers are enabled
 func Initialize(opts ImageSourceOpts) {
 	once.Do(func() {
 		if opts.EnableCAA {
@@ -125,6 +129,10 @@ func Initialize(opts ImageSourceOpts) {
 		if opts.EnableSubsonic {
 			imgsrc.subsonicEnabled = true
 			imgsrc.subsonicC = NewSubsonicClient()
+		}
+		if opts.EnableLastFM {
+			imgsrc.lastfmEnabled = true
+			imgsrc.lastfmC = NewLastFMClient()
 		}
 		if opts.EnableSpotify {
 			imgsrc.spotifyEnabled = true
@@ -145,7 +153,6 @@ func Shutdown() {
 	}
 }
 
-// GetSpotifyClient returns the initialized Spotify client
 func GetSpotifyClient() *SpotifyClient {
 	return imgsrc.spotifyC
 }
@@ -165,9 +172,21 @@ func GetArtistImage(ctx context.Context, opts ArtistImageOpts) (string, error) {
 		if len(opts.Aliases) == 0 {
 			l.Debug().Msg("GetArtistImage: no aliases provided, skipping Subsonic")
 		} else {
-			img, err := imgsrc.subsonicC.GetArtistImage(ctx, opts.Aliases[0])
+			img, err := imgsrc.subsonicC.GetArtistImage(ctx, opts.MBID, opts.Aliases[0])
 			if err != nil {
 				l.Debug().Err(err).Msg("Could not find artist image from Subsonic")
+			} else if img != "" {
+				return img, nil
+			}
+		}
+	}
+	if imgsrc.lastfmEnabled {
+		if len(opts.Aliases) == 0 {
+			l.Debug().Msg("GetArtistImage: no aliases provided, skipping LastFM")
+		} else {
+			img, err := imgsrc.lastfmC.GetArtistImage(ctx, opts.MBID, opts.Aliases[0])
+			if err != nil {
+				l.Debug().Err(err).Msg("Could not find artist image from LastFM")
 			} else if img != "" {
 				return img, nil
 			}
@@ -184,6 +203,7 @@ func GetArtistImage(ctx context.Context, opts ArtistImageOpts) (string, error) {
 	l.Warn().Msg("GetArtistImage: No image providers are enabled")
 	return "", nil
 }
+
 func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 	l := logger.FromContext(ctx)
 	if imgsrc.spotifyEnabled {
@@ -199,7 +219,7 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 		if len(opts.Artists) == 0 {
 			l.Debug().Msg("GetAlbumImage: no artists provided, skipping Subsonic")
 		} else {
-			img, err := imgsrc.subsonicC.GetAlbumImage(ctx, opts.Artists[0], opts.Album)
+			img, err := imgsrc.subsonicC.GetAlbumImage(ctx, opts.ReleaseMbzID, opts.Artists[0], opts.Album)
 			if err != nil {
 				l.Debug().Err(err).Msg("Could not find album image from Subsonic")
 			} else if img != "" {
@@ -244,10 +264,19 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 			} else if img != "" {
 				return img, nil
 			}
-			if img != "" {
+			l.Debug().Str("url", frontURL).Str("status", status).Msg("Could not find album cover from CoverArtArchive with MusicBrainz release group ID")
+		}
+	}
+	if imgsrc.lastfmEnabled {
+		if len(opts.Artists) == 0 {
+			l.Debug().Msg("GetAlbumImage: no artists provided, skipping LastFM")
+		} else {
+			img, err := imgsrc.lastfmC.GetAlbumImage(ctx, opts.ReleaseMbzID, opts.Artists[0], opts.Album)
+			if err != nil {
+				l.Debug().Err(err).Msg("Could not find album image from LastFM")
+			} else if img != "" {
 				return img, nil
 			}
-			l.Debug().Str("url", frontURL).Str("status", status).Msg("Could not find album cover from CoverArtArchive with MusicBrainz release group ID")
 		}
 	}
 	if imgsrc.deezerEnabled {
@@ -260,4 +289,23 @@ func GetAlbumImage(ctx context.Context, opts AlbumImageOpts) (string, error) {
 	}
 	l.Warn().Msg("GetAlbumImage: No image providers are enabled")
 	return "", nil
+}
+
+func ValidateImageURL(url string) error {
+	resp, err := http.Head(url)
+	if err != nil {
+		return fmt.Errorf("ValidateImageURL: http.Head: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ValidateImageURL: HEAD request failed, status code: %d", resp.StatusCode)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "image/") {
+		return fmt.Errorf("ValidateImageURL: URL does not point to an image, content type: %s", contentType)
+	}
+
+	return nil
 }

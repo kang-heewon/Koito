@@ -1,0 +1,59 @@
+{
+  "active_plan": "/Users/owen/Projects/kang-heewon/Koito/.sisyphus/plans/merge-upstream.md",
+  "started_at": "2026-03-25T07:16:34.942Z",
+  "session_ids": [
+    "ses_2dc45c476ffehoHr0fntGJggne",
+    "ses_2dc240195ffetxcVTZHQhSOhGm",
+    "ses_2dc23b5d9ffe1AXhb1D2VlfYcx",
+    "ses_2dc1fc00affeh61xuNOPZ3ITSg",
+    "ses_2dc174e17ffeLa6JWGIJ0igpYE",
+    "ses_2dc17dca3ffekY7o5FqEJ4KnRu",
+    "ses_2dbed4841ffeC15h0Z5lWkyzRL",
+    "ses_2dbed8f28fferCnr2pRVb0iKvP",
+    "ses_2dbd4fcbaffe92iaU8tGBeMOL1",
+    "ses_2dbc0938bffezVfHCH8Row1lhX",
+    "ses_2dbb60507ffeWqJ5B16mEO3vdB",
+    "ses_2dbae89ecffeb3Oz41BBLPO204",
+    "ses_2dba682c7ffei50ELYlaNvTAFH"
+  ],
+  "plan_name": "merge-upstream",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "Git merge 실행 + 설정 파일 충돌 해결",
+      "session_id": "ses_2dc1fc00affeh61xuNOPZ3ITSg",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-03-25T07:29:17.930Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "백엔드 핸들러/서비스 충돌 해결 — Go 코드 전체",
+      "session_id": "ses_2dbed8f28fferCnr2pRVb0iKvP",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-03-25T08:41:46.897Z"
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "전체 빌드 + 테스트 검증",
+      "session_id": "ses_2dbd4fcbaffe92iaU8tGBeMOL1",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-03-25T08:49:33.315Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "머지 커밋 완료",
+      "session_id": "ses_2dbc0938bffezVfHCH8Row1lhX",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-03-25T09:08:51.115Z"
+    }
+  }
+}

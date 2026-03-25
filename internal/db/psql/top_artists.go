@@ -40,9 +40,9 @@ func (d *Psql) GetTopArtistsPaginated(ctx context.Context, opts db.GetItemsOpts)
 			ListenCount: row.ListenCount,
 		}
 		rgs[i] = db.RankedItem[*models.Artist]{
-			Item:        t,
-			Rank:        offset + i + 1,
-			ListenCount: row.ListenCount,
+			Item:         t,
+			Rank:         row.Rank,
+			ListenCount:  row.ListenCount,
 		}
 	}
 	count, err := d.q.CountTopArtists(ctx, repository.CountTopArtistsParams{

@@ -6,6 +6,9 @@ interface GetItemsArgs {
   album_id?: number;
   track_id?: number;
 }
+
+type getItemsArgs = GetItemsArgs;
+
 interface getActivityArgs {
   step: string;
   range: number;
@@ -24,25 +27,38 @@ interface GetRewindStatsArgs {
   to?: number;
 }
 
+type timeframe = GetRewindStatsArgs & {
+  period?: string;
+};
+
+interface getInterestArgs {
+  buckets: number;
+  artist_id: number;
+  album_id: number;
+  track_id: number;
+}
+
 async function parseApiError(r: Response): Promise<string> {
   try {
     const err = (await r.json()) as ApiError;
-    if (err && typeof err.error === "string" && err.error.length > 0) {
+    if (typeof err.error === "string" && err.error.length > 0) {
       return err.error;
     }
   } catch {
     return `request failed (${r.status})`;
   }
+
   return `request failed (${r.status})`;
 }
 
 async function handleJson<T>(r: Response): Promise<T> {
-
   if (!r.ok) {
     throw new Error(await parseApiError(r));
   }
+
   return (await r.json()) as T;
 }
+
 async function getLastListens(
   args: GetItemsArgs
 ): Promise<PaginatedResponse<Listen>> {
@@ -51,6 +67,7 @@ async function getLastListens(
     limit: String(args.limit),
     page: String(args.page),
   });
+
   if (args.artist_id !== undefined) {
     params.set("artist_id", String(args.artist_id));
   }
@@ -67,12 +84,13 @@ async function getLastListens(
 
 async function getTopTracks(
   args: GetItemsArgs
-): Promise<PaginatedResponse<TopRanked<Track>>> {
+): Promise<PaginatedResponse<Ranked<Track>>> {
   const params = new URLSearchParams({
     period: args.period,
     limit: String(args.limit),
     page: String(args.page),
   });
+
   if (args.artist_id !== undefined) {
     params.set("artist_id", String(args.artist_id));
   }
@@ -81,35 +99,37 @@ async function getTopTracks(
   }
 
   const r = await fetch(`/apis/web/v1/top-tracks?${params.toString()}`);
-  return handleJson<PaginatedResponse<TopRanked<Track>>>(r);
+  return handleJson<PaginatedResponse<Ranked<Track>>>(r);
 }
 
 async function getTopAlbums(
   args: GetItemsArgs
-): Promise<PaginatedResponse<TopRanked<Album>>> {
+): Promise<PaginatedResponse<Ranked<Album>>> {
   const params = new URLSearchParams({
     period: args.period,
     limit: String(args.limit),
     page: String(args.page),
   });
+
   if (args.artist_id !== undefined) {
     params.set("artist_id", String(args.artist_id));
   }
 
   const r = await fetch(`/apis/web/v1/top-albums?${params.toString()}`);
-  return handleJson<PaginatedResponse<TopRanked<Album>>>(r);
+  return handleJson<PaginatedResponse<Ranked<Album>>>(r);
 }
 
 async function getTopArtists(
   args: GetItemsArgs
-): Promise<PaginatedResponse<TopRanked<Artist>>> {
+): Promise<PaginatedResponse<Ranked<Artist>>> {
   const params = new URLSearchParams({
     period: args.period,
     limit: String(args.limit),
     page: String(args.page),
   });
+
   const r = await fetch(`/apis/web/v1/top-artists?${params.toString()}`);
-  return handleJson<PaginatedResponse<TopRanked<Artist>>>(r);
+  return handleJson<PaginatedResponse<Ranked<Artist>>>(r);
 }
 
 async function getActivity(
@@ -121,9 +141,15 @@ async function getActivity(
   return handleJson<ListenActivityItem[]>(r);
 }
 
+async function getInterest(args: getInterestArgs): Promise<InterestBucket[]> {
+  const r = await fetch(
+    `/apis/web/v1/interest?buckets=${args.buckets}&album_id=${args.album_id}&artist_id=${args.artist_id}&track_id=${args.track_id}`
+  );
+  return handleJson<InterestBucket[]>(r);
+}
+
 async function getStats(period: string): Promise<Stats> {
   const r = await fetch(`/apis/web/v1/stats?period=${period}`);
-
   return handleJson<Stats>(r);
 }
 
@@ -135,14 +161,13 @@ async function search(q: string): Promise<SearchResponse> {
 
 type ImageTier = "small" | "medium" | "large";
 
-/**
- * Display pixel size → optimal backend image tier.
- * Targets ~3x resolution for crisp rendering on high-DPI screens.
- * Backend tiers: small=96px, medium=512px, large=1000px
- */
 function getImageTier(displayPx: number): ImageTier {
-  if (displayPx <= 48) return "small";
-  if (displayPx <= 200) return "medium";
+  if (displayPx <= 48) {
+    return "small";
+  }
+  if (displayPx <= 200) {
+    return "medium";
+  }
   return "large";
 }
 
@@ -152,6 +177,7 @@ function imageUrl(id: string, size: string) {
   }
   return `/images/${size}/${id}`;
 }
+
 function replaceImage(form: FormData): Promise<Response> {
   return fetch(`/apis/web/v1/replace-image`, {
     method: "POST",
@@ -159,29 +185,43 @@ function replaceImage(form: FormData): Promise<Response> {
   });
 }
 
-function mergeEntities(
-  type: "tracks" | "albums" | "artists",
+function mergeTracks(
   from: number,
   to: number,
   replaceImage?: boolean
 ): Promise<Response> {
-  const params = new URLSearchParams({
-    from_id: String(from),
-    to_id: String(to),
-  });
-  if (replaceImage !== undefined) {
-    params.set("replace_image", String(replaceImage));
-  }
-  return fetch(`/apis/web/v1/merge/${type}?${params.toString()}`, {
+  void replaceImage;
+  return fetch(`/apis/web/v1/merge/tracks?from_id=${from}&to_id=${to}`, {
     method: "POST",
   });
 }
-const mergeTracks = (from: number, to: number, replaceImage: boolean) =>
-  mergeEntities("tracks", from, to, replaceImage);
-const mergeAlbums = (from: number, to: number, replaceImage: boolean) =>
-  mergeEntities("albums", from, to, replaceImage);
-const mergeArtists = (from: number, to: number, replaceImage: boolean) =>
-  mergeEntities("artists", from, to, replaceImage);
+
+function mergeAlbums(
+  from: number,
+  to: number,
+  replaceImage: boolean
+): Promise<Response> {
+  return fetch(
+    `/apis/web/v1/merge/albums?from_id=${from}&to_id=${to}&replace_image=${replaceImage}`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+function mergeArtists(
+  from: number,
+  to: number,
+  replaceImage: boolean
+): Promise<Response> {
+  return fetch(
+    `/apis/web/v1/merge/artists?from_id=${from}&to_id=${to}&replace_image=${replaceImage}`,
+    {
+      method: "POST",
+    }
+  );
+}
+
 function login(
   username: string,
   password: string,
@@ -196,6 +236,7 @@ function login(
     body: form,
   });
 }
+
 function logout(): Promise<Response> {
   return fetch(`/apis/web/v1/logout`, {
     method: "POST",
@@ -204,6 +245,12 @@ function logout(): Promise<Response> {
 
 function getCfg(): Promise<Config> {
   return fetch(`/apis/web/v1/config`).then((r) => handleJson<Config>(r));
+}
+
+function getGenreStats(period: string, metric: "count" | "time"): Promise<GenreStatsResponse> {
+  return fetch(`/apis/web/v1/genre-stats?period=${period}&metric=${metric}`).then(
+    (r) => handleJson<GenreStatsResponse>(r)
+  );
 }
 
 function submitListen(id: string, ts: Date): Promise<Response> {
@@ -221,6 +268,7 @@ function submitListen(id: string, ts: Date): Promise<Response> {
 function getApiKeys(): Promise<ApiKey[]> {
   return fetch(`/apis/web/v1/user/apikeys`).then((r) => handleJson<ApiKey[]>(r));
 }
+
 const createApiKey = async (label: string): Promise<ApiKey> => {
   const form = new URLSearchParams();
   form.append("label", label);
@@ -231,14 +279,15 @@ const createApiKey = async (label: string): Promise<ApiKey> => {
   if (!r.ok) {
     throw new Error(await parseApiError(r));
   }
-  const data: ApiKey = await r.json();
-  return data;
+  return (await r.json()) as ApiKey;
 };
+
 function deleteApiKey(id: number): Promise<Response> {
   return fetch(`/apis/web/v1/user/apikeys?id=${id}`, {
     method: "DELETE",
   });
 }
+
 function updateApiKeyLabel(id: number, label: string): Promise<Response> {
   const form = new URLSearchParams();
   form.append("id", String(id));
@@ -254,6 +303,7 @@ function deleteItem(itemType: string, id: number): Promise<Response> {
     method: "DELETE",
   });
 }
+
 function updateUser(username: string, password: string) {
   const form = new URLSearchParams();
   form.append("username", username);
@@ -263,11 +313,13 @@ function updateUser(username: string, password: string) {
     body: form,
   });
 }
+
 function getAliases(type: string, id: number): Promise<Alias[]> {
   return fetch(`/apis/web/v1/aliases?${type}_id=${id}`).then((r) =>
     handleJson<Alias[]>(r)
   );
 }
+
 function createAlias(
   type: string,
   id: number,
@@ -281,6 +333,7 @@ function createAlias(
     body: form,
   });
 }
+
 function deleteAlias(
   type: string,
   id: number,
@@ -294,6 +347,7 @@ function deleteAlias(
     body: form,
   });
 }
+
 function setPrimaryAlias(
   type: string,
   id: number,
@@ -307,6 +361,21 @@ function setPrimaryAlias(
     body: form,
   });
 }
+
+function updateMbzId(
+  type: string,
+  id: number,
+  mbzid: string
+): Promise<Response> {
+  const form = new URLSearchParams();
+  form.append(`${type}_id`, String(id));
+  form.append("mbz_id", mbzid);
+  return fetch(`/apis/web/v1/mbzid`, {
+    method: "PATCH",
+    body: form,
+  });
+}
+
 function getAlbum(id: number): Promise<Album> {
   return fetch(`/apis/web/v1/album?id=${id}`).then((r) => handleJson<Album>(r));
 }
@@ -318,6 +387,7 @@ function deleteListen(listen: Listen): Promise<Response> {
     method: "DELETE",
   });
 }
+
 async function getExport(): Promise<Blob> {
   const r = await fetch(`/apis/web/v1/export`, {
     method: "GET",
@@ -328,16 +398,8 @@ async function getExport(): Promise<Blob> {
   return r.blob();
 }
 
-function getGenreStats(period: string, metric: "count" | "time"): Promise<GenreStatsResponse> {
-  return fetch(`/apis/web/v1/genre-stats?period=${period}&metric=${metric}`).then(
-    (r) => handleJson<GenreStatsResponse>(r)
-  );
-}
-
 function getNowPlaying(): Promise<NowPlaying> {
-  return fetch("/apis/web/v1/now-playing").then((r) =>
-    handleJson<NowPlaying>(r)
-  );
+  return fetch("/apis/web/v1/now-playing").then((r) => handleJson<NowPlaying>(r));
 }
 
 function getRecommendations(): Promise<RecommendationsResponse> {
@@ -346,14 +408,13 @@ function getRecommendations(): Promise<RecommendationsResponse> {
   );
 }
 
-
 function getWrapped(year: number): Promise<WrappedStats> {
-  return fetch(`/apis/web/v1/wrapped?year=${year}`).then(
-    (r) => handleJson<WrappedStats>(r)
+  return fetch(`/apis/web/v1/wrapped?year=${year}`).then((r) =>
+    handleJson<WrappedStats>(r)
   );
 }
 
-async function getRewindStats(args: GetRewindStatsArgs): Promise<RewindStats> {
+async function getRewindStats(args: timeframe): Promise<RewindStats> {
   const params = new URLSearchParams();
 
   if (args.year !== undefined) {
@@ -377,18 +438,15 @@ async function getRewindStats(args: GetRewindStatsArgs): Promise<RewindStats> {
 }
 
 export {
-  getRewindStats,
-  getWrapped,
-  getRecommendations,
   getLastListens,
   getTopTracks,
   getTopAlbums,
   getTopArtists,
   getActivity,
+  getInterest,
   getStats,
   search,
   replaceImage,
-  mergeEntities,
   mergeTracks,
   mergeAlbums,
   mergeArtists,
@@ -397,12 +455,14 @@ export {
   login,
   logout,
   getCfg,
+  getGenreStats,
   deleteItem,
   updateUser,
   getAliases,
   createAlias,
   deleteAlias,
   setPrimaryAlias,
+  updateMbzId,
   getApiKeys,
   createApiKey,
   deleteApiKey,
@@ -412,8 +472,11 @@ export {
   getExport,
   submitListen,
   getNowPlaying,
-  getGenreStats,
+  getRecommendations,
+  getWrapped,
+  getRewindStats,
 };
+
 type Track = {
   id: number;
   title: string;
@@ -424,7 +487,9 @@ type Track = {
   musicbrainz_id: string;
   time_listened: number;
   first_listen: number;
+  all_time_rank: number;
 };
+
 type Artist = {
   id: number;
   name: string;
@@ -435,7 +500,9 @@ type Artist = {
   time_listened: number;
   first_listen: number;
   is_primary: boolean;
+  all_time_rank: number;
 };
+
 type Album = {
   id: number;
   title: string;
@@ -446,17 +513,21 @@ type Album = {
   musicbrainz_id: string;
   time_listened: number;
   first_listen: number;
+  all_time_rank: number;
 };
+
 type Alias = {
   id: number;
   alias: string;
   source: string;
   is_primary: boolean;
 };
+
 type Listen = {
   time: string;
   track: Track;
 };
+
 type PaginatedResponse<T> = {
   items: T[];
   total_record_count: number;
@@ -464,26 +535,37 @@ type PaginatedResponse<T> = {
   current_page: number;
   items_per_page: number;
 };
+
 type Ranked<T> = {
   item: T;
   rank: number;
   listen_count: number;
   time_listened: number;
 };
+
 type TopRanked<T> = {
   Item: T;
   Rank: number;
   ListenCount: number;
   TimeListened: number;
 };
+
 type ListenActivityItem = {
   start_time: Date;
   listens: number;
 };
+
+type InterestBucket = {
+  bucket_start: Date;
+  bucket_end: Date;
+  listen_count: number;
+};
+
 type SimpleArtists = {
   name: string;
   id: number;
 };
+
 type Stats = {
   listen_count: number;
   track_count: number;
@@ -491,40 +573,37 @@ type Stats = {
   artist_count: number;
   minutes_listened: number;
 };
+
 type SearchResponse = {
   albums: Album[];
   artists: Artist[];
   tracks: Track[];
 };
+
 type User = {
   id: number;
   username: string;
   role: "user" | "admin";
 };
+
 type ApiKey = {
   id: number;
   key: string;
   label: string;
   created_at: Date;
 };
+
 type ApiError = {
   error: string;
 };
+
 type Config = {
   default_theme: string;
 };
+
 type NowPlaying = {
   currently_playing: boolean;
   track: Track;
-};
-
-type GenreStat = {
-  name: string;
-  value: number;
-};
-
-type GenreStatsResponse = {
-  stats: GenreStat[];
 };
 
 type RecommendationTrack = {
@@ -541,63 +620,42 @@ type RecommendationsResponse = {
   tracks: RecommendationTrack[];
 };
 
-type RewindStats = {
+type WrappedTrack = {
+  id: number;
   title: string;
-  top_artists: Ranked<Artist>[];
-  top_albums: Ranked<Album>[];
-  top_tracks: Ranked<Track>[];
-  minutes_listened: number;
-  plays: number;
-  avg_plays_per_day: number;
-  unique_tracks: number;
-  unique_albums: number;
-  unique_artists: number;
-  new_tracks: number;
-  new_albums: number;
-  new_artists: number;
+  artists: SimpleArtists[];
+  image: string;
+  listen_count: number;
 };
 
-export type {
-  RecommendationTrack,
-  RecommendationsResponse,
-  ImageTier,
-  GetItemsArgs,
-  getActivityArgs,
-  GetRewindStatsArgs,
-  Track,
-  Artist,
-  Album,
-  Listen,
-  SearchResponse,
-  PaginatedResponse,
-  Ranked,
-  TopRanked,
-  ListenActivityItem,
-  User,
-  Alias,
-  ApiKey,
-  ApiError,
-  Config,
-  NowPlaying,
-  Stats,
-  GenreStat,
-  GenreStatsResponse,
-  WrappedStats,
-  WrappedTrack,
-  WrappedArtist,
-  WrappedAlbum,
-  TrackStreak,
-  HourDistribution,
-  WeekStats,
-  RewindStats,
+type WrappedArtist = {
+  id: number;
+  name: string;
+  image: string;
+  listen_count: number;
 };
 
-type WrappedTrack = { id: number; title: string; artists: SimpleArtists[]; image: string; listen_count: number };
-type WrappedArtist = { id: number; name: string; image: string; listen_count: number };
-type WrappedAlbum = { id: number; title: string; image: string; listen_count: number };
-type TrackStreak = { track: WrappedTrack; streak_count: number };
-type HourDistribution = { hour: number; listen_count: number };
-type WeekStats = { week_start: string; listen_count: number };
+type WrappedAlbum = {
+  id: number;
+  title: string;
+  image: string;
+  listen_count: number;
+};
+
+type TrackStreak = {
+  track: WrappedTrack;
+  streak_count: number;
+};
+
+type HourDistribution = {
+  hour: number;
+  listen_count: number;
+};
+
+type WeekStats = {
+  week_start: string;
+  listen_count: number;
+};
 
 type WrappedStats = {
   year: number;
@@ -615,4 +673,67 @@ type WrappedStats = {
   busiest_week: WeekStats | null;
   artist_concentration: number;
   track_concentration: number;
+};
+
+type GenreStat = {
+  name: string;
+  value: number;
+};
+
+type GenreStatsResponse = {
+  stats: GenreStat[];
+};
+
+type RewindStats = {
+  title: string;
+  top_artists: Ranked<Artist>[];
+  top_albums: Ranked<Album>[];
+  top_tracks: Ranked<Track>[];
+  minutes_listened: number;
+  avg_minutes_listened_per_day: number;
+  plays: number;
+  avg_plays_per_day: number;
+  unique_tracks: number;
+  unique_albums: number;
+  unique_artists: number;
+  new_tracks: number;
+  new_albums: number;
+  new_artists: number;
+};
+
+export type {
+  RecommendationTrack,
+  RecommendationsResponse,
+  ImageTier,
+  GetItemsArgs,
+  getItemsArgs,
+  getActivityArgs,
+  getInterestArgs,
+  GetRewindStatsArgs,
+  Track,
+  Artist,
+  Album,
+  Listen,
+  SearchResponse,
+  PaginatedResponse,
+  Ranked,
+  TopRanked,
+  ListenActivityItem,
+  InterestBucket,
+  User,
+  Alias,
+  ApiKey,
+  ApiError,
+  Config,
+  NowPlaying,
+  Stats,
+  GenreStatsResponse,
+  WrappedStats,
+  WrappedTrack,
+  WrappedArtist,
+  WrappedAlbum,
+  TrackStreak,
+  HourDistribution,
+  WeekStats,
+  RewindStats,
 };

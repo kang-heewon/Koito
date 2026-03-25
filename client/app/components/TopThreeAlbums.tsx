@@ -1,39 +1,43 @@
-import { useQuery } from "@tanstack/react-query"
-import { getTopAlbums, type GetItemsArgs, type TopRanked, type Album } from "api/api"
-import AlbumDisplay from "./AlbumDisplay"
+import { useQuery } from "@tanstack/react-query";
+import { getTopAlbums, type getItemsArgs } from "api/api";
+import AlbumDisplay from "./AlbumDisplay";
 
 interface Props {
-    period: string
-    artistId?: number
-    vert?: boolean
-    hideTitle?: boolean
+  period: string;
+  artistId?: Number;
+  vert?: boolean;
+  hideTitle?: boolean;
 }
-  
+
 export default function TopThreeAlbums(props: Props) {
+  const { isPending, isError, data, error } = useQuery({
+    queryKey: [
+      "top-albums",
+      { limit: 3, period: props.period, artist_id: props.artistId, page: 0 },
+    ],
+    queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as getItemsArgs),
+  });
 
-    const { isPending, isError, data, error } = useQuery({ 
-        queryKey: ['top-albums', {limit: 3, period: props.period, artist_id: props.artistId, page: 0}], 
-        queryFn: ({ queryKey }) => getTopAlbums(queryKey[1] as GetItemsArgs),
-    })
-    if (isPending) {
-        return <p>Loading...</p>
-    }
-    if (isError) {
-        return <p className="error">Error:{error.message}</p>
-    }
+  if (isPending) {
+    return <p>Loading...</p>;
+  }
+  if (isError) {
+    return <p className="error">Error:{error.message}</p>;
+  }
 
-    if (!data?.items) {
-        return null
-    }
+  console.log(data);
 
-    return (
-        <div>
-            {!props.hideTitle && <h2>Top Three Albums</h2>}
-            <div className={`flex ${props.vert ? 'flex-col' : ''}`} style={{gap: 15}}>
-            {data.items.map((entry, index) => (
-                <AlbumDisplay key={`top-three-album-${entry.Item.id}`} album={entry.Item} size={index === 0 ? 190 : 130} />
-            ))}
-            </div>
-        </div>
-    )
+  return (
+    <div>
+      {!props.hideTitle && <h3>Top Three Albums</h3>}
+      <div
+        className={`flex ${props.vert ? "flex-col" : ""}`}
+        style={{ gap: 15 }}
+      >
+        {data.items.map((item, index) => (
+          <AlbumDisplay album={item.item} size={index === 0 ? 190 : 130} />
+        ))}
+      </div>
+    </div>
+  );
 }

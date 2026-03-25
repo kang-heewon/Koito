@@ -2,7 +2,6 @@ package psql
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/gabehf/koito/internal/db"
 )
@@ -25,11 +24,11 @@ func normalizePagedGetItemsOpts(opts db.GetItemsOpts) (db.GetItemsOpts, error) {
 	}
 	if hasLegacyItemDateFilters(opts) {
 		opts.Timeframe = db.Timeframe{
-			Year:  intToString(opts.Year),
-			Month: intToString(opts.Month),
-			Week:  intToString(opts.Week),
-			From:  intToString(opts.From),
-			To:    intToString(opts.To),
+			Year:     opts.Year,
+			Month:    opts.Month,
+			Week:     opts.Week,
+			FromUnix: int64(opts.From),
+			ToUnix:   int64(opts.To),
 		}
 	}
 	if opts.Timeframe == (db.Timeframe{}) {
@@ -41,12 +40,4 @@ func normalizePagedGetItemsOpts(opts db.GetItemsOpts) (db.GetItemsOpts, error) {
 
 func hasLegacyItemDateFilters(opts db.GetItemsOpts) bool {
 	return opts.Year != 0 || opts.Month != 0 || opts.Week != 0 || opts.From != 0 || opts.To != 0
-}
-
-func intToString(value int) string {
-	if value == 0 {
-		return ""
-	}
-
-	return strconv.Itoa(value)
 }

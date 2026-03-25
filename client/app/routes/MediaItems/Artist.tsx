@@ -8,6 +8,7 @@ import MediaLayout from "./MediaLayout";
 import ArtistAlbums from "~/components/ArtistAlbums";
 import ActivityGrid from "~/components/ActivityGrid";
 import { timeListenedString } from "~/utils/utils";
+import InterestGraph from "~/components/InterestGraph";
 
 export async function clientLoader({ params }: LoaderFunctionArgs) {
   const res = await fetch(`/apis/web/v1/artist?id=${params.id}`);
@@ -28,6 +29,7 @@ export default function ArtistPage() {
       title={artist.name}
       img={artist.image}
       id={artist.id}
+      rank={artist.all_time_rank}
       musicbrainzId={artist.musicbrainz_id}
       imgItemId={artist.id}
       mergeFunc={mergeArtists}
@@ -45,17 +47,17 @@ export default function ArtistPage() {
               {artist.listen_count} play{artist.listen_count > 1 ? "s" : ""}
             </p>
           )}
-          {
+          {artist.time_listened !== 0 && (
             <p title={Math.floor(artist.time_listened / 60 / 60) + " hours"}>
               {timeListenedString(artist.time_listened)}
             </p>
-          }
-          {
+          )}
+          {artist.first_listen > 0 && (
             <p title={new Date(artist.first_listen * 1000).toLocaleString()}>
               Listening since{" "}
               {new Date(artist.first_listen * 1000).toLocaleDateString()}
             </p>
-          }
+          )}
         </div>
       }
     >
@@ -66,7 +68,10 @@ export default function ArtistPage() {
         <div className="flex gap-15 mt-10 flex-wrap">
           <LastPlays limit={20} artistId={artist.id} />
           <TopTracks limit={8} period={period} artistId={artist.id} />
-          <ActivityGrid configurable artistId={artist.id} />
+          <div className="flex flex-col items-start gap-4">
+            <ActivityGrid configurable artistId={artist.id} />
+            <InterestGraph artistId={artist.id} />
+          </div>
         </div>
         <ArtistAlbums period={period} artistId={artist.id} name={artist.name} />
       </div>

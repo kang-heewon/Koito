@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gabehf/koito/internal/db"
 	"github.com/gabehf/koito/internal/models"
@@ -15,8 +16,8 @@ import (
 
 func TestGenerateSummary(t *testing.T) {
 	timeframe := db.Timeframe{
-		From: "2024-01-01T00:00:00Z",
-		To:   "2024-01-05T00:00:00Z",
+		From: mustTime(t, "2024-01-01T00:00:00Z"),
+		To:   mustTime(t, "2024-01-05T00:00:00Z"),
 	}
 
 	store := &mockSummaryStore{
@@ -103,7 +104,7 @@ func TestGenerateSummaryReturnsWrappedError(t *testing.T) {
 		getTopArtistsErr: expectedErr,
 	}
 
-	got, err := summary.GenerateSummary(context.Background(), store, 1, db.Timeframe{Period: string(db.PeriodYear)}, "2024 Rewind")
+	got, err := summary.GenerateSummary(context.Background(), store, 1, db.Timeframe{Period: db.PeriodYear}, "2024 Rewind")
 	require.Error(t, err)
 	assert.Nil(t, got)
 	assert.ErrorIs(t, err, expectedErr)
@@ -218,4 +219,11 @@ func itemKey(opts db.TimeListenedOpts) string {
 
 func int32ToString(value int32) string {
 	return strconv.FormatInt(int64(value), 10)
+}
+
+func mustTime(t *testing.T, value string) time.Time {
+	t.Helper()
+	parsed, err := time.Parse(time.RFC3339, value)
+	require.NoError(t, err)
+	return parsed
 }

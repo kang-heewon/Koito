@@ -27,6 +27,7 @@ type GetTrackOpts struct {
 	ID            int32
 	MusicBrainzID uuid.UUID
 	Title         string
+	ReleaseID     int32
 	ArtistIDs     []int32
 }
 
@@ -119,11 +120,11 @@ type GetItemsOpts struct {
 	Limit     int
 	Timeframe Timeframe
 	Page      int
-	Week      int // 1-52
-	Month     int // 1-12
+	Week      int
+	Month     int
 	Year      int
-	From      int // unix timestamp
-	To        int // unix timestamp
+	From      int
+	To        int
 
 	// Used only for getting top tracks
 	ArtistID int
@@ -138,6 +139,7 @@ type ListenActivityOpts struct {
 	Range    int
 	Month    int
 	Year     int
+	Timezone *time.Location
 	AlbumID  int32
 	ArtistID int32
 	TrackID  int32
@@ -155,4 +157,11 @@ type GetExportPageOpts struct {
 	ListenedAt time.Time
 	TrackID    int32
 	Limit      int32
+}
+
+type GetInterestOpts struct {
+	Buckets  int
+	AlbumID  int32
+	ArtistID int32
+	TrackID  int32
 }

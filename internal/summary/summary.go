@@ -96,44 +96,37 @@ func GenerateSummary(ctx context.Context, store db.DB, userId int32, timeframe d
 	}
 	summary.MinutesListened = int(tmp) / 60
 	summary.AvgMinutesPerDay = summary.MinutesListened / dayCount
-
 	tmp, err = store.CountListens(ctx, timeframe)
 	if err != nil {
 		return nil, fmt.Errorf("GenerateSummary: %w", err)
 	}
 	summary.Plays = int(tmp)
 	summary.AvgPlaysPerDay = float32(summary.Plays) / float32(dayCount)
-
 	tmp, err = store.CountTracks(ctx, timeframe)
 	if err != nil {
 		return nil, fmt.Errorf("GenerateSummary: %w", err)
 	}
 	summary.UniqueTracks = int(tmp)
-
 	tmp, err = store.CountAlbums(ctx, timeframe)
 	if err != nil {
 		return nil, fmt.Errorf("GenerateSummary: %w", err)
 	}
 	summary.UniqueAlbums = int(tmp)
-
 	tmp, err = store.CountArtists(ctx, timeframe)
 	if err != nil {
 		return nil, fmt.Errorf("GenerateSummary: %w", err)
 	}
 	summary.UniqueArtists = int(tmp)
-
 	tmp, err = store.CountNewTracks(ctx, timeframe)
 	if err != nil {
 		return nil, fmt.Errorf("GenerateSummary: %w", err)
 	}
 	summary.NewTracks = int(tmp)
-
 	tmp, err = store.CountNewAlbums(ctx, timeframe)
 	if err != nil {
 		return nil, fmt.Errorf("GenerateSummary: %w", err)
 	}
 	summary.NewAlbums = int(tmp)
-
 	tmp, err = store.CountNewArtists(ctx, timeframe)
 	if err != nil {
 		return nil, fmt.Errorf("GenerateSummary: %w", err)
