@@ -151,10 +151,10 @@ func isDateRangeValidationError(err error) bool {
 }
 
 type rankedResponseItem[T any] struct {
-	Item         T     `json:"Item"`
-	Rank         int64 `json:"Rank"`
-	ListenCount  int64 `json:"ListenCount"`
-	TimeListened int64 `json:"TimeListened"`
+	Item         T     `json:"item"`
+	Rank         int64 `json:"rank"`
+	ListenCount  int64 `json:"listen_count"`
+	TimeListened int64 `json:"time_listened"`
 }
 
 type rankedPaginatedResponse[T any] struct {

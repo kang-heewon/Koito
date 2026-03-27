@@ -543,12 +543,6 @@ type Ranked<T> = {
   time_listened: number;
 };
 
-type TopRanked<T> = {
-  Item: T;
-  Rank: number;
-  ListenCount: number;
-  TimeListened: number;
-};
 
 type ListenActivityItem = {
   start_time: Date;
@@ -717,7 +711,7 @@ export type {
   SearchResponse,
   PaginatedResponse,
   Ranked,
-  TopRanked,
+
   ListenActivityItem,
   InterestBucket,
   User,
