@@ -1,4 +1,4 @@
-import React, { type PropsWithChildren, useEffect, useState } from 'react';
+import React, { type PropsWithChildren, useEffect, useState, useRef } from 'react';
 
 interface Props {
     inner: React.ReactNode
@@ -11,6 +11,8 @@ interface Props {
 export default function Popup({ inner, position, space, extraClasses, children }: PropsWithChildren<Props>) {
     const [isVisible, setIsVisible] = useState(false);
     const [showPopup, setShowPopup] = useState(true);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+    const [adjustedLeft, setAdjustedLeft] = useState(70 + space);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(min-width: 640px)');
@@ -25,13 +27,22 @@ export default function Popup({ inner, position, space, extraClasses, children }
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
 
+    useEffect(() => {
+        if (tooltipRef.current && isVisible) {
+            const tooltipWidth = tooltipRef.current.offsetWidth;
+            const minLeft = tooltipWidth / 2;
+            const baseLeft = 70 + space;
+            setAdjustedLeft(Math.max(baseLeft, minLeft));
+        }
+    }, [isVisible, space]);
+
     let positionClasses = '';
     let spaceCSS: React.CSSProperties = {};
     if (position === 'top') {
         positionClasses = `top-${space} -bottom-2 -translate-y-1/2 -translate-x-1/2`;
     } else if (position === 'right') {
         positionClasses = `bottom-1 -translate-x-1/2`;
-        spaceCSS = { left: 70 + space };
+        spaceCSS = { left: adjustedLeft };
     }
 
     return (
@@ -43,8 +54,9 @@ export default function Popup({ inner, position, space, extraClasses, children }
             {children}
             {showPopup && (
                 <div
+                    ref={tooltipRef}
                     className={`
-                    absolute 
+                    absolute
                     ${positionClasses}
                     ${extraClasses ?? ''}
                     bg-(--color-bg) color-fg border-1 border-(--color-bg-tertiary)
