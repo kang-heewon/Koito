@@ -224,9 +224,6 @@ function IntroSection({
         transition={{ duration: 0.8, delay: 0.16, ease: introEasing }}
         className="grid gap-4 sm:grid-cols-3"
       >
-        <IntroTag title="Replay style" value="Apple Music energy" />
-        <IntroTag title="Built for" value="375px and up" />
-        <IntroTag title="Navigation" value="Swipe, scroll, revisit" />
       </motion.div>
     </div>
   );
