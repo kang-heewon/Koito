@@ -7,6 +7,12 @@ import type { LoaderFunctionArgs } from "react-router";
 import { redirect, useLoaderData, useNavigate } from "react-router";
 import Rewind from "~/components/rewind/Rewind";
 
+type RewindLoaderData = {
+  month: number;
+  stats: RewindStats | null;
+  year: number;
+};
+
 const months = [
   "Full Year",
   "January",
@@ -84,14 +90,18 @@ export async function clientLoader(args: LoaderFunctionArgs) {
     throw redirect(redirectTo);
   }
 
-  const stats = await getRewindStats({ year, month });
-  stats.title = `Your ${month === 0 ? "" : `${months[month]} `}${year} Rewind`;
+  try {
+    const stats = await getRewindStats({ year, month });
+    stats.title = `Your ${month === 0 ? "" : `${months[month]} `}${year} Rewind`;
 
-  return { month, stats, year };
+    return { month, stats, year };
+  } catch {
+    return { month, stats: null, year };
+  }
 }
 
-export function meta({ data }: { data?: { stats: RewindStats } }) {
-  const pageTitle = `${data?.stats.title || "Rewind"} - Koito`;
+export function meta({ data }: { data?: RewindLoaderData }) {
+  const pageTitle = `${data?.stats?.title || "Rewind"} - Koito`;
 
   return [
     { title: pageTitle },
@@ -149,11 +159,7 @@ function NavigationControl({
 }
 
 export default function RewindPage() {
-  const { month, stats, year } = useLoaderData() as {
-    month: number;
-    stats: RewindStats;
-    year: number;
-  };
+  const { month, stats, year } = useLoaderData() as RewindLoaderData;
   const navigate = useNavigate();
   const [accentColor, setAccentColor] = useState(fallbackAccentColor);
   const [accentGlow, setAccentGlow] = useState(fallbackAccentGlow);
@@ -162,6 +168,12 @@ export default function RewindPage() {
   const now = new Date();
 
   useEffect(() => {
+    if (!stats) {
+      setAccentColor(fallbackAccentColor);
+      setAccentGlow(fallbackAccentGlow);
+      return;
+    }
+
     const image = stats.top_artists[0]?.item?.image;
     if (!image) {
       setAccentColor(fallbackAccentColor);
@@ -262,13 +274,26 @@ export default function RewindPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
-        <Rewind
-          stats={stats}
-          monthLabel={monthLabel}
-          year={year}
-          accentColor={accentColor}
-          accentGlow={accentGlow}
-        />
+        {stats ? (
+          <Rewind
+            stats={stats}
+            monthLabel={monthLabel}
+            year={year}
+            accentColor={accentColor}
+            accentGlow={accentGlow}
+          />
+        ) : (
+          <div className="flex min-h-screen items-center justify-center px-6 py-16">
+            <div className="max-w-xl rounded-[32px] border border-white/10 bg-[var(--color-bg)]/70 px-8 py-10 text-center backdrop-blur-sm">
+              <p className="header-font text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+                Unable to load Rewind data
+              </p>
+              <p className="mt-4 text-sm leading-6 text-[var(--color-fg)]/72 sm:text-base">
+                We couldn&apos;t load your {monthLabel.toLowerCase()} recap right now. Try again in a moment.
+              </p>
+            </div>
+          </div>
+        )}
       </motion.div>
     </main>
   );
