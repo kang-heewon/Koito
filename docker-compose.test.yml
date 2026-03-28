@@ -1,0 +1,34 @@
+services:
+  postgres-test:
+    image: ghcr.io/kang-heewon/postgresql-local:18
+    command: postgres -c shared_preload_libraries=pg_bigm
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: koitodb_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  koito-api-test:
+    build:
+      context: .
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    ports:
+      - "4110:4110"
+    environment:
+      KOITO_DATABASE_URL: postgres://postgres:secret@postgres-test:5432/koitodb_test?sslmode=disable
+      KOITO_ALLOWED_HOSTS: "*"
+      KOITO_DISABLE_RATE_LIMIT: "true"
+      KOITO_DISABLE_MUSICBRAINZ: "true"
+      KOITO_DISABLE_DEEZER: "true"
+      KOITO_DISABLE_COVER_ART_ARCHIVE: "true"
+      KOITO_LOGIN_GATE: "true"
+      KOITO_LOG_LEVEL: debug
+      KOITO_DEFAULT_USERNAME: testuser
+      KOITO_DEFAULT_PASSWORD: testpass123

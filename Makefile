@@ -3,7 +3,7 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
-.PHONY: all test clean client
+.PHONY: all test clean client e2e.up e2e.down e2e.test e2e.test.ui e2e.deps
 
 postgres.schemadump:
 	docker run --rm --network=host --env PGPASSWORD=secret -v "./db:/tmp/dump" \
@@ -59,3 +59,18 @@ client.build: client.deps
 test: api.test
 
 build: api.build client.build
+
+e2e.up:
+	docker compose -f docker-compose.test.yml up -d --build
+
+e2e.down:
+	docker compose -f docker-compose.test.yml down -v
+
+e2e.test:
+	cd e2e && npx playwright test
+
+e2e.test.ui:
+	cd e2e && npx playwright test --ui
+
+e2e.deps:
+	cd e2e && yarn install && npx playwright install chromium
