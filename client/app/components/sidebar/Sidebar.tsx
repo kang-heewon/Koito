@@ -1,4 +1,4 @@
-import { ExternalLink, History, Home, Info, RefreshCw, Sparkles } from "lucide-react";
+import { History, Home, RefreshCw, Sparkles } from "lucide-react";
 import SidebarSearch from "./SidebarSearch";
 import SidebarItem from "./SidebarItem";
 import SidebarSettings from "./SidebarSettings";
@@ -71,18 +71,6 @@ export default function Sidebar() {
         </SidebarItem>
       </div>
       <div className="flex gap-4 sm:flex-col">
-        <SidebarItem
-          icon
-          keyHint={<ExternalLink size={14} />}
-          space={22}
-          externalLink
-          to="https://koito.io"
-          name="About"
-          onClick={() => {}}
-          modal={<></>}
-        >
-          <Info size={iconSize} />
-        </SidebarItem>
         <SidebarSettings size={iconSize} />
       </div>
     </div>
