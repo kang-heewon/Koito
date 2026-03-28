@@ -30,9 +30,15 @@ export default function Popup({ inner, position, space, extraClasses, children }
     useLayoutEffect(() => {
         if (tooltipRef.current && showPopup) {
             const tooltipWidth = tooltipRef.current.offsetWidth;
-            const minLeft = tooltipWidth / 2;
             const baseLeft = 70 + space;
-            setAdjustedLeft(Math.max(baseLeft, minLeft));
+
+            const tooltipLeftEdge = baseLeft - tooltipWidth / 2;
+
+            if (tooltipLeftEdge < 0) {
+                setAdjustedLeft(tooltipWidth / 2);
+            } else {
+                setAdjustedLeft(baseLeft);
+            }
         }
     }, [showPopup, space]);
 
