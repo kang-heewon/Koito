@@ -1,4 +1,4 @@
-import React, { type PropsWithChildren, useEffect, useState, useRef } from 'react';
+import React, { type PropsWithChildren, useEffect, useLayoutEffect, useState, useRef } from 'react';
 
 interface Props {
     inner: React.ReactNode
@@ -27,14 +27,14 @@ export default function Popup({ inner, position, space, extraClasses, children }
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
 
-    useEffect(() => {
-        if (tooltipRef.current && isVisible) {
+    useLayoutEffect(() => {
+        if (tooltipRef.current && showPopup) {
             const tooltipWidth = tooltipRef.current.offsetWidth;
             const minLeft = tooltipWidth / 2;
             const baseLeft = 70 + space;
             setAdjustedLeft(Math.max(baseLeft, minLeft));
         }
-    }, [isVisible, space]);
+    }, [showPopup, space]);
 
     let positionClasses = '';
     let spaceCSS: React.CSSProperties = {};
